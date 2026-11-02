@@ -85,6 +85,13 @@ export async function publishMix(mix: Mix, asFeed = !!mix.feed): Promise<Mix> {
   return saveMix({ ...mix, published: ref.uri, feed })
 }
 
+/**
+ * What publishing, unpublishing or removing the feed did, put onto the editor's copy of the mix.
+ * Writing to Bluesky takes a moment and the editor stays live meanwhile, so anything changed while
+ * it ran (the name, a source) is kept rather than replaced by the copy that was sent.
+ */
+export const afterPublishing = (editing: Mix, done: Mix): Mix => ({ ...editing, published: done.published, feed: done.feed })
+
 /** Takes the mix (and its feed) out of your repo; it stays here as a private mix. */
 export async function unpublishMix(mix: Mix): Promise<Mix> {
   const own = ownUris(mix)

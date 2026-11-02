@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveChannel } from './channels'
-import { mixChannel, tid } from './mixes'
+import { afterPublishing, mixChannel, tid } from './mixes'
 import { AT_MIX, cleanMix, MIX_NSID, mixUri } from './mixSources'
 
 const base = { followed: [] as string[], interests: [], customFeeds: [] }
@@ -58,5 +58,20 @@ describe('mix channels', () => {
     const c = resolveChannel(mixChannel(m), undefined, { ...base, followedMixes: [m] })!
     expect(c.eyebrow).toBe('Mix by @someone.bsky.social')
     expect(resolveChannel('mix:did:plc:other:3m2abcdefghij', undefined, { ...base, followedMixes: [m] })).toBeUndefined()
+  })
+})
+
+describe('publishing from the editor', () => {
+  it('keeps edits made while it ran', () => {
+    const sent = { id: 'abc', name: 'Moon', sources: [{ kind: 'topic' as const, id: 'space' }], updatedAt: 1 }
+    const done = { ...sent, published: 'at://did:plc:me/io.paperwing.mix/abc', feed: 'at://did:plc:me/app.bsky.feed.generator/abc', updatedAt: 2 }
+    // Renamed, and a search added, while Bluesky was being written to.
+    const editing = { ...sent, name: 'Moon and Mars', sources: [...sent.sources, { kind: 'news' as const, q: 'Mars' }] }
+    expect(afterPublishing(editing, done)).toEqual({ ...editing, published: done.published, feed: done.feed })
+  })
+  it('clears what unpublishing took down', () => {
+    const editing = { id: 'abc', name: 'Moon', sources: [], published: 'at://did:plc:me/io.paperwing.mix/abc', feed: 'at://did:plc:me/app.bsky.feed.generator/abc', updatedAt: 1 }
+    const done = { ...editing, published: undefined, feed: undefined }
+    expect(afterPublishing(editing, done)).toEqual(done)
   })
 })

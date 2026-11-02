@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { useAtproto } from '../lib/atproto'
 import { findTopic } from '../lib/channels'
 import { findFeeds } from '../lib/follow'
-import { deleteMix, mixChannel, newMix, publishMix, removeFeed, saveMix, shareLink, unpublishMix } from '../lib/mixes'
+import { afterPublishing, deleteMix, mixChannel, newMix, publishMix, removeFeed, saveMix, shareLink, unpublishMix } from '../lib/mixes'
 import { MAX_SOURCES, sourceLabel, type MixSource } from '../lib/mixSources'
 import { usePrefs, type Mix } from '../lib/store'
 import { TOPICS } from '../lib/topics'
@@ -53,7 +53,7 @@ function Editor({ initial }: { initial: Mix }) {
     setBusy(label)
     try {
       const next = await job()
-      if (next) setMix(next)
+      if (next) setMix((m) => afterPublishing(m, next))
       return true
     } catch (err) {
       toast((err as Error).message, { tone: 'error' })
