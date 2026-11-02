@@ -13,6 +13,10 @@ see LICENSE in this folder), copied unmodified at commit 4ae2317.
 `release-notes` is PaperWing's own: how to write changesets (kinds, wording, bumps) and how a
 release becomes "What's new" and a production deploy.
 
+`codebase-health` is PaperWing's own: the security invariants, performance budget, accessibility
+rules and shared helpers, what each git hook and CI gate enforces, and a map of known duplication to
+collapse when you're nearby.
+
 `ship` is PaperWing's own too: the gate before any push or pull request (checks, changesets, then the
 review below, then fixing what it raises).
 

@@ -13,13 +13,15 @@ release, and merging the Release pull request is the production deploy.
 
 1. **Checks.** Each of these must pass:
    - `npm run build`
+   - `npm run check:budget` (after the build)
    - `npm run lint`
    - `npm run format:check`
    - `npm test`
    - `npm run test:stories`
    - `npm run test:e2e`
 
-   A failure is fixed, not skipped.
+   A failure is fixed, not skipped. The `pre-push` hook runs the cheap half of this; CI adds Lighthouse.
+   What each gate protects, and how to fix what it raises, is in the `codebase-health` skill.
 2. **Changesets.** Every change people can notice has one (`release-notes` skill), and
    `npm run check:changesets` passes. A change with nothing to notice gets an empty changeset.
 3. **Review.** Run `/ce-code-review` (the `ce-code-review` skill) over exactly what will be pushed:

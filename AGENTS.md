@@ -4,13 +4,16 @@ Repo-wide rules for coding agents (Claude Code reads this through `CLAUDE.md`). 
 `GLOSSARY.md`: name modules, tests and copy with them. How the code is laid out, the
 safety rules and the house style are in `CONTRIBUTING.md`; read it first. Design references are in
 `.claude/skills/`: `codebase-design` for module shape (deep modules, seams, adapters), `tdd` for the test loop,
-`improve-codebase-architecture` for finding refactors, `ce-code-review` for review.
+`improve-codebase-architecture` for finding refactors, `ce-code-review` for review. `codebase-health` holds the
+security invariants, performance budgets, accessibility rules and shared helpers: read it before touching an endpoint,
+anything that fetches or renders outside content, or UI, and whenever a hook, budget or check fails.
 
 ## Completion checklist
 
 Before committing:
 
-- `npm run build`, `npm run lint`, `npm test`, `npm run test:stories` and `npm run test:e2e` pass. Format what you
+- `npm run build`, `npm run check:budget`, `npm run lint`, `npm test`, `npm run test:stories` and `npm run test:e2e`
+  pass. The git hooks (installed by `npm install`) run most of these; never skip them with `--no-verify`. Format what you
   touched, and only that: `npx prettier --write <files>` (Prettier is pinned in `package.json`; a global or cached one formats differently).
 - New behaviour has a test at the module's interface (`*.test.ts` beside it), written before the code where it
   can be. UI you add or change has a story beside it (`*.stories.tsx`), rendered from its parameters only: no

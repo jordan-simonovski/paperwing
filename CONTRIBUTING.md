@@ -41,7 +41,10 @@ npm run test:stories   # every Storybook story, rendered in Chromium (npx playwr
 npm run test:e2e       # the journeys in e2e/, against the built app, at desktop and phone sizes
 ```
 
-All five must pass. Formatting is Prettier (pinned in `package.json`, with its settings there: no semicolons, single
+All five must pass. `npm install` also installs git hooks (`.githooks/`): commits check formatting and lint on
+what you staged, and pushes check for a changeset, then run the build, the bundle budget
+(`npm run check:budget`) and the unit tests. CI adds the stories, the journeys and Lighthouse
+(`npm run check:lighthouse`, settings in `lighthouserc.json`). Formatting is Prettier (pinned in `package.json`, with its settings there: no semicolons, single
 quotes, a 200-character line). Format what you touched:
 
 ```sh
@@ -71,7 +74,8 @@ Then:
 | `.storybook/` | Storybook config and the harness every story renders in |
 | `src/test/` | Fixtures shared by tests and stories |
 | `e2e/` | End-to-end journeys, with the stubbed network they run against |
-| `.claude/skills/` | Design references for coding agents (deep modules, seams, TDD) |
+| `.claude/skills/` | References for coding agents (deep modules, seams, TDD, the quality bar in `codebase-health`) |
+| `.githooks/` | The git hooks `npm install` turns on: format and lint on commit, the cheap checks on push |
 | `AGENTS.md` | The checklist coding agents follow, including the pre-PR review |
 | `.compound-engineering/` | The pinned Compound Engineering review, checked by `scripts/compound-review/` |
 
