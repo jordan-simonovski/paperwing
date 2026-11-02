@@ -1,19 +1,19 @@
-import { cleanSubmission, communityUrl, PAPERWING_SITE, type PaperwingSort } from '../../src/lib/paperwing.js'
-import { BOARD_HIDE_NSID, BOARD_NSID, cleanBoard, cleanBoardHide, type Board } from '../../src/lib/social.js'
+import { cleanSubmission, communityUrl, PAPERWING_SITE, SUBMISSION_NSID, type PaperwingSort } from '../../src/lib/paperwing.js'
+import { tidTime } from '../../src/lib/boardFinder.js'
+import { BOARD_NSID, canPost, cleanBoard, type Board } from '../../src/lib/social.js'
 import type { Story } from '../../src/lib/types.js'
-import { linking, posts } from './atlinks.js'
+import { posts } from './atlinks.js'
 import { type PostView, toStory } from './bsky.js'
-import { getRecord, handles, listAllRecords, pool } from './frontpage.js'
-import { fetchJson } from './http.js'
+import { moderationOf } from './boardModeration.js'
+import { getRecord, handles, pool } from './frontpage.js'
 import { cachedInKv } from './kv.js'
-import { blocked, rank, submissions, unlisted } from './paperwing.js'
+import { blocked, linksTo, official, rank, submissions, unlisted } from './paperwing.js'
 
 // Community boards: a board is a record in its owner's Bluesky account (social.ts). Its listings are
 // submissions linking to its page (found through Constellation), its votes and comments are the
 // posts' Bluesky likes and replies, and its moderation is two open things: hides written by the
 // moderators it names, and a Bluesky moderation list whose accounts are kept out. No database.
 
-const APPVIEW = 'https://public.api.bsky.app/xrpc'
 const DID = /^did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)$/
 const RKEY = /^[a-z2-7]{13}$/
 
@@ -22,6 +22,10 @@ export interface BoardView extends Board {
   owner: string
   ownerHandle?: string
   moderatorHandles: Record<string, string>
+  /** Run by PaperWing itself (its owner is PaperWing's own account): never claimed by the board. */
+  official: boolean
+  /** Listings in the last week, where the board list counts them. */
+  active?: number
 }
 
 export async function readBoard(did: string, rkey: string): Promise<BoardView> {
@@ -31,48 +35,15 @@ export async function readBoard(did: string, rkey: string): Promise<BoardView> {
   const board = cleanBoard(record.value)
   if (!board) throw new Error('That board is empty or malformed')
   const names = await handles([did, ...board.moderators])
-  return { ...board, uri, owner: did, ownerHandle: names.get(did), moderatorHandles: Object.fromEntries(board.moderators.flatMap((m) => (names.get(m) ? [[m, names.get(m)!]] : []))) }
-}
-
-/** The accounts on a Bluesky moderation list, up to a thousand; a longer one fails rather than half-read. */
-async function listMembers(list: string): Promise<Set<string>> {
-  const out = new Set<string>()
-  let cursor: string | undefined
-  for (let page = 0; page < 10; page++) {
-    const res = await fetchJson<{ items: { subject: { did: string } }[]; cursor?: string }>(
-      `${APPVIEW}/app.bsky.graph.getList?list=${encodeURIComponent(list)}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
-      { timeoutMs: 6000 },
-    ).catch((err: unknown) => {
-      // A list its owner deleted keeps nobody out. Anything else, or a page after the first going
-      // missing, fails the board: half a block list would let the rest in.
-      if (page === 0 && isGone(err)) return { items: [], cursor: undefined }
-      throw err
-    })
-    for (const i of res.items) out.add(i.subject.did)
-    cursor = res.cursor
-    if (!cursor) return out
+  return {
+    ...board,
+    uri,
+    owner: did,
+    ownerHandle: names.get(did),
+    moderatorHandles: Object.fromEntries(board.moderators.flatMap((m) => (names.get(m) ? [[m, names.get(m)!]] : []))),
+    official: official(did),
   }
-  // Part of a block list would let the rest in.
-  throw new Error(`More than 1000 accounts on ${list}`)
 }
-
-/**
- * Listings a board's moderators have hidden, read from each moderator's own repo: hides by anyone
- * else don't count, and however many others write, they can't crowd a moderator's out or get in
- * the way. Throws when a moderator's hides can't be read: an empty set would put what was hidden back.
- */
-async function hiddenOn(board: BoardView): Promise<Set<string>> {
-  const mine = await Promise.all([board.owner, ...board.moderators].map((did) => listAllRecords<unknown>(did, BOARD_HIDE_NSID)))
-  return new Set(
-    mine.flat().flatMap((r) => {
-      const hide = cleanBoardHide(r.value)
-      return hide?.board === board.uri ? [hide.subject] : []
-    }),
-  )
-}
-
-/** The network answered that the record or list isn't there (atproto says 400 for a missing record). */
-const isGone = (err: unknown) => err instanceof Error && /\bUpstream 40[04]\b/.test(err.message)
 
 /**
  * A community board and its listings, ranked like the front page, with its moderation applied.
@@ -82,17 +53,14 @@ const isGone = (err: unknown) => err instanceof Error && /\bUpstream 40[04]\b/.t
 export async function boardFront(did: string, rkey: string, sort: PaperwingSort): Promise<{ board: BoardView; stories: Story[] }> {
   return cachedInKv(`rd:board:${did}:${rkey}:${sort}`, 60, async () => {
     const board = await readBoard(did, rkey)
-    const [uris, hidden, kept] = await Promise.all([
-      submissions(communityUrl(did, rkey), '.boardUrl', 200),
-      hiddenOn(board),
-      board.blockList ? listMembers(board.blockList) : Promise.resolve(new Set<string>()),
-    ])
+    const [uris, { hidden, kept }] = await Promise.all([submissions(communityUrl(did, rkey), '.boardUrl', 200), moderationOf(board.uri, board)])
     const records = await pool(uris, 10, (u) => getRecord<unknown>(u).catch(() => undefined))
     const off = blocked()
     const subs = records.flatMap((r, i) => {
       const s = r ? cleanSubmission(r.value) : undefined
       const author = uris[i].split('/')[2]
       if (!s || s.community !== board.uri || s.post.uri.split('/')[2] !== author) return []
+      if (!canPost(board, board.owner, author, board.official)) return []
       if (hidden.has(s.post.uri) || kept.has(author) || off.has(author) || off.has(s.post.uri)) return []
       return [s]
     })
@@ -104,12 +72,23 @@ export async function boardFront(did: string, rkey: string, sort: PaperwingSort)
   })
 }
 
-/** Every community board, newest first (boards carry PaperWing's address, so Constellation lists them). */
+/**
+ * Every community board (boards carry PaperWing's address, so Constellation lists them), each with
+ * how many links it got this week. A listing's record key says when it was made, so counting needs
+ * no record reads. Up to 500 boards.
+ */
 export async function allBoards(): Promise<BoardView[]> {
-  const uris = await linking(PAPERWING_SITE, BOARD_NSID, '.site', 100).catch(() => [])
-  const found = await pool(uris, 10, (u) => {
+  const uris = await linksTo(PAPERWING_SITE, BOARD_NSID, '.site', 500).catch(() => [])
+  const weekAgo = Date.now() - 7 * 86_400_000
+  const found = await pool(uris, 10, async (u) => {
     const [, , did, , rkey] = u.split('/')
-    return readBoard(did, rkey).catch(() => undefined)
+    const [board, listed] = await Promise.all([readBoard(did, rkey), linksTo(communityUrl(did, rkey), SUBMISSION_NSID, '.boardUrl', 100).catch(() => [])])
+    // A key dated in the future isn't this week's.
+    const active = listed.filter((l) => {
+      const at = tidTime(l.split('/')[4])
+      return at !== undefined && at > weekAgo && at <= Date.now() + 60_000
+    }).length
+    return { ...board, active }
   })
-  return found.filter((b): b is BoardView => !!b).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  return found.filter((b) => !!b).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 }

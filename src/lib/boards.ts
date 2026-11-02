@@ -18,6 +18,10 @@ export interface BoardView extends Board {
   owner: string
   ownerHandle?: string
   moderatorHandles: Record<string, string>
+  /** Run by PaperWing itself: decided by the server from who owns the board, never by the board. */
+  official?: boolean
+  /** Listings in the last week (on the board list). */
+  active?: number
 }
 
 /** A board you've joined: it gets a channel and shows in the menu. */
@@ -55,9 +59,13 @@ async function fetchBoardInfo(did: string, rkey: string): Promise<BoardView> {
 export const useBoard = (did: string | undefined, rkey: string | undefined) =>
   useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoardInfo(did!, rkey!), enabled: !!did && !!rkey, staleTime: 60_000 })
 
-export const useAllBoards = () =>
+export const useAllBoards = () => useAllBoardsWhen(true)
+
+/** Every board, asked for only when `enabled` (a topic page has boards; most pages don't need them). */
+export const useAllBoardsWhen = (enabled: boolean) =>
   useQuery({
     queryKey: keys.boards,
+    enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const res = await fetch('/api/feed?src=boards')

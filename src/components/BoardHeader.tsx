@@ -5,7 +5,9 @@ import { useAtproto } from '../lib/atproto'
 import { toggleJoin, useBoard } from '../lib/boards'
 import { profilePath } from '../lib/people'
 import { usePrefs } from '../lib/store'
+import { canPost } from '../lib/social'
 import { TOPIC_BY_ID } from '../lib/topics'
+import { OfficialBadge } from './OfficialBadge'
 
 /** The top of a community board: what it's for, its rules and who moderates it, and a way to join. */
 export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri: string }) {
@@ -41,7 +43,10 @@ export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri
         <p className="flex items-center gap-1.5 text-[0.8125rem] font-semibold uppercase tracking-[0.08em] text-ink-3">
           <Users size={13} /> Community board{topic ? ` · ${topic.label}` : ''}
         </p>
-        <h1 className="mt-1.5 text-[1.5rem] font-bold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{board.name}</h1>
+        <h1 className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[1.5rem] font-bold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+          {board.name}
+          {board.official && <OfficialBadge size={18} label />}
+        </h1>
         {board.description && <p className="mt-1.5 whitespace-pre-line text-[0.9375rem] leading-relaxed text-ink-2">{board.description}</p>}
         <div className="mt-3 flex flex-wrap gap-2">
           <button className={`btn h-9 text-[0.8125rem] ${joined ? 'following' : 'btn-primary'}`} onClick={() => toggleJoin({ uri, name: board.name })} aria-pressed={joined}>
@@ -77,7 +82,9 @@ export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri
           ))}
         </p>
         <p className="mt-2 text-[0.8125rem] text-ink-3">
-          To post here: open a story, tap Share, choose Post it to your networks, tick List it on PaperWing and pick this board. Votes are Bluesky likes; comments are replies.
+          {canPost(board, board.owner, me ?? '', !!board.official)
+            ? 'To post here: open a story, tap Share, choose Post it to your networks, tick List it on PaperWing and pick this board. Votes are Bluesky likes; comments are replies.'
+            : 'Only its moderators post here. You can still vote and reply: votes are Bluesky likes; comments are replies.'}
         </p>
       </div>
     </header>

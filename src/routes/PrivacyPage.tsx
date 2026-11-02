@@ -56,8 +56,8 @@ export function PrivacyPage() {
             cookie is kept on your device and sent through the server with each vote or comment. Signing out ends that session on HN too.
           </p>
           <p>
-            Posting, voting and sharing happen only when you ask. Stories you list on PaperWing are ordinary public Bluesky posts with a small public record in your own Bluesky account; you can delete
-            them on Bluesky like any post.
+            Posting, voting and sharing happen only when you ask. Stories you list on PaperWing are ordinary public Bluesky posts with a small public record in your own Bluesky account (the link, its
+            title, the board you chose and whether it goes on the front page too); you can delete them on Bluesky like any post.
           </p>
           <p>
             The same goes for PaperWing’s social features, each only when you use it: items you share with a note, margin notes on articles, your blogroll (if you turn it on), and community boards you

@@ -75,3 +75,35 @@ export const SeveralWords: Story = {
     await expect(page.getAllByRole('option')[0]).toHaveTextContent('Accounts and sources')
   },
 }
+
+const boardList = [
+  {
+    uri: 'at://did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/io.paperwing.board/3kitchenboard',
+    name: 'Home Cooking',
+    description: 'Recipes and kitchen gear',
+    owner: 'did:plc:u',
+    moderators: [],
+    moderatorHandles: {},
+    createdAt: '2026-10-01T00:00:00Z',
+    active: 4,
+  },
+  {
+    uri: 'at://did:plc:eprq6bm2okrgk6zsoka2wpux/io.paperwing.board/3announcement',
+    name: 'Announcements',
+    description: 'News from PaperWing',
+    owner: 'did:plc:eprq6bm2okrgk6zsoka2wpux',
+    moderators: [],
+    moderatorHandles: {},
+    createdAt: '2026-10-01T00:00:00Z',
+    official: true,
+  },
+]
+
+/** Boards are found by name or what they're about. */
+export const FindsABoard: Story = {
+  parameters: { app: { ui: { palette: true }, prefs: { followed: ['tech'] }, queries: [[['boards'], boardList]] } },
+  play: async ({ canvas }) => {
+    await userEvent.type(canvas.getByRole('combobox'), 'kitchen')
+    await waitFor(() => expect(canvas.getByRole('option', { name: /Home Cooking/ })).toBeInTheDocument())
+  },
+}

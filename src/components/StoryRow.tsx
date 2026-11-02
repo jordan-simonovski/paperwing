@@ -1,6 +1,8 @@
 import { useComposer } from '../lib/compose'
 import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
+import { boardPath } from '../lib/boards'
+import { OfficialBadge } from './OfficialBadge'
 import { Link } from 'react-router'
 import { ArrowBigDown, ArrowBigUp, Bookmark, BookmarkCheck, EyeOff, Image as ImageIcon, Loader2, MessageSquare, Play, Newspaper, Share2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -87,6 +89,17 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </Link>
             </>
           )}
+          {/* A board's listing on the front page: which board, like a subreddit's name. */}
+          {s.board && (
+            <>
+              <span aria-hidden>·</span>
+              <Link className="row-domain inline-flex items-center gap-1" to={boardPath(s.board.uri)} onClick={(e) => e.stopPropagation()} aria-label={`in ${s.board.name}`}>
+                in {s.board.name}
+              </Link>
+              {s.board.official && <OfficialBadge size={13} />}
+            </>
+          )}
+          {s.pinned && <span className="pinned-chip">Pinned</span>}
           <span aria-hidden>·</span>
           {/* The full date is only for hovering, and formatting it for every row costs on phones: set it on the way in. */}
           <time dateTime={new Date(s.createdAt).toISOString()} onPointerEnter={(e) => (e.currentTarget.title ||= fullDate(s.createdAt))}>

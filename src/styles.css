@@ -312,6 +312,27 @@
   .btn-primary:hover {
     background: var(--ink-2);
   }
+  /* PaperWing's own boards: a check in the accent colour, only ever set by the server from who owns the board. */
+  .official-badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--signal);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .pinned-chip {
+    margin-left: 0.25rem;
+    padding: 0 0.4375rem;
+    border-radius: 999px;
+    background: var(--sunk);
+    color: var(--ink-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+  }
+
   /* The phone's one action: post a link. Filled, so it reads as "make something" among the icons. */
   .post-btn {
     display: inline-grid;

@@ -22,6 +22,8 @@ export interface Submission {
   boardUrl?: string
   /** A community board it's listed to (io.paperwing.board at:// URI), instead of a topic board. */
   community?: string
+  /** A board listing that its poster also put on PaperWing's front page (board listings stay on their board otherwise). */
+  front?: boolean
   createdAt: string
 }
 
@@ -49,6 +51,7 @@ export function cleanSubmission(raw: unknown): Submission | undefined {
     title: r.title.trim().slice(0, 300),
     board,
     ...(community ? { community } : {}),
+    ...(community && r.front === true ? { front: true } : {}),
     site: PAPERWING_SITE,
     boardUrl: board ? boardUrl(board) : cm && community ? communityUrl(cm[1], cm[2]) : undefined,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date(0).toISOString(),
@@ -56,7 +59,7 @@ export function cleanSubmission(raw: unknown): Submission | undefined {
 }
 
 /** The record written alongside a Bluesky post to submit it. */
-export const submissionRecord = (post: { uri: string; cid: string }, url: string, title: string, board?: string): Omit<Submission, 'site'> & { site: string } => {
+export const submissionRecord = (post: { uri: string; cid: string }, url: string, title: string, board?: string, opts: { front?: boolean } = {}): Omit<Submission, 'site'> & { site: string } => {
   // A board is a topic id, or a community board's at:// URI.
   const cm = board ? AT_COMMUNITY.exec(board) : null
   return {
@@ -64,7 +67,7 @@ export const submissionRecord = (post: { uri: string; cid: string }, url: string
     post: { uri: post.uri, cid: post.cid },
     url,
     title,
-    ...(cm ? { community: board!, boardUrl: communityUrl(cm[1], cm[2]) } : board ? { board, boardUrl: boardUrl(board) } : {}),
+    ...(cm ? { community: board!, boardUrl: communityUrl(cm[1], cm[2]), ...(opts.front ? { front: true } : {}) } : board ? { board, boardUrl: boardUrl(board) } : {}),
     site: PAPERWING_SITE,
     createdAt: new Date().toISOString(),
   }

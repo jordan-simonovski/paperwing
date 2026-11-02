@@ -67,7 +67,12 @@ vi.mock('./atlinks.js', () => ({
     ),
   ),
 }))
+// Links to an address, by Constellation: every board (as many pages as there are), and each
+// board's listings, whose record keys say when they were made.
+const linkTargets: Record<string, string[]> = {}
 vi.mock('./paperwing.js', () => ({
+  official: (did: string) => did === 'did:plc:eprq6bm2okrgk6zsoka2wpux',
+  linksTo: vi.fn(async (target: string) => linkTargets[target] ?? []),
   blocked: () => new Set<string>(),
   unlisted: () => false,
   rank: (list: PostView[]) => list,
@@ -75,7 +80,9 @@ vi.mock('./paperwing.js', () => ({
 }))
 vi.mock('./http.js', () => ({ fetchJson: vi.fn(async () => ({ items: [{ subject: { did: BOB } }] })) }))
 
-const { boardFront } = await import('./boards.js')
+const { allBoards, boardFront } = await import('./boards.js')
+const { tid } = await import('../../src/lib/mixes.js')
+const { submissions } = await import('./paperwing.js')
 const { listAllRecords } = await import('./frontpage.js')
 const { fetchJson } = await import('./http.js')
 
@@ -139,5 +146,34 @@ describe('community boards', () => {
     await expect(boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).rejects.toThrow(/More than/)
     vi.mocked(fetchJson).mockReset()
     vi.mocked(fetchJson).mockImplementation(async () => ({ items: [{ subject: { did: BOB } }] }))
+  })
+
+  it('lists every board, official ones marked, with how many links each got this week', async () => {
+    const NEWS_OWNER = 'did:plc:eprq6bm2okrgk6zsoka2wpux'
+    const news = `at://${NEWS_OWNER}/io.paperwing.board/3announcement`
+    records[news] = { name: 'Announcements', moderators: [], site: 'https://paperwing.io', createdAt: '2026-11-01T00:00:00Z' }
+    const extra = Array.from({ length: 120 }, (_, i) => `at://${STRANGER}/io.paperwing.board/${tid((Date.now() - i * 1000) * 1000)}`)
+    for (const u of extra) records[u] = { name: `Board ${u.slice(-4)}`, moderators: [], site: 'https://paperwing.io', createdAt: '2026-10-01T00:00:00Z' }
+    linkTargets['https://paperwing.io'] = [BOARD, news, ...extra]
+    const day = 86_400_000
+    const at = (msAgo: number) => `at://${ANN}/io.paperwing.submission/${tid((Date.now() - msAgo) * 1000)}`
+    linkTargets[`https://paperwing.io/c/${OWNER}/bbbbbbbbbbbbb`] = [at(1 * day), at(2 * day), at(9 * day)]
+    const boards = await allBoards()
+    expect(boards).toHaveLength(122)
+    expect(boards.find((b) => b.uri === BOARD)).toMatchObject({ active: 2, official: false })
+    expect(boards.find((b) => b.uri === news)).toMatchObject({ active: 0, official: true })
+    for (const u of extra) delete records[u]
+    delete records[news]
+  })
+
+  it('on a board where only moderators post, keeps only its moderators’ listings', async () => {
+    const before = records[BOARD]
+    records[BOARD] = { ...(before as object), modsOnly: true }
+    records[`at://${MOD}/io.paperwing.submission/9`] = sub(MOD, 'mmmmmmmmmmmmm', BOARD)
+    vi.mocked(submissions).mockResolvedValueOnce([`at://${ANN}/io.paperwing.submission/1`, `at://${MOD}/io.paperwing.submission/9`])
+    const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'new')
+    expect(stories.map((s) => s.title)).toEqual(['mmmmmmmmmmmmm'])
+    records[BOARD] = before
+    delete records[`at://${MOD}/io.paperwing.submission/9`]
   })
 })

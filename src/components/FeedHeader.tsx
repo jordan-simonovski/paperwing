@@ -14,6 +14,8 @@ import { postLink } from '../lib/compose'
 import { parseChannelId } from '../lib/channelId'
 import { toggleCommunity } from '../lib/explore'
 import { Link } from 'react-router'
+import { boardPath, useAllBoardsWhen } from '../lib/boards'
+import { boardsAbout, byActivity } from '../lib/boardFinder'
 import { cooccurringTopics, type Topic } from '../lib/topics'
 import type { SourceKind } from '../lib/types'
 import { SOURCE_NAMES } from './Source'
@@ -55,6 +57,10 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
     if (channel.topic) for (const t of cooccurringTopics(stories, channel.topic.id)) if (!ids.includes(t)) ids.push(t)
     return ids.filter((id) => id !== channel.id).slice(0, 6)
   }, [channel, stories])
+
+  // Community boards about this topic, the liveliest first. Fetched only on a topic's page.
+  const { data: allBoards } = useAllBoardsWhen(isTopic)
+  const boardsHere = useMemo(() => (channel.topic && allBoards ? byActivity(boardsAbout(allBoards, channel.topic)).slice(0, 6) : []), [allBoards, channel.topic])
 
   const sources = useMemo(() => {
     const counts = new Map<SourceKind, number>()
@@ -189,6 +195,16 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                 </Link>
               )}
             </div>
+            {boardsHere.length > 0 && (
+              <div className="scroll-x -mx-4 mt-2 flex items-center gap-1.5 px-4 md:-mx-5 md:px-5" aria-label={`Boards about ${channel.label}`}>
+                <span className="mr-0.5 flex-none text-[0.8125rem] font-semibold opacity-80">Boards</span>
+                {boardsHere.map((b) => (
+                  <Link key={b.uri} className="chip h-7 flex-none px-2.5 text-[0.8125rem]" to={boardPath(b.uri)}>
+                    {b.name}
+                  </Link>
+                ))}
+              </div>
+            )}
             {/* One line that scrolls sideways, so related topics never push the stories down. */}
             {near.length > 0 && (
               <div className="scroll-x -mx-4 mt-3 flex items-center gap-1.5 px-4 max-sm:hidden md:-mx-5 md:px-5" aria-label="Related topics">

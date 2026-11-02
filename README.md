@@ -354,6 +354,7 @@ Import the repo into Vercel. It detects Vite, builds to `dist`, and deploys `api
 Optional environment variables (see `.env.example`):
 
 - `GITHUB_TOKEN`: raises the GitHub search rate limit for the Projects feed.
+- `PAPERWING_OFFICIAL`: PaperWing's own account DIDs. Boards they own are official (badge, moderators-only posting, a pinned front-page announcement). Without it no board is official.
 
 ## Pretext motion
 

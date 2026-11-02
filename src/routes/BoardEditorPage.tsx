@@ -25,6 +25,7 @@ export function BoardEditorPage() {
   const [topic, setTopic] = useState('')
   const [mods, setMods] = useState('')
   const [blockList, setBlockList] = useState(true)
+  const [modsOnly, setModsOnly] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function BoardEditorPage() {
         .join(', '),
     )
     setBlockList(!!existing.blockList)
+    setModsOnly(!!existing.modsOnly)
   }, [existing])
 
   if (!did)
@@ -78,6 +80,7 @@ export function BoardEditorPage() {
           topic: topic || undefined,
           moderators,
           blockList: blockList ? list : undefined,
+          modsOnly: modsOnly || !!existing?.official,
           createdAt: existing?.createdAt,
         },
         rkey,
@@ -144,6 +147,18 @@ export function BoardEditorPage() {
           <span className="text-[0.875rem] font-semibold">Moderators</span>
           <input className="input mt-1.5" value={mods} onChange={(e) => setMods(e.target.value)} placeholder="@friend.bsky.social, @another.example" />
           <span className="mt-1 block text-[0.8125rem] text-ink-3">Bluesky handles, up to {MAX_MODERATORS}. You’re always one. Moderators can hide listings from the board.</span>
+        </label>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 size-4 accent-[var(--ink)]"
+            checked={modsOnly || !!existing?.official}
+            disabled={!!existing?.official}
+            onChange={(e) => setModsOnly(e.target.checked)}
+          />
+          <span className="text-[0.9375rem] text-ink-2">
+            Only moderators post here. Anyone can still vote and reply.{existing?.official ? ' Always, for an official board.' : ' Good for announcements and curated boards.'}
+          </span>
         </label>
         <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-4 accent-[var(--ink)]" checked={blockList} disabled={!!existing?.blockList} onChange={(e) => setBlockList(e.target.checked)} />

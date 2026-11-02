@@ -83,3 +83,40 @@ export const FilterSheetOnAPhone: Story = {
 export const StatusList: StoryObj<typeof SourceStatusList> = {
   render: () => <SourceStatusList statuses={statusesFor(space, { failed: 1, loading: 1 })} />,
 }
+
+/** A topic shows the community boards about it. */
+export const BoardsAboutTheTopic: Story = {
+  parameters: {
+    app: {
+      queries: [
+        [
+          ['boards'],
+          [
+            {
+              uri: 'at://did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/io.paperwing.board/3rocketsboard',
+              name: 'Rockets',
+              description: 'Launches, NASA and SpaceX',
+              owner: 'did:plc:u',
+              moderators: [],
+              moderatorHandles: {},
+              createdAt: '2026-10-01T00:00:00Z',
+            },
+            {
+              uri: 'at://did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/io.paperwing.board/3kitchenboard',
+              name: 'Home Cooking',
+              owner: 'did:plc:u',
+              moderators: [],
+              moderatorHandles: {},
+              createdAt: '2026-10-01T00:00:00Z',
+            },
+          ],
+        ],
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    const row = await canvas.findByLabelText('Boards about Space')
+    await expect(within(row).getByRole('link', { name: 'Rockets' })).toHaveAttribute('href', '/c/did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/3rocketsboard')
+    await expect(within(row).queryByRole('link', { name: 'Home Cooking' })).toBeNull()
+  },
+}

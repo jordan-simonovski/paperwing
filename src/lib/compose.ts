@@ -225,6 +225,8 @@ export interface ShareInput {
   take: string
   /** Also list it on PaperWing, on this board (a topic id) or the front page only. */
   paperwing: boolean
+  /** On a community board, also on PaperWing's front page (it stays on its board otherwise). */
+  front?: boolean
   board?: string
   /** The Lemmy community to post it in ("world@lemmy.world"). */
   community?: string
@@ -275,7 +277,7 @@ async function shareToBluesky(i: ShareInput, link: string): Promise<ShareResult>
   if (!i.paperwing) return { network: 'bluesky', ok: true, url }
   // The post is up either way; the listing is what makes it a PaperWing submission.
   try {
-    await createRecord(SUBMISSION_NSID, submissionRecord(ref, link, i.title.trim(), i.board) as unknown as Record<string, unknown>)
+    await createRecord(SUBMISSION_NSID, submissionRecord(ref, link, i.title.trim(), i.board, { front: i.front }) as unknown as Record<string, unknown>)
     return { network: 'bluesky', ok: true, url, note: 'Posted, and listed on PaperWing' }
   } catch (err) {
     return { network: 'bluesky', ok: true, url, note: `Posted, but not listed on PaperWing: ${(err as Error).message}` }

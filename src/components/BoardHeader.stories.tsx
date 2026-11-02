@@ -48,3 +48,30 @@ export const ReadTheRulesAndJoin: Story = {
     await expect(usePrefs.getState().boards).toEqual([{ uri, name: 'The Open Web' }])
   },
 }
+
+/** PaperWing's own board says so: the server marks it from who owns it. */
+export const OfficialBoard: Story = {
+  parameters: { app: { queries: [[['board', OWNER, RKEY], { ...board, name: 'Announcements', official: true }]] } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByLabelText('Official PaperWing board')).toBeVisible()
+    await expect(canvas.getByText('Official')).toBeVisible()
+    await expect(canvas.getByText(/Only its moderators post here/)).toBeVisible()
+  },
+}
+
+/** On a board where only moderators post, a moderator still gets the how-to. */
+export const ModeratorsOnlyToAModerator: Story = {
+  parameters: { app: { queries: [[['board', OWNER, RKEY], { ...board, modsOnly: true }]], atproto: { did: MOD, handle: 'molly.wiki' } } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/To post here/)).toBeVisible()
+  },
+}
+
+/** A board that only calls itself official gets no badge. */
+export const CallsItselfOfficial: Story = {
+  parameters: { app: { queries: [[['board', OWNER, RKEY], { ...board, name: 'Official PaperWing Announcements', official: false }]] } },
+  play: async ({ canvas }) => {
+    await canvas.findByRole('heading', { name: 'Official PaperWing Announcements' })
+    await expect(canvas.queryByLabelText('Official PaperWing board')).toBeNull()
+  },
+}

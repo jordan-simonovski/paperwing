@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect } from 'storybook/test'
+import { expect, userEvent } from 'storybook/test'
 import type { BoardView } from '../lib/boards'
 import { BoardEditorPage } from './BoardEditorPage'
 
@@ -59,5 +59,26 @@ export const EditWhileModerationIsDown: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: 'Edit your board' })).toBeVisible()
     await expect(canvas.getByRole('textbox', { name: 'Name' })).toHaveValue('The Open Web')
+  },
+}
+
+/** An official board only takes posts from its moderators: the choice is made for it. */
+export const OfficialBoard: Story = {
+  parameters: { app: { atproto: signedIn, route: editing, fetch: { '/api/feed?src=boardinfo': { ...board, official: true } } } },
+  play: async ({ canvas }) => {
+    const only = await canvas.findByRole('checkbox', { name: /Only moderators post here/ })
+    await expect(only).toBeChecked()
+    await expect(only).toBeDisabled()
+  },
+}
+
+/** Any board can choose it. */
+export const ModeratorsOnly: Story = {
+  parameters: { app: { atproto: signedIn, route: editing, fetch: { '/api/feed?src=boardinfo': board } } },
+  play: async ({ canvas }) => {
+    const only = await canvas.findByRole('checkbox', { name: /Only moderators post here/ })
+    await expect(only).not.toBeChecked()
+    await userEvent.click(only)
+    await expect(only).toBeChecked()
   },
 }

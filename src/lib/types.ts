@@ -47,6 +47,10 @@ export interface Story {
   /** Self text or abstract, as HTML. Sanitized before rendering. */
   text?: string
   tags?: string[]
+  /** The community board a PaperWing listing is on, shown on the front page and in For you ("in Home Cooking"). */
+  board?: { uri: string; name: string; official: boolean }
+  /** An official announcement held at the top of PaperWing's front page for a few days. */
+  pinned?: boolean
   thumbnail?: string
   /** True when comments can be rendered in-app. */
   hasThread: boolean

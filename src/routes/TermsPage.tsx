@@ -79,7 +79,12 @@ export function TermsPage() {
           </p>
           <p>
             <strong>Community boards</strong> are run by the people who start them. Their owners and moderators set their rules, can hide listings from their board and keep accounts out of it, and are
-            responsible for how they moderate. PaperWing’s own rules still apply on every board.
+            responsible for how they moderate, including whether only they can post there. Their moderation follows their board’s listings onto the front page. PaperWing’s own rules still apply on
+            every board.
+          </p>
+          <p>
+            Boards marked <strong>Official</strong> are run by PaperWing. Only their moderators post there, and that’s where PaperWing’s announcements come from. A board that only calls itself
+            official in its name isn’t.
           </p>
         </Part>
 

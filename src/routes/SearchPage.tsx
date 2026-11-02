@@ -14,6 +14,7 @@ import { SEARCH_SOURCES, searchIdeas } from '../lib/search'
 import { useActivity, usePrefs } from '../lib/store'
 import { relatedTopics, searchTopics } from '../lib/topics'
 import { clearRecentSearches, recentSearches, rememberSearch } from '../components/Palette'
+import { BoardMatches } from '../components/BoardMatches'
 
 const RANGES = [
   { id: 'day', label: '24h', days: 1 },
@@ -279,6 +280,7 @@ export function SearchPage() {
             </div>
           )}
 
+          {q.trim() && <BoardMatches query={q} />}
           <div className="-mx-4 md:-mx-5">
             {searching && !stories.length && Array.from({ length: 6 }, (_, i) => <RowSkeleton key={i} />)}
             {stories.map((s) => (

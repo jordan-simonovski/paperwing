@@ -70,3 +70,33 @@ export const UpvoteTeachesTheRanking: Story = {
 
 /** While a feed loads. */
 export const Skeleton: Story = { render: () => <RowSkeleton /> }
+
+const BOARD = 'at://did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/io.paperwing.board/3kitchenboard'
+const NEWS = 'at://did:plc:eprq6bm2okrgk6zsoka2wpux/io.paperwing.board/3announcement'
+
+/** A board's listing on the front page says which board it's from, with a way there. */
+export const FromABoard: Story = {
+  args: { story: ranked({ source: 'bluesky', sourceLabel: 'PaperWing', author: 'cook.example', board: { uri: BOARD, name: 'Home Cooking', official: false } }) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('link', { name: 'in Home Cooking' })).toHaveAttribute('href', '/c/did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/3kitchenboard')
+    await expect(canvas.queryByLabelText('Official PaperWing board')).toBeNull()
+  },
+}
+
+/** PaperWing's own announcement: marked official, and pinned to the top of the front page. */
+export const OfficialAnnouncement: Story = {
+  args: {
+    story: ranked({
+      source: 'bluesky',
+      sourceLabel: 'PaperWing',
+      author: 'paperwing.io',
+      board: { uri: NEWS, name: 'Announcements', official: true },
+      pinned: true,
+      title: 'Boards are here: find yours in Explore',
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByLabelText('Official PaperWing board')).toBeVisible()
+    await expect(canvas.getByText('Pinned')).toBeVisible()
+  },
+}

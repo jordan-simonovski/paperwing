@@ -5,7 +5,7 @@ import { Check, Heart, Loader2, Plus, Search, Users } from 'lucide-react'
 import { useDeferredValue, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { mixChannel, unfollowMix } from '../lib/mixes'
-import { boardPath, toggleJoin, useAllBoards } from '../lib/boards'
+import { BoardDirectory } from '../components/BoardDirectory'
 import { toast } from '../lib/ui'
 import { FeedFinder, FeedRow } from '../components/FollowBlogs'
 import { bskyFeedChannel } from '../lib/channels'
@@ -267,52 +267,8 @@ export function ExplorePage() {
         {tab === 'feeds' && <BlueskyFeedsTab />}
         {tab === 'publishers' && <Publishers />}
         {tab === 'mixes' && <Mixes />}
-        {tab === 'boards' && <Boards />}
+        {tab === 'boards' && <BoardDirectory />}
       </div>
-    </div>
-  )
-}
-
-/** Community boards: every board on PaperWing (found on the open network), to join, or start your own. */
-function Boards() {
-  const { data: all = [], isPending } = useAllBoards()
-  const joined = usePrefs((p) => p.boards)
-  return (
-    <div className="mt-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="min-w-0 flex-1 text-[0.9375rem] text-ink-2">Spaces run by their communities, with their own rules and moderators. Each lives in its owner’s Bluesky account.</p>
-        <Link className="btn btn-primary" to="/boards">
-          <Plus size={15} /> Start a board
-        </Link>
-      </div>
-      {isPending ? (
-        <p className="mt-6 text-ink-3">Finding boards…</p>
-      ) : all.length === 0 ? (
-        <p className="mt-6 text-ink-3">No community boards yet. Start the first one.</p>
-      ) : (
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {all.map((b) => {
-            const isIn = joined.some((j) => j.uri === b.uri)
-            return (
-              <div key={b.uri} className="flex flex-col rounded-[18px] bg-panel p-4">
-                <Link to={boardPath(b.uri)} className="text-[1.0625rem] font-bold hover:underline">
-                  {b.name}
-                </Link>
-                {b.description && <p className="mt-1 line-clamp-3 text-[0.875rem] text-ink-2">{b.description}</p>}
-                <p className="mt-2 text-[0.8125rem] text-ink-3">{b.ownerHandle ? `Started by @${b.ownerHandle}` : 'Community board'}</p>
-                <div className="mt-3 flex gap-2">
-                  <button className={`btn h-9 text-[0.8125rem] ${isIn ? 'following' : 'btn-primary'}`} onClick={() => toggleJoin(b)} aria-pressed={isIn}>
-                    {isIn ? <Check size={14} /> : <Plus size={14} />} {isIn ? 'Joined' : 'Join'}
-                  </button>
-                  <Link className="btn h-9 text-[0.8125rem]" to={boardPath(b.uri)}>
-                    Open
-                  </Link>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }

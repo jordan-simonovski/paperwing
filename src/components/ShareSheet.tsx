@@ -3,11 +3,13 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { shareTargets, useAccounts } from '../lib/accounts'
 import { canWrite, useAtproto } from '../lib/atproto'
+import { boardParts, useBoard } from '../lib/boards'
 import { blueskyText, mastodonText, SHARE_LIMITS, shareLink, shareStory, type ShareNetwork, type ShareResult } from '../lib/compose'
 import { domainOf } from '../lib/format'
 import { graphemes } from '../lib/facets'
 import { usePrefs } from '../lib/store'
 import { SUBMISSION_NSID } from '../lib/paperwing'
+import { canPost } from '../lib/social'
 import { topicsForStory, TOPICS } from '../lib/topics'
 import type { Story } from '../lib/types'
 import { toast } from '../lib/ui'
@@ -36,6 +38,14 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
   const [take, setTake] = useState('')
   const [board, setBoard] = useState(() => given ?? topicsForStory(story).find((t) => TOPICS.some((x) => x.id === t)) ?? '')
   const [paperwing, setPaperwing] = useState(bsky)
+  // A community board's listing stays on its board unless you also put it on the front page.
+  const [front, setFront] = useState(false)
+  const onCommunityBoard = board.startsWith('at://')
+  const parts = onCommunityBoard ? boardParts(board) : undefined
+  const { data: picked } = useBoard(parts?.did, parts?.rkey)
+  const me = useAtproto((a) => a.did)
+  // Only its moderators list on a moderators-only board (every official board is one): say so rather than fail.
+  const shut = !!picked && !canPost(picked, picked.owner, me ?? '', !!picked.official)
   const [to, setTo] = useState<Record<ShareNetwork, boolean>>({ bluesky: bsky, hn: false, mastodon: false, lemmy: false })
   // The community to post in: one of yours, the one whose topic fits best first.
   const [community, setCommunity] = useState(() => communities[0]?.name ?? '')
@@ -53,7 +63,16 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
   const submit = async () => {
     setBusy(true)
     try {
-      const out = await shareStory({ story, title, take, paperwing: to.bluesky && paperwing, board: board || undefined, community: community || undefined, to: chosen })
+      const out = await shareStory({
+        story,
+        title,
+        take,
+        paperwing: to.bluesky && paperwing && !shut,
+        board: board || undefined,
+        front: onCommunityBoard && front,
+        community: community || undefined,
+        to: chosen,
+      })
       setResults(out)
       const good = out.filter((r) => r.ok).length
       if (good === out.length) toast(good === 1 ? `Shared to ${NAMES[out[0].network]}${out[0].note?.includes('PaperWing') ? ' and PaperWing' : ''}` : `Shared to ${good} places`)
@@ -160,6 +179,13 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
                       ))}
                     </optgroup>
                   </select>
+                )}
+                {paperwing && canList && shut && <p className="mt-2 text-[0.8125rem] text-ink-3">Only its moderators post on {picked.name}.</p>}
+                {paperwing && canList && onCommunityBoard && !shut && (
+                  <label className="mt-2.5 flex items-center gap-3">
+                    <input type="checkbox" className="size-4 accent-[var(--ink)]" checked={front} onChange={(e) => setFront(e.target.checked)} />
+                    <span className="text-[0.875rem]">Also on PaperWing’s front page</span>
+                  </label>
                 )}
               </div>
             )}

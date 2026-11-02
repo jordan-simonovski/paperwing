@@ -66,3 +66,46 @@ export const FromHackerNews: Story = {
     await waitFor(() => expect(page().getByText('Already on Hacker News')).toBeVisible())
   },
 }
+
+/** Listed on a community board: it stays there unless you also put it on the front page. */
+export const OnACommunityBoard: Story = {
+  parameters: { app: { atproto: bsky, prefs: { boards: [{ uri: 'at://did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/io.paperwing.board/3kitchenboard', name: 'Home Cooking' }] } } },
+  play: async () => {
+    const board = await waitFor(() => page().getByRole('combobox', { name: 'Board' }))
+    // A topic board is part of the front page already: nothing to choose.
+    await userEvent.selectOptions(board, 'Science')
+    await expect(page().queryByRole('checkbox', { name: /front page/ })).toBeNull()
+    await userEvent.selectOptions(board, 'Home Cooking')
+    const front = page().getByRole('checkbox', { name: /Also on PaperWing’s front page/ })
+    await expect(front).not.toBeChecked()
+  },
+}
+
+/** A board only its moderators post on: someone else is told, and can't list there. */
+export const OnAModeratorsOnlyBoard: Story = {
+  parameters: {
+    app: {
+      atproto: bsky,
+      prefs: { boards: [{ uri: 'at://did:plc:eprq6bm2okrgk6zsoka2wpux/io.paperwing.board/3announcement', name: 'Announcements' }] },
+      queries: [
+        [
+          ['board', 'did:plc:eprq6bm2okrgk6zsoka2wpux', '3announcement'],
+          {
+            uri: 'at://did:plc:eprq6bm2okrgk6zsoka2wpux/io.paperwing.board/3announcement',
+            name: 'Announcements',
+            owner: 'did:plc:eprq6bm2okrgk6zsoka2wpux',
+            moderators: [],
+            moderatorHandles: {},
+            official: true,
+            createdAt: '2026-10-01T00:00:00Z',
+          },
+        ],
+      ],
+    },
+  },
+  play: async () => {
+    await userEvent.selectOptions(await waitFor(() => page().getByRole('combobox', { name: 'Board' })), 'Announcements')
+    await expect(await page().findByText('Only its moderators post on Announcements.')).toBeVisible()
+    await expect(page().queryByRole('checkbox', { name: /front page/ })).toBeNull()
+  },
+}

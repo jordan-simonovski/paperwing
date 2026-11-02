@@ -101,10 +101,19 @@ export interface Board {
   moderators: string[]
   /** A Bluesky moderation list (app.bsky.graph.list) of accounts kept out. */
   blockList?: string
+  /** Only its owner and moderators post (official boards always). Anyone can still vote and reply. */
+  modsOnly?: boolean
   createdAt: string
 }
 
 export const MAX_MODERATORS = 12
+
+/**
+ * Whether a listing by `author` counts on a board owned by `owner`. Anyone can write a listing naming
+ * any board, so where only moderators post (or the board is official), the rest are left out.
+ */
+export const canPost = (board: Pick<Board, 'moderators' | 'modsOnly'>, owner: string, author: string, official = false) =>
+  !(board.modsOnly || official) || author === owner || board.moderators.includes(author)
 const LIST_URI = /^at:\/\/did:[a-z0-9:._%-]+\/app\.bsky\.graph\.list\/[a-z0-9]{1,64}$/i
 
 export function cleanBoard(raw: unknown): Board | undefined {
@@ -115,7 +124,16 @@ export function cleanBoard(raw: unknown): Board | undefined {
   const moderators = Array.isArray(r.moderators) ? [...new Set(r.moderators.filter((d): d is string => typeof d === 'string' && DID.test(d)))].slice(0, MAX_MODERATORS) : []
   const topic = typeof r.topic === 'string' && TOPIC_BY_ID.has(r.topic) ? r.topic : undefined
   const blockList = typeof r.blockList === 'string' && LIST_URI.test(r.blockList) ? r.blockList : undefined
-  return { name, description: str(r.description, 600), rules: str(r.rules, 2000), topic, moderators, ...(blockList ? { blockList } : {}), createdAt: date(r.createdAt) }
+  return {
+    name,
+    description: str(r.description, 600),
+    rules: str(r.rules, 2000),
+    topic,
+    moderators,
+    ...(blockList ? { blockList } : {}),
+    ...(r.modsOnly === true ? { modsOnly: true } : {}),
+    createdAt: date(r.createdAt),
+  }
 }
 
 /** What's written for a board: the board, plus PaperWing's address, so every board can be found (Constellation, by .site). */
@@ -126,6 +144,7 @@ export const boardRecord = (b: Omit<Board, 'createdAt'> & { createdAt?: string }
   ...(b.topic ? { topic: b.topic } : {}),
   moderators: b.moderators,
   ...(b.blockList ? { blockList: b.blockList } : {}),
+  ...(b.modsOnly ? { modsOnly: true } : {}),
   site: 'https://paperwing.io',
   createdAt: b.createdAt ?? new Date().toISOString(),
 })

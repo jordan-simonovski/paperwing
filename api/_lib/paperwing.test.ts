@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanSubmission } from '../../src/lib/paperwing.js'
+import { cleanSubmission, submissionRecord } from '../../src/lib/paperwing.js'
 import type { PostView } from './bsky.js'
 import { blocked, rank } from './paperwing.js'
 
@@ -34,6 +34,23 @@ describe('PaperWing front page', () => {
     expect(cleanSubmission({ ...good, board: 'nope' })?.board).toBeUndefined()
     expect(cleanSubmission({ ...good, url: 'javascript:alert(1)' })).toBeUndefined()
     expect(cleanSubmission({ ...good, post: { uri: 'at://did:plc:x/app.bsky.feed.like/abc', cid: 'c' } })).toBeUndefined()
+  })
+})
+
+describe('a listing on a community board', () => {
+  const ref = { uri: 'at://did:plc:ukwly4246zmbi537o4u36pff/app.bsky.feed.post/3m2abcdefghij', cid: 'c' }
+  const BOARD = 'at://did:plc:ukwly4246zmbi537o4u36pff/io.paperwing.board/3m2abcdefghij'
+
+  it('stays on its board unless its poster also puts it on the front page', () => {
+    expect(cleanSubmission(submissionRecord(ref, 'https://a.example/x', 'T', BOARD))).toMatchObject({ community: BOARD })
+    expect(cleanSubmission(submissionRecord(ref, 'https://a.example/x', 'T', BOARD))?.front).toBeUndefined()
+    expect(cleanSubmission(submissionRecord(ref, 'https://a.example/x', 'T', BOARD, { front: true }))?.front).toBe(true)
+  })
+
+  it('only a board listing can ask for the front page: everything else is on it already', () => {
+    expect(submissionRecord(ref, 'https://a.example/x', 'T', 'space', { front: true })).not.toHaveProperty('front')
+    expect(cleanSubmission({ ...submissionRecord(ref, 'https://a.example/x', 'T', 'space'), front: true })?.front).toBeUndefined()
+    expect(cleanSubmission({ ...submissionRecord(ref, 'https://a.example/x', 'T', BOARD), front: 'yes' })?.front).toBeUndefined()
   })
 })
 
