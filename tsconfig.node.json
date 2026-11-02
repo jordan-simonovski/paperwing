@@ -12,6 +12,5 @@
     "noUnusedLocals": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "api"],
-  "exclude": ["api/**/*.test.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "api"]
 }

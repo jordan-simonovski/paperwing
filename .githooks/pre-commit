@@ -1,0 +1,26 @@
+#!/bin/sh
+# Fast checks on what you're committing: formatting and lint. The full gate is pre-push and CI.
+# Installed by `npm install` (the prepare script points core.hooksPath here).
+# ponytail: checks the working-tree copy of each staged file, so a partly staged file is judged whole.
+set -e
+
+staged() { git diff --cached --name-only --diff-filter=ACMR -z -- "$@"; }
+
+# Never commit secrets: .env.local and friends (.env.example is the one allowed).
+if git diff --cached --name-only --diff-filter=A | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$' >/dev/null; then
+  echo "pre-commit: refusing to commit an .env file. Keys and tokens stay out of the repo (CONTRIBUTING.md)." >&2
+  exit 1
+fi
+
+# Prettier, honouring .prettierignore.
+if [ -n "$(staged)" ]; then
+  staged | xargs -0 npx --no-install prettier --check --ignore-unknown --no-error-on-unmatched-pattern || {
+    echo "pre-commit: run \`npx prettier --write <files>\` on the files above." >&2
+    exit 1
+  }
+fi
+
+# ESLint on the TypeScript it covers (eslint.config.js decides what's ignored).
+if [ -n "$(staged '*.ts' '*.tsx')" ]; then
+  staged '*.ts' '*.tsx' | xargs -0 npx --no-install eslint --no-warn-ignored --max-warnings 0
+fi

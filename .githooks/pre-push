@@ -1,0 +1,33 @@
+#!/bin/sh
+# The gate before anything leaves this checkout (the `ship` skill runs this and more):
+# a changeset for user-facing changes, then lint, formatting, types, the build, the bundle
+# budget and the unit tests. Stories, end-to-end journeys and Lighthouse need a browser and run in CI.
+set -e
+
+zero=0000000000000000000000000000000000000000
+base_branch=origin/main
+user_facing='^(src/|api/|sw/|public/|index\.html$)'
+not_shipped='(\.test\.tsx?|\.stories\.tsx)$|^src/test/|^api/_test/'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # deleting a branch
+  case "$remote_ref" in refs/heads/changeset-release/*) continue ;; esac
+  base=$(git merge-base "$local_sha" "$base_branch" 2>/dev/null || echo "")
+  [ -z "$base" ] && continue
+  files=$(git diff --name-only "$base" "$local_sha")
+  # A release commit rewrites CHANGELOG.md and consumes the changesets: nothing to ask for.
+  echo "$files" | grep -qx 'CHANGELOG.md' && continue
+  if echo "$files" | grep -E "$user_facing" | grep -vE "$not_shipped" >/dev/null &&
+    ! echo "$files" | grep -E '^\.changeset/.+\.md$' | grep -v README.md >/dev/null; then
+    echo "pre-push: $remote_ref changes the app but adds no changeset." >&2
+    echo "  Add one for readers (npx changeset, see .changeset/README.md), or npx changeset add --empty." >&2
+    exit 1
+  fi
+done
+
+npm run --silent check:changesets
+npm run --silent lint
+npm run --silent format:check
+npm run --silent build
+npm run --silent check:budget
+npm test --silent
