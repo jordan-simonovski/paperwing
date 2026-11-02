@@ -183,8 +183,16 @@ export const useReactions = create<Reactions>()(
   ),
 )
 
+/**
+ * Likes being written, by subject: the record's address is only known once it's written, so a
+ * second press meanwhile would write a second like that taking back could never remove.
+ */
+const liking = new Map<string, Promise<boolean>>()
+
 /** Likes a Bluesky post, or votes on a Frontpage post or comment; again takes it back. */
 export async function react(kind: 'like' | 'vote', subject: StrongRef): Promise<boolean> {
+  const pending = liking.get(subject.uri)
+  if (pending) return pending
   const { made, set } = useReactions.getState()
   const existing = made[subject.uri]
   if (existing) {
@@ -198,9 +206,14 @@ export async function react(kind: 'like' | 'vote', subject: StrongRef): Promise<
     return false
   }
   const collection = kind === 'like' ? 'app.bsky.feed.like' : 'fyi.frontpage.feed.vote'
-  const ref = await createRecord(collection, { subject, createdAt: new Date().toISOString() })
-  set(subject.uri, ref.uri)
-  return true
+  const write = createRecord(collection, { subject, createdAt: new Date().toISOString() })
+    .then((ref) => {
+      set(subject.uri, ref.uri)
+      return true
+    })
+    .finally(() => liking.delete(subject.uri))
+  liking.set(subject.uri, write)
+  return write
 }
 
 /* ---------------------------------------------------------------- sharing */

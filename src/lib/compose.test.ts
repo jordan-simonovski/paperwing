@@ -1,10 +1,12 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
-import { linkFrom, send } from './compose'
+import { createRecord } from './atproto'
+import { linkFrom, react, send, useReactions } from './compose'
 import { keys } from './query'
 import type { Comment, Thread } from './types'
 
 vi.mock('./hnAccount', async (real) => ({ ...(await real<typeof import('./hnAccount')>()), hnComment: vi.fn(async () => {}) }))
+vi.mock('./atproto', async (importOriginal) => ({ ...(await importOriginal<typeof import('./atproto')>()), createRecord: vi.fn() }))
 
 describe('the link in what someone pastes', () => {
   it('takes a full link as it is', () => {
@@ -45,5 +47,20 @@ describe('a reply you post appears in the thread on screen', () => {
     const qc = thread()
     await send(qc, { kind: 'hn-reply', threadKey: 'hn-1', parent: '12', story: false }, 'Replying to 12')
     expect(ids(qc.getQueryData<Thread>(keys.thread('hn-1'))!.comments)).toEqual([['11', [['12', ['new']]]], '13'])
+  })
+})
+
+describe('liking and voting', () => {
+  it('writes one like however fast the arrow is pressed again', async () => {
+    // The first like is still on its way when the reader presses again.
+    let done!: (ref: { uri: string; cid: string }) => void
+    vi.mocked(createRecord).mockReturnValue(new Promise((resolve) => (done = resolve)))
+    const post = { uri: 'at://did:plc:author/app.bsky.feed.post/1', cid: 'bafy-post' }
+    const first = react('like', post)
+    const again = react('like', post)
+    done({ uri: 'at://did:plc:reader/app.bsky.feed.like/1', cid: 'bafy-like' })
+    await expect(Promise.all([first, again])).resolves.toEqual([true, true])
+    expect(createRecord).toHaveBeenCalledTimes(1)
+    expect(useReactions.getState().made[post.uri]).toBe('at://did:plc:reader/app.bsky.feed.like/1')
   })
 })
