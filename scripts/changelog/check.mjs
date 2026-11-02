@@ -16,10 +16,13 @@ const JARGON = [
  * @param {string} md the whole changeset file
  */
 export function problems(md) {
-  const bump = /^"[^"]+":\s*(major|minor|patch)\s*$/m.exec(md)?.[1]
+  // Changesets reads the header as YAML, so the package name may be quoted either way or not at all.
+  const header = /^---\s*\n([\s\S]*?)^---/m.exec(md)?.[1] ?? ''
+  const bump = /^\s*(?:"[^"]+"|'[^']+'|[\w@/.-]+)\s*:\s*(major|minor|patch)\s*$/m.exec(header)?.[1]
   const body = md.replace(/^---[\s\S]*?---\s*/, '').trim()
   if (!body) return []
   const out = []
+  if (!bump) out.push('give it a version bump: "paperwing": major, minor or patch')
   const { kind, text } = splitKind(body)
   if (!kind) out.push(`start with its kind: ${KINDS.map((k) => k.kind).join(', ')} (e.g. "new: **Save from any app.** …")`)
   else if (bump && !KIND.get(kind).bumps.includes(bump)) out.push(`"${kind}" is a ${KIND.get(kind).bumps.join(' or ')} change, not ${bump}`)

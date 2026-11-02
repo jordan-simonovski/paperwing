@@ -81,6 +81,17 @@ describe('checking a changeset before it lands', () => {
     expect(problems(changeset('minor', 'fix: **A bug.** Fixed.'))[0]).toMatch(/"fix" is a patch/)
   })
 
+  it('reads the version bump however the package name is quoted', () => {
+    // Changesets reads the header as YAML, so a hand-written one without quotes still bumps the version.
+    expect(problems('---\npaperwing: patch\n---\n\nbreaking: **Links moved.** Old ones redirect.\n')[0]).toMatch(/"breaking" is a major/)
+    expect(problems("---\n'paperwing': patch\n---\n\nbreaking: **Links moved.** Old ones redirect.\n")[0]).toMatch(/"breaking" is a major/)
+    expect(problems('---\npaperwing: patch\n---\n\nfix: **A bug.** Fixed.\n')).toEqual([])
+  })
+
+  it('asks for a version bump when it can’t find one', () => {
+    expect(problems('---\n---\n\nfix: **A bug.** Fixed.\n')[0]).toMatch(/version bump/)
+  })
+
   it('keeps internal detail out of what readers see', () => {
     const p = problems(changeset('patch', 'fix: **Thread counts.** `api/_lib/threadCounts.ts` handled md- keys from commit abc1234f.'))
     expect(p.join(' ')).toMatch(/a source file/)
