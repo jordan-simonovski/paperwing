@@ -1,5 +1,30 @@
 # What's new
 
+## 0.5.0
+
+_Released 2 November 2026_
+
+### New
+
+- **Post any link to PaperWing.** "Post a link" on PaperWing and its boards takes any address, fills in the title from the page, then lets you list it on PaperWing (and share it anywhere else you're signed in). Paste a link into the command bar to post it from anywhere, no saving first.
+
+### Improved
+
+- **The command bar finds settings and pages.** Type "text size", "mute" or "sync" to go straight to the setting, or jump to Today, Activity, mixes and What's new. Its suggestions, and Search's, now come from the topics you follow.
+- **A way forward when a channel is empty or won’t load.** "Try again" when sources can't be reached, a button to clear a filter that left nothing, related topics to try when a channel is quiet, and the same "Try again" on Explore.
+- **Easier to get around on a phone.** A menu button now sits beside the logo, where your topics, sources and mixes live, and small buttons such as votes, save and share are easier to hit with a thumb.
+- **Dialogs fit wide screens.** Sharing, adding to a mix, writing a reply and margin notes open as a dialog in the middle of the window on a computer, rather than a panel stretched across the whole bottom of the screen.
+- **Saved, Activity and Settings stay in view on a computer.** The sidebar scrolls your topics and sources on their own, so however many you follow, the places you keep things never drop out of sight.
+- **Things that explain themselves.** Choosing Hot, Latest, Top or Spicy says what it means, unfollowing a topic can be undone, Share offers posting even before you sign in (and says where), the reader's "open on" button shows the site's own logo, and starting a board or mix is clearer.
+- **A quicker way in.** "Start fresh" is the obvious first step, every step after picking topics has "Skip the tour", and the bar at the bottom says your topics are in once you've picked them.
+
+### Fixes
+
+- **Margin notes work on desktop.** Select a passage in the reader and "Note this passage" now appears right beside it, instead of at the bottom of the window where it was easy to miss. If you're not signed in with Bluesky, it tells you how to sign in rather than doing nothing, and every article now mentions that you can leave notes.
+- **The same sources everywhere.** The command bar now lists the sources you see in the sidebar, with their logos, instead of tech sources you don't follow, the machine learning papers source and topic are called ML papers so they aren't mistaken for the Papers topic, and the Hacker News and Lobsters front pages are Tech front pages, apart from PaperWing's own.
+- **Joining sync mid-sync starts clean.** Entering a new sync code while this device was still syncing with its old one could carry the old code's place across, so some changes on the new code were missed until the next full sync. The new code now always gets its own first sync.
+- **Setup shows your real sign-ins.** The accounts step of setup no longer shows Hacker News or Mastodon as signed in after that sign-in has stopped working, and joining sync gives the same clear message wherever you do it.
+
 ## 0.4.0
 
 _Released 2 November 2026_
