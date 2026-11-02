@@ -38,9 +38,15 @@ _Avoid_: item, bookmark
 What one list page shows: a label, the feeds it reads and how to rank them. Topics, mixes, communities, profiles, boards and For you are all channels.
 _Avoid_: feed (for the page)
 
+**Channel id**:
+How a channel is named in URLs, prefs and sync (`for-you`, `observability`, `c:science@lemmy.world`). Read and written only by `channelId.ts`, as a channel address; a malformed id is no channel.
+
 **Feed ref**:
 One request a channel makes to one source ("HN top", "Quanta's RSS", "c/technology, today's top").
 _Avoid_: feed, source (for the request)
+
+**Feed kind**:
+One kind of feed ref (HN, RSS, a Lemmy community…) and everything about it: its cache id, name, brand, logo, fetch and Latest. One entry each in `FEED_KINDS`.
 
 **Channel feed**:
 The module that turns a reader and a channel into ranked stories: plan the channel, fetch its feed refs, rank what came back.
