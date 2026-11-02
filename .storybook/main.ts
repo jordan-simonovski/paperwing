@@ -1,5 +1,6 @@
 import type { StorybookConfig } from '@storybook/react-vite'
 import type { PluginOption } from 'vite'
+import { noServer } from './noServer'
 
 // Stories live next to what they show (Foo.stories.tsx beside Foo.tsx). The app's Vite config is
 // reused, minus the plugins that only make sense for the app itself: the local /api functions (a
@@ -15,7 +16,7 @@ const config: StorybookConfig = {
   viteFinal: async (vite) => {
     const keep = (plugins: PluginOption[] | undefined): PluginOption[] =>
       (plugins ?? []).flatMap((p) => (Array.isArray(p) ? [keep(p)] : p && typeof p === 'object' && 'name' in p && APP_ONLY.has(p.name) ? [] : [p]))
-    return { ...vite, plugins: keep(vite.plugins) }
+    return { ...vite, plugins: [noServer(), ...keep(vite.plugins)] }
   },
 }
 
