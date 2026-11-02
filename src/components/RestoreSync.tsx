@@ -1,7 +1,7 @@
 import { KeyRound, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { codeFromPasskey, passkeySupport, type PasskeySupport } from '../lib/passkey'
-import { isCode, normalizeCode, syncAvailable, syncNow, useSync } from '../lib/sync'
+import { useState } from 'react'
+import { codeFromPasskey, useSyncReadiness } from '../lib/passkey'
+import { joinSync } from '../lib/sync'
 
 /**
  * On the welcome page: bring an existing PaperWing across instead of starting fresh, with your
@@ -9,27 +9,19 @@ import { isCode, normalizeCode, syncAvailable, syncNow, useSync } from '../lib/s
  * Calls `onRestored` once the first sync has landed.
  */
 export function RestoreSync({ onRestored }: { onRestored: () => void }) {
-  const [available, setAvailable] = useState<boolean>()
-  const [support, setSupport] = useState<PasskeySupport>()
+  const { available, passkeys: support } = useSyncReadiness()
   const [busy, setBusy] = useState<'passkey' | 'code'>()
   const [code, setCode] = useState('')
   const [showCode, setShowCode] = useState(false)
   const [error, setError] = useState<string>()
 
-  useEffect(() => void syncAvailable().then(setAvailable), [])
-  useEffect(() => void passkeySupport().then(setSupport), [])
   if (available === false) return null
 
   const restore = async (how: 'passkey' | 'code') => {
     setBusy(how)
     setError(undefined)
     try {
-      const next = how === 'passkey' ? await codeFromPasskey() : normalizeCode(code)
-      if (!isCode(next)) throw new Error('That isn’t a complete sync code')
-      useSync.getState().setCode(next, { passkey: how === 'passkey' })
-      await syncNow()
-      const failed = useSync.getState().error
-      if (failed) throw new Error(failed)
+      await joinSync(how === 'passkey' ? await codeFromPasskey() : code, { passkey: how === 'passkey' })
       onRestored()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That didn’t work')

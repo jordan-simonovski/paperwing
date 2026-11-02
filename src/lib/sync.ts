@@ -183,6 +183,26 @@ export function syncNow(): Promise<void> {
   return running
 }
 
+/**
+ * Joins this device to a sync code (typed, pasted, from a pairing link or a passkey) and runs the
+ * first sync. Rejects, with a message for people, when the code isn't one or the first sync fails.
+ * The code stays set after a failed sync: the failure is nearly always the network, and the next
+ * sync (on the next edit, on return to the app) picks up where this one stopped.
+ */
+export async function joinSync(raw: string, opts: { passkey?: boolean } = {}): Promise<void> {
+  const code = normalizeCode(raw)
+  if (!isCode(code)) throw new Error('A sync code is 26 letters and digits')
+  const { code: current, setCode } = useSync.getState()
+  if (code !== current) setCode(code, opts)
+  else if (opts.passkey) useSync.setState({ passkey: true })
+  await syncNow()
+  const failed = useSync.getState().error
+  if (failed) throw new Error(`Couldn’t sync: ${failed}`)
+}
+
+/** Turns sync on with a new code: this device's library goes up, ready for others to join. */
+export const startSyncWithNewCode = () => joinSync(newSyncCode())
+
 /** Syncs on start, a few seconds after any edit, on return to the app, and every five minutes. */
 export function startSync() {
   void pruneSummaries()

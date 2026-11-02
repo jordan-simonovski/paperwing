@@ -55,11 +55,11 @@ import { SaveFromApps } from '../components/SaveFromApps'
 import { StatusPagesSettings } from '../components/StatusPagesSettings'
 import { featureLabel } from '../lib/tasteLabel'
 import { protectStorage, useLibrary } from '../lib/library'
-import { codeFromPasskey, createSyncPasskey, passkeySupport, type PasskeySupport } from '../lib/passkey'
+import { codeFromPasskey, createSyncPasskey, useSyncReadiness } from '../lib/passkey'
 import { pushAvailable, pushInfo, usePush } from '../lib/push'
 import { STATUS_PAGES } from '../lib/statusPageList'
 import { SummarySettings } from '../components/SummarySettings'
-import { formatCode, isCode, newSyncCode, normalizeCode, syncAvailable, syncNow, useSync } from '../lib/sync'
+import { formatCode, joinSync, startSyncWithNewCode, syncNow, useSync } from '../lib/sync'
 import { ago, fullDate, plural } from '../lib/format'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { isIOS, usePWA } from '../lib/pwa'
@@ -207,8 +207,7 @@ function StorageStatus() {
 
 function SyncSettings() {
   const { code, lastSync, error, syncing, passkey, setCode } = useSync()
-  const [available, setAvailable] = useState<boolean>()
-  const [support, setSupport] = useState<PasskeySupport>()
+  const { available, passkeys: support } = useSyncReadiness()
   const [busy, setBusy] = useState(false)
   const [joining, setJoining] = useState('')
   const [qr, setQr] = useState<string>()
@@ -217,8 +216,6 @@ function SyncSettings() {
   const link = code ? `${location.origin}/pair#${code}` : ''
   const showPairing = !passkey || manual
 
-  useEffect(() => void syncAvailable().then(setAvailable), [])
-  useEffect(() => void passkeySupport().then(setSupport), [])
   useEffect(() => {
     if (!link || !showPairing) return setQr(undefined)
     // The QR encoder only loads when someone opens this section with sync on.
@@ -228,12 +225,8 @@ function SyncSettings() {
   const withPasskey = async (get: () => Promise<string>, done: string) => {
     setBusy(true)
     try {
-      const next = await get()
-      if (next !== code) setCode(next, { passkey: true })
-      else useSync.setState({ passkey: true })
-      await syncNow()
-      const failed = useSync.getState().error
-      toast(failed ? `Couldn't sync: ${failed}` : done, failed ? { tone: 'error' } : undefined)
+      await joinSync(await get(), { passkey: true })
+      toast(done)
     } catch (err) {
       toast(err instanceof Error ? err.message : 'The passkey didn’t work', { tone: 'error' })
     } finally {
@@ -277,10 +270,12 @@ function SyncSettings() {
           <div>
             <button
               className={`btn${support === 'no' ? ' btn-primary' : ''}`}
-              onClick={() => {
-                setCode(newSyncCode())
-                void syncNow().then(() => toast('Sync is on. Pair another device with the code or QR below'))
-              }}
+              onClick={() =>
+                void startSyncWithNewCode().then(
+                  () => toast('Sync is on. Pair another device with the code or QR below'),
+                  (err: Error) => toast(err.message, { tone: 'error' }),
+                )
+              }
             >
               Turn on sync with a code
             </button>
@@ -290,11 +285,13 @@ function SyncSettings() {
             className="flex flex-wrap items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault()
-              const c = normalizeCode(joining)
-              if (!isCode(c)) return toast('A sync code is 26 letters and digits', { tone: 'error' })
-              setCode(c)
-              setJoining('')
-              void syncNow().then(() => toast(useSync.getState().error ? `Couldn't sync: ${useSync.getState().error}` : 'This device is now in sync'))
+              void joinSync(joining).then(
+                () => {
+                  setJoining('')
+                  toast('This device is now in sync')
+                },
+                (err: Error) => toast(err.message, { tone: 'error' }),
+              )
             }}
           >
             <input

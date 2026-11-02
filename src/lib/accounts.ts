@@ -57,6 +57,22 @@ export function storyVote(a: Accounts, s: Story): VoteTarget | undefined {
   return undefined
 }
 
+export type Network = keyof Accounts
+
+/** Who the reader is signed in as on a network, as that network shows it; undefined when they aren't (or the sign-in has lapsed). */
+export function signedInAs(a: Accounts, network: Network): string | undefined {
+  switch (network) {
+    case 'bluesky':
+      return a.bluesky && (a.bluesky.handle ? `@${a.bluesky.handle}` : a.bluesky.did)
+    case 'hn':
+      return a.hn?.user
+    case 'mastodon':
+      return a.mastodon && `@${a.mastodon.acct}`
+    case 'lemmy':
+      return a.lemmy?.user
+  }
+}
+
 /** Can the reader post anywhere at all (for the share button)? */
 const canPostSomewhere = (a: Accounts) => !!(a.bluesky || a.hn || a.mastodon?.canPost || a.lemmy)
 

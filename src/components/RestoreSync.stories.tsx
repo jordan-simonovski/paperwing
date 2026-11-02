@@ -20,7 +20,7 @@ export const IncompleteCode: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: /sync code/i }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Sync code' }), 'abcde-fghij')
     await userEvent.keyboard('{Enter}')
-    await expect(await canvas.findByText('That isn’t a complete sync code')).toBeVisible()
+    await expect(await canvas.findByText('A sync code is 26 letters and digits')).toBeVisible()
     await expect(args.onRestored).not.toHaveBeenCalled()
   },
 }

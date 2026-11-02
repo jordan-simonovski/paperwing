@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { usePrefs } from '../lib/store'
-import { formatCode, isCode, normalizeCode, syncNow, useSync } from '../lib/sync'
+import { formatCode, isCode, joinSync, normalizeCode, useSync } from '../lib/sync'
 import { toast } from '../lib/ui'
 
 /**
@@ -28,10 +28,12 @@ export function PairPage() {
 
   if (!valid || current === code) return null
   const pair = () => {
-    useSync.getState().setCode(code)
     // Topics come over with the rest: no need to pick them again here.
     usePrefs.getState().set({ welcomed: true })
-    void syncNow().then(() => toast(useSync.getState().error ? `Paired, but the first sync failed: ${useSync.getState().error}` : 'This device is now in sync'))
+    void joinSync(code).then(
+      () => toast('This device is now in sync'),
+      (err: Error) => toast(`Paired, but the first sync failed. ${err.message}`, { tone: 'error' }),
+    )
     navigate('/saved', { replace: true })
   }
   return (

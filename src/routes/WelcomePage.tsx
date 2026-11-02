@@ -10,14 +10,11 @@ import { Pip } from '../components/Pip'
 import { RestoreSync } from '../components/RestoreSync'
 import { PaperwingIcon, SourceIcon } from '../components/SourceIcon'
 import { SummarySettings } from '../components/SummarySettings'
-import { useAtproto } from '../lib/atproto'
-import { useHn } from '../lib/hnAccount'
-import { useLemmyAccount } from '../lib/lemmyAccount'
-import { useMastodon } from '../lib/mastodon'
 import { STEPS, useOnboarding, type Step } from '../lib/onboarding'
-import { createSyncPasskey, passkeySupport, type PasskeySupport } from '../lib/passkey'
+import { createSyncPasskey, useSyncReadiness } from '../lib/passkey'
 import { usePrefs } from '../lib/store'
-import { syncAvailable, syncNow, useSync } from '../lib/sync'
+import { joinSync, useSync } from '../lib/sync'
+import { signedInAs, useAccounts } from '../lib/accounts'
 import { CLUSTERS, TOPICS, type ClusterId } from '../lib/topics'
 import { toast } from '../lib/ui'
 
@@ -283,26 +280,24 @@ function AccountCard({ id, name, signedIn, children }: { id: 'bluesky' | 'hn' | 
 }
 
 function Accounts() {
-  const bsky = useAtproto((a) => a.handle)
-  const hn = useHn((h) => h.user)
-  const md = useMastodon((m) => m.acct)
-  const lemmy = useLemmyAccount((l) => (l.jwt ? l.user : undefined))
+  // Signed in means a sign-in that still works, as everywhere else in the app: a remembered name alone isn't one.
+  const accounts = useAccounts()
   return (
     <>
       <Heading kicker="Step 4: your accounts (optional)" title="Vote and reply where the conversation is">
         <p>Reading never needs an account. Sign in to upvote, comment and post on each network from here. Sign-ins stay on this device and only go to that network.</p>
       </Heading>
       <div className="mt-6 max-w-2xl space-y-2.5">
-        <AccountCard id="bluesky" name="Bluesky" signedIn={bsky ? `@${bsky}` : undefined}>
+        <AccountCard id="bluesky" name="Bluesky" signedIn={signedInAs(accounts, 'bluesky')}>
           <BlueskyAccount />
         </AccountCard>
-        <AccountCard id="hn" name="Hacker News" signedIn={hn}>
+        <AccountCard id="hn" name="Hacker News" signedIn={signedInAs(accounts, 'hn')}>
           <HnAccount />
         </AccountCard>
-        <AccountCard id="mastodon" name="Mastodon" signedIn={md ? `@${md}` : undefined}>
+        <AccountCard id="mastodon" name="Mastodon" signedIn={signedInAs(accounts, 'mastodon')}>
           <MastodonSettings />
         </AccountCard>
-        <AccountCard id="lemmy" name="Lemmy" signedIn={lemmy}>
+        <AccountCard id="lemmy" name="Lemmy" signedIn={signedInAs(accounts, 'lemmy')}>
           <LemmyAccount />
         </AccountCard>
       </div>
@@ -422,19 +417,13 @@ function Ai() {
 
 function Passkey({ onDone }: { onDone: () => void }) {
   const code = useSync((s) => s.code)
-  const [available, setAvailable] = useState<boolean>()
-  const [support, setSupport] = useState<PasskeySupport>()
+  const { available, passkeys: support } = useSyncReadiness()
   const [busy, setBusy] = useState(false)
-  useEffect(() => void syncAvailable().then(setAvailable), [])
-  useEffect(() => void passkeySupport().then(setSupport), [])
 
   const create = async () => {
     setBusy(true)
     try {
-      useSync.getState().setCode(await createSyncPasskey(), { passkey: true })
-      await syncNow()
-      const failed = useSync.getState().error
-      if (failed) throw new Error(failed)
+      await joinSync(await createSyncPasskey(), { passkey: true })
       toast('Sync is on, and your passkey holds the key')
       onDone()
     } catch (err) {

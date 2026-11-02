@@ -1,7 +1,7 @@
 import { ArrowRight, Loader2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { HOME } from '../lib/oauthClient'
-import { newSyncCode, syncAvailable, syncNow, useSync } from '../lib/sync'
+import { joinSync, newSyncCode, syncAvailable, useSync } from '../lib/sync'
 import { toast } from '../lib/ui'
 
 // PaperWing moved from its vercel.app address to paperwing.io. Everything kept in this browser
@@ -19,14 +19,10 @@ const homeLive = () =>
 
 export async function moveHome() {
   if (!(await syncAvailable())) throw new Error('Sync isn’t available right now, so nothing could be carried across. Try again shortly.')
-  let code = useSync.getState().code
-  if (!code) {
-    code = newSyncCode()
-    useSync.getState().setCode(code)
-  }
-  await syncNow()
-  const error = useSync.getState().error
-  if (error) throw new Error(`Couldn’t sync before moving: ${error}`)
+  const code = useSync.getState().code ?? newSyncCode()
+  await joinSync(code).catch((err: Error) => {
+    throw new Error(`${err.message}. Nothing was moved.`)
+  })
   // The code rides in the #fragment, which never reaches a server.
   location.href = `https://${HOME}/pair#${code}`
 }

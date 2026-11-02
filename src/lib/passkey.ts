@@ -1,4 +1,5 @@
-import { codeFromBytes } from './sync'
+import { useEffect, useState } from 'react'
+import { codeFromBytes, syncAvailable } from './sync'
 
 // Sync with a passkey instead of a code. Passkeys live in the system's password manager (iCloud
 // Keychain on Apple devices, Google Password Manager, 1Password), which already carries them to
@@ -86,4 +87,16 @@ export async function createSyncPasskey(): Promise<string> {
   } catch (err) {
     throw explain(err)
   }
+}
+
+/**
+ * What this device can do for sync: whether the deployment has it, and whether passkeys work here.
+ * Both are undefined until known.
+ */
+export function useSyncReadiness(): { available?: boolean; passkeys?: PasskeySupport } {
+  const [available, setAvailable] = useState<boolean>()
+  const [passkeys, setPasskeys] = useState<PasskeySupport>()
+  useEffect(() => void syncAvailable().then(setAvailable), [])
+  useEffect(() => void passkeySupport().then(setPasskeys), [])
+  return { available, passkeys }
 }

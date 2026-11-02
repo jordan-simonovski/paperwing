@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { commentActions, shareTargets, storyActions, storyVote, type Accounts } from './accounts'
+import { commentActions, shareTargets, signedInAs, storyActions, storyVote, type Accounts } from './accounts'
 import { comment, story } from '../test/fixtures'
 
 // The accounts module, through its interface: given where the reader is signed in (plain facts),
@@ -88,5 +88,16 @@ describe('sharing to networks', () => {
   })
   it('posts to Lemmy only once you have joined a community to post in', () => {
     expect(shareTargets(lemmy, hnStory, 0).find((x) => x.network === 'lemmy')).toMatchObject({ ok: false, why: 'Join a community first' })
+  })
+})
+
+describe('who you are signed in as', () => {
+  it('names you as each network does, and nobody when the sign-in has lapsed', () => {
+    const a: Accounts = { bluesky: { did: 'did:plc:me', handle: 'me.example' }, hn: { user: 'me' }, mastodon: { instance: 'hachyderm.io', acct: 'me', canPost: true, canFavourite: true } }
+    expect(signedInAs(a, 'bluesky')).toBe('@me.example')
+    expect(signedInAs(a, 'hn')).toBe('me')
+    expect(signedInAs(a, 'mastodon')).toBe('@me')
+    expect(signedInAs(a, 'lemmy')).toBeUndefined()
+    expect(signedInAs({ bluesky: { did: 'did:plc:me' } }, 'bluesky')).toBe('did:plc:me')
   })
 })
