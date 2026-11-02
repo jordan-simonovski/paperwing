@@ -1,9 +1,9 @@
 import { cleanSubmission, communityUrl, PAPERWING_SITE, type PaperwingSort } from '../../src/lib/paperwing.js'
 import { BOARD_HIDE_NSID, BOARD_NSID, cleanBoard, cleanBoardHide, type Board } from '../../src/lib/social.js'
 import type { Story } from '../../src/lib/types.js'
-import { linking, linkingAll, posts } from './atlinks.js'
+import { linking, posts } from './atlinks.js'
 import { type PostView, toStory } from './bsky.js'
-import { getRecord, handles, pool } from './frontpage.js'
+import { getRecord, handles, listAllRecords, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
 import { cachedInKv } from './kv.js'
 import { blocked, rank, submissions, unlisted } from './paperwing.js'
@@ -42,7 +42,12 @@ async function listMembers(list: string): Promise<Set<string>> {
     const res = await fetchJson<{ items: { subject: { did: string } }[]; cursor?: string }>(
       `${APPVIEW}/app.bsky.graph.getList?list=${encodeURIComponent(list)}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
       { timeoutMs: 6000 },
-    )
+    ).catch((err: unknown) => {
+      // A list its owner deleted keeps nobody out. Anything else, or a page after the first going
+      // missing, fails the board: half a block list would let the rest in.
+      if (page === 0 && isGone(err)) return { items: [], cursor: undefined }
+      throw err
+    })
     for (const i of res.items) out.add(i.subject.did)
     cursor = res.cursor
     if (!cursor) break
@@ -51,21 +56,18 @@ async function listMembers(list: string): Promise<Set<string>> {
 }
 
 /**
- * Listings a board's moderators have hidden: hides by anyone else don't count. Throws when the
- * hides, or any one of them, can't be read: an empty set would put what was hidden back.
+ * Listings a board's moderators have hidden, read from each moderator's own repo: hides by anyone
+ * else don't count, and however many others write, they can't crowd a moderator's out or get in
+ * the way. Throws when a moderator's hides can't be read: an empty set would put what was hidden back.
  */
 async function hiddenOn(board: BoardView): Promise<Set<string>> {
-  // Every page of hides: anyone can add their own, and a moderator's mustn't fall off the end.
-  const uris = await linkingAll(board.uri, BOARD_HIDE_NSID, '.board')
-  const mods = new Set([board.owner, ...board.moderators])
-  const records = await pool(
-    uris.filter((u) => mods.has(u.split('/')[2])),
-    10,
-    // A hide that's gone was taken back (the index catches up later): it hides nothing.
-    (u) => getRecord<unknown>(u).catch((err: unknown) => (isGone(err) ? null : Promise.reject(err))),
+  const mine = await Promise.all([board.owner, ...board.moderators].map((did) => listAllRecords<unknown>(did, BOARD_HIDE_NSID)))
+  return new Set(
+    mine.flat().flatMap((r) => {
+      const hide = cleanBoardHide(r.value)
+      return hide?.board === board.uri ? [hide.subject] : []
+    }),
   )
-  if (records.some((r) => r === undefined)) throw new Error("Couldn't read this board's moderation")
-  return new Set(records.flatMap((r) => (r && cleanBoardHide(r.value)?.board === board.uri ? [cleanBoardHide(r.value)!.subject] : [])))
 }
 
 /** The network answered that the record or list isn't there (atproto says 400 for a missing record). */
@@ -82,8 +84,7 @@ export async function boardFront(did: string, rkey: string, sort: PaperwingSort)
     const [uris, hidden, kept] = await Promise.all([
       submissions(communityUrl(did, rkey), '.boardUrl', 200),
       hiddenOn(board),
-      // A block list its owner deleted keeps nobody out; one that can't be read fails the board.
-      board.blockList ? listMembers(board.blockList).catch((err: unknown) => (isGone(err) ? new Set<string>() : Promise.reject(err))) : Promise.resolve(new Set<string>()),
+      board.blockList ? listMembers(board.blockList) : Promise.resolve(new Set<string>()),
     ])
     const records = await pool(uris, 10, (u) => getRecord<unknown>(u).catch(() => undefined))
     const off = blocked()

@@ -243,6 +243,26 @@ export async function listRecords<T>(did: string, collection: string, limit = 25
   return res.records
 }
 
+/**
+ * Every record in one collection of someone's repo, page by page, for when a missing one matters (a
+ * moderator's hides). Unlike listRecords it fails when the repo can't be read, and past `maxPages`.
+ */
+export async function listAllRecords<T>(did: string, collection: string, { maxPages = 20 } = {}): Promise<RecordView<T>[]> {
+  const pds = await pdsOf(did)
+  const out: RecordView<T>[] = []
+  let cursor: string | undefined
+  for (let page = 0; page < maxPages; page++) {
+    const res = await fetchJson<{ records: RecordView<T>[]; cursor?: string }>(
+      `${pds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${collection}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      { timeoutMs: 8000 },
+    )
+    out.push(...res.records)
+    cursor = res.cursor
+    if (!cursor || !res.records.length) return out
+  }
+  throw new Error(`More than ${maxPages * 100} ${collection} records in ${did}`)
+}
+
 const plain = (c: CommentRecord) => (c.blocks ? c.blocks.map((b) => b.content?.text ?? '').join('\n\n') : (c.content ?? '')).trim()
 
 /**

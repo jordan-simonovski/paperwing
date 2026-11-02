@@ -206,11 +206,18 @@ describe('plain records from before sync was encrypted', () => {
 })
 
 describe('plain settings records', () => {
-  it('can’t switch on anything public: only sealed settings can publish your blogroll', async () => {
-    usePrefs.setState({ ...usePrefs.getInitialState(), syncedPrefsAt: 0 })
+  it('are ignored: only sealed settings can change yours (they decide what your blogroll publishes)', async () => {
+    usePrefs.setState({ ...usePrefs.getInitialState(), followed: ['web'], blogrollPublic: true, syncedPrefsAt: 0 })
     const before = Date.UTC(2026, 9, 29, 8)
-    vi.stubGlobal('fetch', answer(200, { records: [{ key: 'prefs', updatedAt: before, data: { followed: ['physics'], blogrollPublic: true } }], cursor: 1, more: false }))
+    vi.stubGlobal(
+      'fetch',
+      answer(200, {
+        records: [{ key: 'prefs', updatedAt: before, data: { followed: ['physics'], customFeeds: [{ url: 'https://planted.example/feed' }], blogrollPublic: true } }],
+        cursor: 1,
+        more: false,
+      }),
+    )
     await joinSync(newSyncCode())
-    expect(usePrefs.getState()).toMatchObject({ followed: ['physics'], blogrollPublic: false })
+    expect(usePrefs.getState()).toMatchObject({ followed: ['web'], customFeeds: [] })
   })
 })

@@ -4,7 +4,7 @@ import type { Story } from '../src/lib/types.js'
 import { fetchJson } from './_lib/http.js'
 import { linkStories, readMix } from './_lib/mixfeed.js'
 import { paperwingFront } from './_lib/paperwing.js'
-import { boardFront } from './_lib/boards.js'
+import { boardFront, readBoard } from './_lib/boards.js'
 import { actorOf, person } from './_lib/people.js'
 import { escapeHtml as esc, siteOf } from './_lib/text.js'
 
@@ -26,6 +26,17 @@ const host = (u: string) => siteOf(u)
 
 /** The address names no feed: worth caching. Anything else that goes wrong is a hiccup, which isn't. */
 class NotFound extends Error {}
+
+/**
+ * The feed's own subject (a person, a mix, a board) is gone if the network says so (400 or 404) or
+ * the record isn't one. Only that lookup counts: a 400 from something read along the way (a
+ * moderator's hides) is a hiccup in a feed that exists.
+ */
+const orGone = <T>(lookup: Promise<T>): Promise<T> =>
+  lookup.catch((err: unknown) => {
+    if (err instanceof Error && /\bUpstream 40[04]\b|^Not a |empty or malformed/.test(err.message)) throw new NotFound(err.message)
+    throw err
+  })
 
 /** A topic: its publishers and its best recent Hacker News stories. */
 async function topicFeed(id: string): Promise<Feed> {
@@ -87,12 +98,13 @@ async function build(parts: string[]): Promise<Feed> {
     case 'topic':
       return topicFeed(a ?? '')
     case 'c': {
+      await orGone(readBoard(a ?? '', b ?? ''))
       const { board, stories } = await boardFront(a ?? '', b ?? '', 'hot')
       return { title: `${board.name} on PaperWing`, description: board.description ?? 'A community board on PaperWing', page: `${ORIGIN}/c/${a}/${b}`, items: stories }
     }
     case 'mix': {
       if (!a || !b) throw new NotFound('A mix feed needs its owner and id')
-      const { mix, handle } = await readMix(`at://${a}/io.paperwing.mix/${b}`)
+      const { mix, handle } = await orGone(readMix(`at://${a}/io.paperwing.mix/${b}`))
       return {
         title: `${mix.name}: a PaperWing mix${handle ? ` by @${handle}` : ''}`,
         description: mix.description ?? 'A mix of sources on PaperWing',
@@ -103,7 +115,7 @@ async function build(parts: string[]): Promise<Feed> {
     case 'u': {
       const actor = actorOf(decodeURIComponent(a ?? ''))
       if (!actor) throw new NotFound('Not a handle')
-      const p = await person(actor)
+      const p = await orGone(person(actor))
       const who = p.profile.name ? `${p.profile.name} (@${p.profile.handle})` : `@${p.profile.handle}`
       const items = [...p.stories, ...(p.shares ?? [])].sort((x, y) => y.createdAt - x.createdAt)
       return { title: `${who} on PaperWing`, description: `What ${who} lists and shares on PaperWing`, page: `${ORIGIN}/u/${p.profile.handle}`, items }
@@ -152,9 +164,7 @@ export async function GET(request: Request): Promise<Response> {
       headers: { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'public, max-age=600, s-maxage=600, stale-while-revalidate=3600', 'access-control-allow-origin': '*' },
     })
   } catch (err) {
-    // Gone upstream counts as missing too: an unknown handle, a deleted mix or board (the network
-    // answers 400 or 404, or the record isn't one).
-    const missing = err instanceof NotFound || (err instanceof Error && /\bUpstream 40[04]\b|^Not a |empty or malformed/.test(err.message))
+    const missing = err instanceof NotFound
     return new Response(missing ? err.message : 'This feed couldn’t be built just now. Try again shortly.', {
       status: missing ? 404 : 502,
       headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': missing ? 'public, s-maxage=300' : 'no-store' },

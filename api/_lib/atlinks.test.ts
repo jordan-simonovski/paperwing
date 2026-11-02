@@ -32,12 +32,6 @@ vi.mock('./http.js', async (orig) => ({
             },
           }
         : { links: {} }
-    if (u.pathname === '/links' && target?.startsWith('at://paged')) {
-      // Three pages of two, or endless pages for at://paged-forever.
-      const page = Number(u.searchParams.get('cursor') ?? 0)
-      const more = target === 'at://paged-forever' || page < 2
-      return { linking_records: [0, 1].map((i) => ({ did: 'did:plc:h', collection: 'io.paperwing.boardhide', rkey: `${page}-${i}` })), cursor: more ? String(page + 1) : null }
-    }
     if (u.pathname === '/links') {
       const col = u.searchParams.get('collection')
       const path = u.searchParams.get('path')
@@ -74,16 +68,5 @@ describe('open-network discussions', () => {
   it('refuses things that are not web links', async () => {
     const { openNetworkDiscussions } = await import('./atlinks')
     await expect(openNetworkDiscussions('javascript:alert(1)')).rejects.toThrow()
-  })
-})
-
-describe('every link to a record', () => {
-  it('follows the pages to the end', async () => {
-    const { linkingAll } = await import('./atlinks')
-    expect(await linkingAll('at://paged', 'io.paperwing.boardhide', '.board', { pageSize: 2 })).toHaveLength(6)
-  })
-  it('refuses to answer with part of the list', async () => {
-    const { linkingAll } = await import('./atlinks')
-    await expect(linkingAll('at://paged-forever', 'io.paperwing.boardhide', '.board', { pageSize: 2, maxPages: 3 })).rejects.toThrow(/More than 6/)
   })
 })

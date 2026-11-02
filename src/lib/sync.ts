@@ -135,11 +135,10 @@ async function applyRecords(code: string, wire: SyncRecord[]) {
     } else if (r.key.startsWith('m:')) {
       const s = r.deleted ? undefined : cleanSummary(r.key.slice(2), r.data)
       if (s) summaries.push(s)
-    } else if (r.key === 'prefs' && !r.deleted && r.updatedAt > usePrefs.getState().syncedPrefsAt) {
+    } else if (r.key === 'prefs' && sealedRecords.has(r) && !r.deleted && r.updatedAt > usePrefs.getState().syncedPrefsAt) {
+      // Settings decide what your blogroll publishes, so only sealed ones count: anyone who can
+      // write to the database can write a plain record. A device's next settings change goes up sealed.
       const prefs = cleanPrefs(r.data)
-      // Anyone who can write to the database can write a plain record; it may carry your lists but
-      // never switch on something that publishes them.
-      if (prefs && !sealedRecords.has(r)) delete prefs.blogrollPublic
       if (prefs) usePrefs.setState({ ...prefs, syncedPrefsAt: r.updatedAt })
     }
   }
