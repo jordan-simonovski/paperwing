@@ -7,6 +7,7 @@ import { cardImage, ogImage, pageCard } from './_lib/og.js'
 import { readMix } from './_lib/mixfeed.js'
 import { paperwingFront } from './_lib/paperwing.js'
 import { actorOf, person } from './_lib/people.js'
+import { marginNotes } from './_lib/notes.js'
 import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './_lib/sources.js'
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
 
@@ -49,6 +50,11 @@ export async function GET(request: Request): Promise<Response> {
         // A member's Frontpage posts, comments and the replies to them: a minute at the edge.
         const did = p.get('did')
         return did ? json(await frontpageActivity(did), 60) : fail('did required')
+      }
+      case 'notes': {
+        // Margin notes on an article, from anyone: two minutes at the edge.
+        const url = p.get('url')
+        return url ? json(await marginNotes(url), 120) : fail('url required')
       }
       case 'person': {
         // Someone's PaperWing profile: their listings and mixes, from their own repo. Two minutes at the edge.

@@ -1,3 +1,5 @@
+import { useRef } from 'react'
+import { MarginNotes } from './MarginNotes'
 import { AlertTriangle, ArrowUpRight, Minus, Plus } from 'lucide-react'
 import { useArticle } from '../lib/hooks'
 import { sanitize } from '../lib/html'
@@ -27,6 +29,7 @@ export function TextSizeControl() {
 
 export function ArticleView({ story }: { story: Story }) {
   const article = useArticle(story.url, story.key, true)
+  const prose = useRef<HTMLDivElement>(null)
 
   if (!story.url) {
     if (!story.text && !story.quote) return <p className="py-10 text-center text-ink-3">This post has no body text.</p>
@@ -80,7 +83,8 @@ export function ArticleView({ story }: { story: Story }) {
         </span>
       </div>
       {showTitle && <h2 className="mb-6 text-[1.625rem] font-bold leading-tight tracking-[-0.02em]">{a.title}</h2>}
-      <div className="prose" dangerouslySetInnerHTML={{ __html: sanitize(a.html) }} />
+      <div ref={prose} className="prose" dangerouslySetInnerHTML={{ __html: sanitize(a.html) }} />
+      <MarginNotes url={story.url} container={prose} html={a.html} />
       <div className="mt-14 flex justify-center">
         <a className="btn" href={story.url} target="_blank" rel="noopener noreferrer">
           Continue on {new URL(story.url).hostname.replace(/^www\./, '')} <ArrowUpRight size={14} />
