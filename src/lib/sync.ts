@@ -92,6 +92,15 @@ async function localChanges(since: number): Promise<SyncRecord[]> {
  */
 const SEALED_SINCE = Date.UTC(2026, 9, 29, 9)
 
+/**
+ * A plain record with the time inside it held to the record's own date. Anyone can write one and
+ * date it before sealing began; without this, a later time inside would outrank newer edits here.
+ */
+function asOfItsDate(r: SyncRecord): SyncRecord {
+  const inner = (r.data as { updatedAt?: unknown } | undefined)?.updatedAt
+  return typeof inner === 'number' && inner > r.updatedAt ? { ...r, data: { ...(r.data as object), updatedAt: r.updatedAt } } : r
+}
+
 /** What a preference is: the shape it has when the app starts. A synced value has to match it. */
 const shapeOf = (v: unknown) => (Array.isArray(v) ? 'list' : v === null ? 'null' : typeof v)
 
@@ -112,7 +121,7 @@ async function applyRecords(code: string, wire: SyncRecord[]) {
   const watched: Watched[] = []
   const summaries: CachedSummary[] = []
   // Plain records still arrive from before encryption; a sealed one this code can't open is skipped.
-  const opened = await Promise.all(wire.map((r) => (isSealed(r) || r.updatedAt < SEALED_SINCE ? open(code, r) : undefined)))
+  const opened = await Promise.all(wire.map((r) => (isSealed(r) ? open(code, r) : r.updatedAt < SEALED_SINCE ? asOfItsDate(r) : undefined)))
   const records = opened.filter((r): r is SyncRecord => !!r)
   for (const r of records) {
     applied.set(r.key, r.updatedAt)

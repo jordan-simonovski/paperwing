@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('idb-keyval', () => import('../test/memoryIdb'))
-import { useLibrary } from './library'
+import { useLibrary, type SavedItem } from './library'
 import { usePrefs } from './store'
+import { useSummaries, type CachedSummary } from './summaryCache'
 import { formatCode, joinSync, newSyncCode, notSyncedText, syncNow, useSync } from './sync'
+import { useWatch } from './watch'
+import { story } from '../test/fixtures'
 
 // Joining sync, through its interface: a code in, the first sync run, and what a person is told.
 
@@ -146,5 +149,51 @@ describe('whether this deployment syncs', () => {
     )
     expect(await syncAvailable()).toBe(false)
     expect(await syncAvailable()).toBe(true)
+  })
+})
+
+describe('plain records from before sync was encrypted', () => {
+  // Anyone who can write to the database can add a plain record and date it before encryption
+  // began. It still counts, as old records do, but only as of that date: its own times can't make
+  // it outrank anything newer.
+  const before = Date.UTC(2026, 9, 29, 8)
+  const future = Date.now() + 365 * 86_400_000
+  const pull = (...records: unknown[]) => vi.stubGlobal('fetch', answer(200, { records, cursor: 1, more: false }))
+
+  const summary = (gist: string, updatedAt: number): CachedSummary => ({
+    key: 'hn-1',
+    summary: { gist, themes: [], disagreements: [], standouts: [], contrast: null },
+    model: 'm',
+    refs: [],
+    sent: 1,
+    total: 1,
+    comments: 1,
+    places: ['HN'],
+    at: Date.now(),
+    updatedAt,
+  })
+
+  it('a backdated summary can’t replace a newer one by claiming a later time inside', async () => {
+    await useSummaries.getState().put(summary('What people actually said.', Date.now()))
+    pull({ key: 'm:hn-1', updatedAt: before, data: summary('Planted.', future) })
+    await joinSync(newSyncCode())
+    expect(useSummaries.getState().items['hn-1']?.summary.gist).toBe('What people actually said.')
+  })
+
+  it('a backdated watched thread can’t replace a newer one by claiming a later time inside', async () => {
+    const s = story({ key: 'hn-2' })
+    useWatch.setState({ items: { 'hn-2': { story: s, addedAt: 1, lookedAt: 1, removedAt: Date.now(), updatedAt: Date.now() } } })
+    pull({ key: 'w:hn-2', updatedAt: before, data: { story: s, addedAt: 1, lookedAt: 1, updatedAt: future } })
+    await joinSync(newSyncCode())
+    expect(useWatch.getState().items['hn-2'].removedAt).toBeDefined()
+  })
+
+  it('a backdated saved story is kept as of its record’s date, not a later one inside', async () => {
+    const s = story({ key: 'hn-3' })
+    // Archived, so nothing starts downloading it.
+    const item: SavedItem = { story: s, savedAt: 1, state: 'archive', seen: [], updatedAt: future }
+    pull({ key: 's:hn-3', updatedAt: before, data: item })
+    await joinSync(newSyncCode())
+    expect(useLibrary.getState().items['hn-3'].updatedAt).toBeLessThanOrEqual(before)
   })
 })
