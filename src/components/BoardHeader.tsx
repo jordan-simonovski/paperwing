@@ -1,8 +1,9 @@
-import { Check, ChevronDown, Loader2, Pencil, Plus, Shield, Users } from 'lucide-react'
+import { Check, ChevronDown, Link2, Loader2, PenLine, Pencil, Plus, Shield, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useAtproto } from '../lib/atproto'
 import { toggleJoin, useBoard } from '../lib/boards'
+import { postLink, useComposer } from '../lib/compose'
 import { profilePath } from '../lib/people'
 import { usePrefs } from '../lib/store'
 import { canPost } from '../lib/social'
@@ -81,11 +82,21 @@ export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri
             </span>
           ))}
         </p>
-        <p className="mt-2 text-[0.8125rem] text-ink-3">
-          {canPost(board, board.owner, me ?? '', !!board.official)
-            ? 'To post here: open a story, tap Share, choose Post it to your networks, tick List it on PaperWing and pick this board. Votes are Bluesky likes; comments are replies.'
-            : 'Only its moderators post here. You can still vote and reply: votes are Bluesky likes; comments are replies.'}
-        </p>
+        {canPost(board, board.owner, me ?? '', !!board.official) ? (
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className="btn h-8 px-3.5 text-[0.8125rem]" onClick={() => postLink({ board: uri })}>
+                <Link2 size={14} /> Post a link
+              </button>
+              <button className="btn h-8 px-3.5 text-[0.8125rem]" onClick={() => useComposer.getState().open({ kind: 'self-post', board: uri })}>
+                <PenLine size={14} /> Write a post
+              </button>
+            </div>
+            <p className="mt-2 text-[0.8125rem] text-ink-3">Posts here go out from your Bluesky account. Votes are Bluesky likes; comments are replies.</p>
+          </>
+        ) : (
+          <p className="mt-2 text-[0.8125rem] text-ink-3">Only its moderators post here. You can still vote and reply: votes are Bluesky likes; comments are replies.</p>
+        )}
       </div>
     </header>
   )

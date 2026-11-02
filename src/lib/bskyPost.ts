@@ -1,3 +1,4 @@
+import { isSelfPost } from './paperwing.js'
 import { storyKey } from './storyKey.js'
 // What a Bluesky post shares, read the same way by the feed generator and the client.
 import type { Media, Quote } from './types.js'
@@ -28,6 +29,8 @@ interface QuotedRecord {
   indexedAt?: string
 }
 export interface Shareable {
+  /** The post's own address: a self post's card links to its page on PaperWing, which names it. */
+  uri?: string
   record: { text: string; facets?: { features?: { $type: string; uri?: string }[] }[] }
   embed?: MediaEmbed & { media?: MediaEmbed; record?: QuotedRecord & { record?: QuotedRecord } }
 }
@@ -46,9 +49,15 @@ export const isGifLink = (uri?: string) => {
 const IMAGES = 'app.bsky.embed.images#view'
 const VIDEO = 'app.bsky.embed.video#view'
 
-/** The link a post shares: its preview card, else the first link typed into the text (not other Bluesky posts). */
+const cardOf = (p: Shareable) => (p.embed?.$type === EXTERNAL ? p.embed.external?.uri : p.embed?.media?.$type === EXTERNAL ? p.embed.media.external?.uri : undefined)
+
+/** A PaperWing self post: its card links to its own page, where its words are (paperwing.ts). */
+export const selfPostOf = (p: Shareable) => !!p.uri && isSelfPost(cardOf(p), p.uri)
+
+/** The link a post shares: its preview card, else the first link typed into the text (not other Bluesky posts). A self post shares none. */
 export function sharedLink(p: Shareable): string | undefined {
-  const card = p.embed?.$type === EXTERNAL ? p.embed.external?.uri : p.embed?.media?.$type === EXTERNAL ? p.embed.media.external?.uri : undefined
+  if (selfPostOf(p)) return undefined
+  const card = cardOf(p)
   if (webUrl(card) && !isGifLink(card!)) return card
   for (const facet of p.record.facets ?? []) {
     for (const f of facet.features ?? []) {

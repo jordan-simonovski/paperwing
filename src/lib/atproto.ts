@@ -187,6 +187,23 @@ export async function appview<T>(nsid: string, params: Record<string, string | n
 /** Whether the sign-in may write this collection: undefined until known. */
 export const canWrite = (scope: string | undefined, collection: string) => (scope === undefined ? undefined : scope.includes(`repo:${collection}`))
 
+/**
+ * Whether the sign-in may change records it already wrote in this collection: undefined until known.
+ * A sign-in from before PaperWing asked for that may only create them.
+ */
+export const canUpdate = (scope: string | undefined, collection: string) =>
+  scope === undefined ? undefined : scope.split(' ').some((s) => s === `repo:${collection}` || (s.startsWith(`repo:${collection}?`) && s.includes('action=update')))
+
+/** One of the signed-in account's own records, read from their own server. */
+export async function getOwnRecord<T>(collection: string, rkey: string): Promise<{ uri: string; cid: string; value: T }> {
+  const s = await session()
+  const qs = new URLSearchParams({ repo: s.did, collection, rkey })
+  const res = await s.fetchHandler(`/xrpc/com.atproto.repo.getRecord?${qs}`, { method: 'GET' })
+  const data = (await res.json().catch(() => ({}))) as { uri: string; cid: string; value: T; message?: string }
+  if (!res.ok) throw new Error(data.message ?? `Couldn’t read it back (${res.status})`)
+  return data
+}
+
 /** Creates or replaces a record at a key of our choosing (a mix, its feed), in the signed-in account's repo. */
 export async function putRecord(collection: string, rkey: string, record: Record<string, unknown>): Promise<StrongRef> {
   if (canWrite(useAtproto.getState().scope, collection) === false) throw new Error('Publishing needs one more permission: allow it under Settings, Sources (Bluesky account).')
@@ -203,9 +220,9 @@ export async function uploadBlob(bytes: Blob): Promise<{ $type: 'blob'; ref: { $
   return data.blob
 }
 
-/** Writes a record to the signed-in account's repo. */
-export const createRecord = (collection: string, record: Record<string, unknown>) =>
-  session().then((s) => xrpc<StrongRef>('com.atproto.repo.createRecord', { repo: s.did, collection, record: { $type: collection, ...record } }))
+/** Writes a record to the signed-in account's repo; at a key of our choosing when given one (a TID, newTid()). */
+export const createRecord = (collection: string, record: Record<string, unknown>, rkey?: string) =>
+  session().then((s) => xrpc<StrongRef>('com.atproto.repo.createRecord', { repo: s.did, collection, ...(rkey ? { rkey } : {}), record: { $type: collection, ...record } }))
 
 /** What PaperWing ever deletes: its own likes, votes, mixes, feeds and submissions. */
 const DELETABLE = new Set([

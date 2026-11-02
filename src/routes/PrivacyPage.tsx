@@ -60,6 +60,11 @@ export function PrivacyPage() {
             title, the board you chose and whether it goes on the front page too); you can delete them on Bluesky like any post.
           </p>
           <p>
+            A post you write on PaperWing works the same way: its Bluesky post has the title, the start of your words and a link to it here, and the words themselves are in that public record in your
+            own account, where you can edit them. Each version of the words PaperWing’s server sees is kept in its database (Upstash), with when it first saw it, so anyone can read what a post said
+            before it was edited: the original and up to nine later versions, kept for a year after the post was last opened.
+          </p>
+          <p>
             The same goes for PaperWing’s social features, each only when you use it: items you share with a note, margin notes on articles, your blogroll (if you turn it on), and community boards you
             start or moderate. Each is a public record in your own Bluesky account that anyone can read, and you can remove it from PaperWing or any tool that manages your account.
           </p>

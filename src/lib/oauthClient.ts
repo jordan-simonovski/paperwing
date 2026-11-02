@@ -19,8 +19,9 @@ export const SCOPE = [
   // Publishing your mixes (mixSources.ts), and a mix as a Bluesky feed served by PaperWing.
   `repo:${MIX_NSID}?action=create&action=update&action=delete`,
   'repo:app.bsky.feed.generator?action=create&action=update&action=delete',
-  // Submitting to PaperWing: a record beside your Bluesky post (paperwing.ts), and the link card's picture.
-  `repo:${SUBMISSION_NSID}?action=create`,
+  // Submitting to PaperWing: a record beside your Bluesky post (paperwing.ts), and the link card's
+  // picture. A self post's words live in that record, so editing them updates it.
+  `repo:${SUBMISSION_NSID}?action=create&action=update`,
   'blob:image/*',
   // PaperWing's social records (social.ts): shares with a note, your blogroll, margin notes, and
   // community boards with their moderators' hides and a Bluesky moderation list of blocked accounts.

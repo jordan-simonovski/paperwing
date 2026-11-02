@@ -3,16 +3,15 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { shareTargets, useAccounts } from '../lib/accounts'
 import { canWrite, useAtproto } from '../lib/atproto'
-import { boardParts, useBoard } from '../lib/boards'
 import { blueskyText, mastodonText, SHARE_LIMITS, shareLink, shareStory, type ShareNetwork, type ShareResult } from '../lib/compose'
 import { domainOf } from '../lib/format'
 import { graphemes } from '../lib/facets'
 import { usePrefs } from '../lib/store'
 import { SUBMISSION_NSID } from '../lib/paperwing'
-import { canPost } from '../lib/social'
 import { topicsForStory, TOPICS } from '../lib/topics'
 import type { Story } from '../lib/types'
 import { toast } from '../lib/ui'
+import { BoardPicker, useBoardShut } from './BoardPicker'
 import { Sheet } from './Sheet'
 import { SourceIcon } from './SourceIcon'
 
@@ -31,7 +30,6 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
   const lemmy = !!accounts.lemmy
   const canList = useAtproto((a) => canWrite(a.scope, SUBMISSION_NSID) !== false)
   const communities = usePrefs((p) => p.communities)
-  const joinedBoards = usePrefs((p) => p.boards)
   const link = shareLink(story) ?? ''
 
   const [title, setTitle] = useState(story.title)
@@ -41,11 +39,8 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
   // A community board's listing stays on its board unless you also put it on the front page.
   const [front, setFront] = useState(false)
   const onCommunityBoard = board.startsWith('at://')
-  const parts = onCommunityBoard ? boardParts(board) : undefined
-  const { data: picked } = useBoard(parts?.did, parts?.rkey)
-  const me = useAtproto((a) => a.did)
-  // Only its moderators list on a moderators-only board (every official board is one): say so rather than fail.
-  const shut = !!picked && !canPost(picked, picked.owner, me ?? '', !!picked.official)
+  // Only its moderators list on a moderators-only board (every official board is one): the picker says so.
+  const { shut } = useBoardShut(board)
   const [to, setTo] = useState<Record<ShareNetwork, boolean>>({ bluesky: bsky, hn: false, mastodon: false, lemmy: false })
   // The community to post in: one of yours, the one whose topic fits best first.
   const [community, setCommunity] = useState(() => communities[0]?.name ?? '')
@@ -160,32 +155,9 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
                   </span>
                 </label>
                 {paperwing && canList && (
-                  <select className="input mt-2.5 h-10" value={board} onChange={(e) => setBoard(e.target.value)} aria-label="Board">
-                    <option value="">No board, just PaperWing</option>
-                    {joinedBoards.length > 0 && (
-                      <optgroup label="Your community boards">
-                        {joinedBoards.map((b) => (
-                          <option key={b.uri} value={b.uri}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    <optgroup label="Topic boards">
-                      {TOPICS.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                )}
-                {paperwing && canList && shut && <p className="mt-2 text-[0.8125rem] text-ink-3">Only its moderators post on {picked.name}.</p>}
-                {paperwing && canList && onCommunityBoard && !shut && (
-                  <label className="mt-2.5 flex items-center gap-3">
-                    <input type="checkbox" className="size-4 accent-[var(--ink)]" checked={front} onChange={(e) => setFront(e.target.checked)} />
-                    <span className="text-[0.875rem]">Also on PaperWing’s front page</span>
-                  </label>
+                  <div className="mt-2.5">
+                    <BoardPicker board={board} onBoard={setBoard} front={front} onFront={setFront} />
+                  </div>
                 )}
               </div>
             )}

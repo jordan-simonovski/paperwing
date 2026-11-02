@@ -2,7 +2,7 @@ import { AddToMix } from './AddToMix'
 import { RssButton } from './RssButton'
 import { BoardHeader } from './BoardHeader'
 import { ProfileHeader } from './ProfileHeader'
-import { AlertTriangle, Check, Link2, Loader2, Plus, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { AlertTriangle, Check, Link2, Loader2, PenLine, Plus, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { findTopic, listOf, mixSourceFor, rssPath, type Channel } from '../lib/channels'
 import { topicIcon } from '../lib/topicIcons'
@@ -10,7 +10,7 @@ import type { FeedStatus } from '../lib/hooks'
 import { kindOf, type Ranked, type SortMode, type StoryKind } from '../lib/rank'
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
-import { postLink } from '../lib/compose'
+import { postLink, useComposer } from '../lib/compose'
 import { parseChannelId } from '../lib/channelId'
 import { toggleCommunity } from '../lib/explore'
 import { Link } from 'react-router'
@@ -184,9 +184,17 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
               )}
               {mixable && <AddToMix source={mixable.source} label={mixable.label} className="btn h-8 flex-none px-3 text-[0.8125rem] max-sm:px-2.5" textClassName="max-sm:hidden" />}
               {postsHere && (
-                <button className="btn h-8 flex-none px-3.5 text-[0.8125rem]" onClick={() => postLink({ board: address?.kind === 'paperwing' ? address.board : undefined })}>
-                  <Link2 size={14} /> Post a link
-                </button>
+                <>
+                  <button className="btn h-8 flex-none px-3.5 text-[0.8125rem]" onClick={() => postLink({ board: address?.kind === 'paperwing' ? address.board : undefined })}>
+                    <Link2 size={14} /> Post a link
+                  </button>
+                  <button
+                    className="btn h-8 flex-none px-3.5 text-[0.8125rem]"
+                    onClick={() => useComposer.getState().open({ kind: 'self-post', board: address?.kind === 'paperwing' ? address.board : undefined })}
+                  >
+                    <PenLine size={14} /> Write a post
+                  </button>
+                </>
               )}
               {rssPath(channel.id) && <RssButton path={rssPath(channel.id)!} />}
               {channel.action && (

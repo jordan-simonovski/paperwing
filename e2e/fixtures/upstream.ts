@@ -1,5 +1,7 @@
 import { NOW, story } from '../../src/test/fixtures'
 import type { Article, Story } from '../../src/lib/types'
+import { selfPostUrl, type SelfPostBody } from '../../src/lib/paperwing'
+import { storyKey } from '../../src/lib/storyKey'
 
 // What each upstream answers in the journeys, in its own wire shape: Algolia hits, Lemmy post
 // views, Bluesky feed items, and the stories our own /api/feed sends. Stories carry the shared
@@ -151,4 +153,69 @@ export const WEB_WE_LOST_ARTICLE: Article = {
     '<p><a href="javascript:window.__pwned=\'link\'">A link that should not run</a></p>',
     '<p>Five years ago, most social users could control their own identity.</p>',
   ].join('\n'),
+}
+
+/* ----------------------------------------------------------- PaperWing self posts */
+
+const SELF_AUTHOR = 'did:plc:writerwriterwriterwriter'
+const SELF_URI = `at://${SELF_AUTHOR}/app.bsky.feed.post/3m2selfpostaa`
+const SELF_BEFORE = 'What is everyone reading this month?\n\nI’m on **Piranesi**.'
+const SELF_NOW = 'What is everyone reading this month?\n\nI’m on **Piranesi**, and it’s wonderfully strange.\n\n- Tell me yours\n- And why'
+
+/** A self post on PaperWing's front page, as the server lists it: a title, no link of its own. */
+export const SELF_POST: Story = story({
+  key: storyKey({ kind: 'bs', uri: SELF_URI }),
+  source: 'bluesky',
+  sourceLabel: 'PaperWing',
+  title: 'Ask PaperWing: what are you reading?',
+  url: null,
+  discussionUrl: 'https://bsky.app/profile/writer.example/post/3m2selfpostaa',
+  author: 'writer.example',
+  authorDid: SELF_AUTHOR,
+  score: 4,
+  comments: 1,
+  hasThread: true,
+  createdAt: NOW - 3 * HOUR,
+  ref: { uri: SELF_URI, cid: 'bafyself' },
+})
+
+/** Its thread on Bluesky's AppView: the post (title, snippet, a card to its own page) and a reply. */
+export const SELF_POST_THREAD = {
+  thread: {
+    $type: 'app.bsky.feed.defs#threadViewPost',
+    post: {
+      uri: SELF_URI,
+      cid: 'bafyself',
+      author: { did: SELF_AUTHOR, handle: 'writer.example' },
+      record: { text: 'Ask PaperWing: what are you reading?\n\nWhat is everyone reading this month? I’m on Piranesi.', createdAt: iso(NOW - 3 * HOUR) },
+      embed: { $type: 'app.bsky.embed.external#view', external: { uri: selfPostUrl(SELF_URI), title: 'Ask PaperWing: what are you reading?', description: 'What is everyone reading this month?' } },
+      likeCount: 4,
+      replyCount: 1,
+      indexedAt: iso(NOW - 3 * HOUR),
+    },
+    replies: [
+      {
+        $type: 'app.bsky.feed.defs#threadViewPost',
+        post: {
+          uri: 'at://did:plc:readerreaderreaderreader/app.bsky.feed.post/3m2replyaaaaa',
+          cid: 'bafyreply',
+          author: { did: 'did:plc:readerreaderreaderreader', handle: 'reader.example' },
+          record: { text: 'The Dispossessed, for the third time.', createdAt: iso(NOW - 2 * HOUR) },
+          likeCount: 1,
+          replyCount: 0,
+          indexedAt: iso(NOW - 2 * HOUR),
+        },
+        replies: [],
+      },
+    ],
+  },
+}
+
+/** Its words as PaperWing has them: edited an hour after it was posted. */
+export const SELF_POST_BODY: SelfPostBody = {
+  body: SELF_NOW,
+  versions: [
+    { body: SELF_BEFORE, seenAt: NOW - 3 * HOUR },
+    { body: SELF_NOW, seenAt: NOW - 2 * HOUR },
+  ],
 }

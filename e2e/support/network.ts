@@ -1,4 +1,5 @@
 import type { Page, Request, Route } from '@playwright/test'
+import type { SelfPostBody } from '../../src/lib/paperwing'
 import type { Article, Story } from '../../src/lib/types'
 import { HN_TOP, SEABED, MELTING, WEB_WE_LOST_ARTICLE, WEB_WE_LOST_THREAD, type HnHit, type HnItem, type LemmyPostView } from '../fixtures/upstream'
 
@@ -33,6 +34,10 @@ export interface Stubs {
   lemmy: Record<string, Answer<LemmyPostView[]>>
   /** Bluesky custom feeds and lists through the public AppView, by at:// URI. */
   bluesky: Record<string, unknown[]>
+  /** Bluesky threads through the public AppView (getPostThread), by the post's at:// URI. */
+  blueskyThreads: Record<string, unknown>
+  /** PaperWing self posts' words and versions (/api/thread?src=paperwing), by story key. */
+  selfPosts: Record<string, Answer<SelfPostBody>>
   /** The reader view: /api/extract, by article URL. */
   extract: Record<string, Answer<Article>>
   /** A link's card (its own title and description), by URL: what Post a link reads in. */
@@ -48,12 +53,14 @@ const DEFAULTS: Stubs = {
   hnItems: { [WEB_WE_LOST_THREAD.id]: WEB_WE_LOST_THREAD },
   lemmy: { 'world@lemmy.world': [SEABED] },
   bluesky: {},
+  blueskyThreads: {},
+  selfPosts: {},
   extract: { [WEB_WE_LOST_ARTICLE.url]: WEB_WE_LOST_ARTICLE },
   cards: {},
   sync: true,
 }
 
-const MAPS = ['feeds', 'hnItems', 'lemmy', 'bluesky', 'extract', 'cards'] as const
+const MAPS = ['feeds', 'hnItems', 'lemmy', 'bluesky', 'blueskyThreads', 'selfPosts', 'extract', 'cards'] as const
 
 function mergeStubs(base: Stubs, over: Partial<Stubs>): Stubs {
   const out = { ...base, ...over }
@@ -94,6 +101,7 @@ const HOSTS: Record<string, Handler> = {
       return s.feeds[`${src}:${q.get('label')}`] ?? s.feeds[src] ?? []
     }
     if (p === '/api/extract') return s.extract[q.get('url') ?? ''] ?? fail(422, 'Could not extract an article')
+    if (p === '/api/thread' && q.get('src') === 'paperwing') return s.selfPosts[q.get('id') ?? ''] ?? notFound(`self post ${q.get('id')}`)
     if (p === '/api/thread') return notFound(`thread ${url.search}`)
     if (p === '/api/sync') {
       if (q.has('status')) return { enabled: s.sync }
@@ -138,6 +146,7 @@ const HOSTS: Record<string, Handler> = {
   'public.api.bsky.app': (url, _req, s) => {
     const m = url.pathname.match(/^\/xrpc\/app\.bsky\.feed\.(getFeed|getListFeed)$/)
     if (m) return { feed: s.bluesky[url.searchParams.get(m[1] === 'getFeed' ? 'feed' : 'list') ?? ''] ?? [] }
+    if (url.pathname === '/xrpc/app.bsky.feed.getPostThread') return s.blueskyThreads[url.searchParams.get('uri') ?? ''] ?? notFound(`Bluesky thread ${url.searchParams.get('uri')}`)
     return undefined
   },
   'dev.to': (url) => (url.pathname === '/api/articles' ? [] : undefined),

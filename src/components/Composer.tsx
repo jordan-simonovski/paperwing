@@ -8,11 +8,13 @@ import { Sheet } from './Sheet'
 import { ShareLinks } from './ShareLinks'
 import { PostLink } from './PostLink'
 import { ShareSheet } from './ShareSheet'
+import { WritePost } from './WritePost'
 
 const TITLES: Record<ComposeTarget['kind'], string> = {
   'bsky-reply': 'Reply on Bluesky',
   share: 'Share',
   'post-link': 'Post a link',
+  'self-post': 'Write a post',
   links: 'Share',
   'fp-comment': 'Comment on Frontpage',
   'hn-reply': 'Reply on Hacker News',
@@ -36,6 +38,7 @@ export function Composer() {
   if (!target) return null
   if (target.kind === 'share') return <ShareSheet story={target.story} board={target.board} onClose={close} />
   if (target.kind === 'post-link') return <PostLink url={target.url} title={target.title} board={target.board} onClose={close} />
+  if (target.kind === 'self-post') return <WritePost board={target.board} edit={target.edit} onClose={close} />
   if (target.kind === 'links') return <ShareLinks story={target.story} onClose={close} />
   const limit = LIMITS[target.kind]
   const used = graphemes(text)

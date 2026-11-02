@@ -47,6 +47,8 @@ export interface Story {
   /** Self text or abstract, as HTML. Sanitized before rendering. */
   text?: string
   tags?: string[]
+  /** A PaperWing self post's words (Markdown) and the versions PaperWing has seen of them. */
+  selfPost?: { body: string; versions: { body: string; seenAt: number }[] }
   /** The community board a PaperWing listing is on, shown on the front page and in For you ("in Home Cooking"). */
   board?: { uri: string; name: string; official: boolean }
   /** An official announcement held at the top of PaperWing's front page for a few days. */
