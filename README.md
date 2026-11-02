@@ -2,7 +2,20 @@
 
 A reader for the open web, organised by topic rather than by source. It started as a tech reader (Hacker News, Lobsters, status pages, arXiv, GitHub and about 85 engineering blogs) and now covers news, politics, science, culture, sport and anything else you can search for, from publishers' feeds, Lemmy communities, Bluesky feeds and Mastodon hashtags. It installs as a PWA and works offline.
 
-## What it does
+## What it stands for
+
+Social media went wrong in ways that were profitable: attention sold to advertisers, feeds tuned for time spent, people locked in so leaving cost them everything. PaperWing is built the other way round, and says so in the app at [paperwing.io/principles](https://paperwing.io/principles):
+
+1. **You're the reader, not the product.** No ads, no selling data, no engagement targets. Paid for by readers on [Ko-fi](https://ko-fi.com/jordo92), not by growth targets.
+2. **A feed you can read, and switch off.** The ranking recipe is written down and runs on your device; a chronological timeline is one tap away; nothing is optimised for time spent.
+3. **What it learns about you stays with you.** No accounts, no analytics, no tracking; sync is encrypted on your device.
+4. **Open networks, not a walled garden.** What you post lives in your own Bluesky, Mastodon, Lemmy or HN account. If PaperWing disappeared tomorrow, you'd lose nothing you made.
+5. **Send people to the source.** Credit and clicks go to the people who wrote things and the communities that discussed them.
+6. **Moderation you can see and choose.** Each network's moderation, plus the mutes and labelers you pick; PaperWing's own rules are written down.
+7. **Open source, so you can leave with the code too.** Apache 2.0: read it, run it, fork it.
+8. **Small on purpose.** Most of the work happens on your device, so it stays cheap enough to keep its promises.
+
+
 
 - **Topics, not sources.** Eighteen hand-built topics (AI, Agents, Observability, SRE, Eng Leadership, Databases, …) each pull from their own mix of Lobsters tags, dev.to tags, RSS feeds and HN keyword searches. Every story gets topic tags by keyword. Each topic links to its neighbours ("near →"), so you can move sideways.
 - **Search by topic or interest.** ⌘K (or `/`) resolves free text to topics ("tracing" → Observability, with SRE and Kubernetes nearby). It also searches Hacker News, or turns any query into a followed interest with its own feed.

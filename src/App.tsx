@@ -26,6 +26,7 @@ const router = createBrowserRouter([
       { path: 'share', lazy: () => import('./routes/SharePage').then((m) => ({ Component: m.SharePage })) },
       { path: 'atproto-callback', lazy: () => import('./routes/AtprotoCallback').then((m) => ({ Component: m.AtprotoCallback })) },
       { path: 'mastodon/callback', lazy: () => import('./routes/MastodonCallback').then((m) => ({ Component: m.MastodonCallback })) },
+      { path: 'principles', lazy: () => import('./routes/PrinciplesPage').then((m) => ({ Component: m.PrinciplesPage })) },
       { path: 'terms', lazy: () => import('./routes/TermsPage').then((m) => ({ Component: m.TermsPage })) },
       { path: 'privacy', lazy: () => import('./routes/PrivacyPage').then((m) => ({ Component: m.PrivacyPage })) },
       { path: 'pair', lazy: () => import('./routes/PairPage').then((m) => ({ Component: m.PairPage })) },

@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Check, ExternalLink, KeyRound, Loader2, Plus, Rss, Send, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, Check, Code2, ExternalLink, Heart, KeyRound, Loader2, Plus, Rss, Send, Sparkles, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { BlueskyAccount } from '../components/BlueskyAccount'
@@ -88,9 +88,13 @@ function Hello() {
         }}
       />
       <p className="mt-4 text-[0.8125rem] text-ink-3">
-        No ads, no analytics, no tracking.{' '}
+        Free, open source, and no ads, analytics or tracking.{' '}
+        <Link to="/principles" className="underline underline-offset-2">
+          What PaperWing stands for
+        </Link>
+        {' · '}
         <Link to="/privacy" className="underline underline-offset-2">
-          How PaperWing handles your data
+          Privacy
         </Link>
         {' · '}
         <Link to="/terms" className="underline underline-offset-2">
@@ -431,7 +435,31 @@ function Passkey({ onDone }: { onDone: () => void }) {
             </button>
           </div>
         ))}
+      <MadeInTheOpen />
     </>
+  )
+}
+
+/** The tour's sign-off: PaperWing is open source and reader-supported, and here's where both happen. */
+function MadeInTheOpen() {
+  return (
+    <section className="mt-8 max-w-xl rounded-[18px] bg-panel p-5">
+      <h2 className="text-[1.0625rem] font-bold">Made in the open</h2>
+      <p className="mt-1 text-[0.875rem] leading-relaxed text-ink-2">
+        PaperWing is open source, free, and has no ads. Its code is on GitHub for anyone to read, improve or run themselves, and it’s kept going by readers who chip in.{' '}
+        <Link to="/principles" className="font-semibold text-ink underline underline-offset-2">
+          What it stands for
+        </Link>
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <a className="btn h-9 text-[0.8125rem]" href="https://github.com/jordan-simonovski/paperwing" target="_blank" rel="noopener noreferrer">
+          <Code2 size={14} /> PaperWing on GitHub
+        </a>
+        <a className="btn h-9 text-[0.8125rem]" href="https://ko-fi.com/jordo92" target="_blank" rel="noopener noreferrer">
+          <Heart size={14} /> Support it on Ko-fi
+        </a>
+      </div>
+    </section>
   )
 }
 

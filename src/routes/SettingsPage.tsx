@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Code2,
+  Compass,
   Copy,
   Download,
   FileText,
@@ -954,6 +955,9 @@ function About() {
           </a>
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
+          <Link className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" to="/principles">
+            <Compass size={14} /> Our principles
+          </Link>
           <Link className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" to="/privacy">
             <Shield size={14} /> Privacy
           </Link>
