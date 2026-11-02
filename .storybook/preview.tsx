@@ -1,6 +1,7 @@
 import '@fontsource-variable/atkinson-hyperlegible-next'
 import '@fontsource-variable/atkinson-hyperlegible-next/wght-italic.css'
 import '@fontsource-variable/jetbrains-mono'
+import '@fontsource-variable/fraunces/full.css'
 import '../src/styles.css'
 import type { Preview } from '@storybook/react-vite'
 import { withApp } from './harness'

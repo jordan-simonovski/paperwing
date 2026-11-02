@@ -18,7 +18,7 @@ for (const a of assets) {
   // No seasonal hat on the brand, and no splash.
   await page.addInitScript(() => {
     sessionStorage.setItem('readout:splashed', '1')
-    localStorage.setItem('readout:prefs', JSON.stringify({ state: { welcomed: true, seasonal: false, theme: 'light' }, version: 5 }))
+    localStorage.setItem('readout:prefs', JSON.stringify({ state: { welcomed: true, seasonal: false, theme: 'light' }, version: 6 }))
   })
   await page.goto(`${base}/brand?asset=${a.asset}`)
   await page.waitForSelector('#asset svg')

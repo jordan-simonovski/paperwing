@@ -11,7 +11,9 @@ import { usePrefs } from './store'
 // skips it.
 
 const TEXT_FAMILY = '"Atkinson Hyperlegible Next Variable", sans-serif'
-const WEIGHT = 800
+/** The wordmark's face (styles.css, .wordmark). */
+const WORD_FAMILY = '"Fraunces Variable", Georgia, serif'
+const WEIGHT = 600
 const WORD = 'PaperWing'
 /** The flight (along the word, then the loop back to land), the unfold, a beat to blink. */
 const ALONG = 640
@@ -139,6 +141,7 @@ export function playSplash(opts: { force?: boolean } = {}): Promise<void> {
   const ground = css.getPropertyValue('--ground').trim() || '#f4f4f1'
   const signal = css.getPropertyValue('--signal').trim() || '#e5484d'
   const quiet = css.getPropertyValue('--ink-3').trim() || '#888'
+  const ink = css.getPropertyValue('--ink').trim() || '#1c1b19'
 
   // The backdrop and the logo are separate layers, so the fade and the glide to the header can run
   // as compositor transitions, smooth even while the app renders underneath.
@@ -156,10 +159,10 @@ export function playSplash(opts: { force?: boolean } = {}): Promise<void> {
     release()
   }
 
-  const fontLoad = document.fonts?.load(`${WEIGHT} 64px ${TEXT_FAMILY}`)
+  const fontLoad = document.fonts?.load(`${WEIGHT} 64px ${WORD_FAMILY}`)
   const timeout = new Promise((r) => setTimeout(r, 700))
   void Promise.race([fontLoad, timeout]).then(() => {
-    if (!document.fonts?.check(`${WEIGHT} 64px ${TEXT_FAMILY}`)) return remove()
+    if (!document.fonts?.check(`${WEIGHT} 64px ${WORD_FAMILY}`)) return remove()
     run()
   })
 
@@ -170,11 +173,11 @@ export function playSplash(opts: { force?: boolean } = {}): Promise<void> {
     // The splash logo: the header's mark and wordmark, scaled up together, as big as fits (Pip's
     // 30px head and an 11px gap beside a 28px word, as in the phone header).
     const probe = document.createElement('canvas').getContext('2d')!
-    probe.font = `${WEIGHT} 100px ${TEXT_FAMILY}`
+    probe.font = `${WEIGHT} 100px ${WORD_FAMILY}`
     const perPx = probe.measureText(WORD).width / 100 + 41 / 28
     const size = Math.min(76, (W * 0.84) / perPx)
     const k = size / 28
-    const font = `${WEIGHT} ${size}px ${TEXT_FAMILY}`
+    const font = `${WEIGHT} ${size}px ${WORD_FAMILY}`
     probe.font = font
     // The word box: 2px either side.
     const wordW = Math.ceil(probe.measureText(WORD).width) + 4
@@ -241,7 +244,8 @@ export function playSplash(opts: { force?: boolean } = {}): Promise<void> {
       // The letters drop into place behind the plane as it passes over each.
       ctx.font = font
       ctx.textBaseline = 'middle'
-      ctx.fillStyle = signal
+      // In ink, as in the header: Pip carries the red.
+      ctx.fillStyle = ink
       if (t >= unfolded) ctx.fillText(WORD, wordX + 2, mid)
       else
         for (const l of letters) {

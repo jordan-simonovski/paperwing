@@ -1,6 +1,8 @@
 import '@fontsource-variable/atkinson-hyperlegible-next'
 import '@fontsource-variable/atkinson-hyperlegible-next/wght-italic.css'
 import '@fontsource-variable/jetbrains-mono'
+// The wordmark's face, with its soft and wonky axes.
+import '@fontsource-variable/fraunces/full.css'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -27,7 +29,7 @@ void splash.then(() => {
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: PERSIST_MAX_AGE, buster: PERSIST_BUSTER, dehydrateOptions }}>
         <App />
       </PersistQueryClientProvider>
-    </StrictMode>,
+    </StrictMode>
   )
   setupPWA()
   startSync()

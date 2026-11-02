@@ -1,7 +1,7 @@
 /* PaperWing · custom direction (Hallmark-guided, app scope) · idea: a reading instrument whose one object is where a story is being discussed
  * look: near-neutral ground and ink so text reads first, one signal red on selection, news and the active discussion; topic colour fields for identity
- * faces: Atkinson Hyperlegible Next (all reading and UI, and the wordmark at 800 in signal red), JetBrains Mono (code inside articles only)
- * brand: Pip the paper owl (design/) beside the wordmark; Pip's red is the app's signal red
+ * faces: Atkinson Hyperlegible Next (all reading and UI), Fraunces (the wordmark only, soft and wonky, in ink), JetBrains Mono (code inside articles only)
+ * brand: Pip the paper owl (design/) beside the wordmark; Pip carries the red, the app's signal red
  * refused: eyebrows, tracked caps, mono labels, middle-dot meta, hairline row rules, counting-mark meters, grain, glass blur, cream + serif */
 @import 'tailwindcss';
 
@@ -28,6 +28,7 @@
 :root {
   --font-text: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, sans-serif;
   --font-mark: var(--font-text);
+  --font-wordmark: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
   --font-code: 'JetBrains Mono Variable', ui-monospace, monospace;
 
   /* Light: a near-neutral ground so the words read first; a hair of warmth keeps it from feeling clinical (not cream). */
@@ -194,13 +195,18 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* PaperWing in Fraunces, soft and a little wonky: paper and print, its own thing. In ink, so Pip
+     beside it carries the red. */
   .wordmark {
-    font-family: var(--font-mark);
-    font-weight: 800;
+    font-family: var(--font-wordmark);
+    font-weight: 600;
+    font-variation-settings:
+      'SOFT' 100,
+      'WONK' 1;
     font-size: 1.75rem;
     line-height: 1;
-    letter-spacing: -0.02em;
-    color: var(--signal);
+    letter-spacing: -0.01em;
+    color: var(--ink);
   }
   /* The mark: Pip's head, sized to sit beside the wordmark. */
   .mark {

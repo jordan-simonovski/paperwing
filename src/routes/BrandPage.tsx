@@ -9,7 +9,12 @@ const INK = '#23221f'
 const RED = 'oklch(0.55 0.215 27)'
 
 function Wordmark({ size }: { size: number }) {
-  return <span style={{ fontFamily: 'var(--font-mark)', fontWeight: 800, fontSize: size, letterSpacing: '-0.03em', color: RED, lineHeight: 1 }}>PaperWing</span>
+  // As in the header (styles.css, .wordmark): Fraunces, soft and wonky, in ink beside Pip's red.
+  return (
+    <span style={{ fontFamily: 'var(--font-wordmark)', fontWeight: 600, fontVariationSettings: "'SOFT' 100, 'WONK' 1", fontSize: size, letterSpacing: '-0.01em', color: INK, lineHeight: 1 }}>
+      PaperWing
+    </span>
+  )
 }
 
 export function BrandPage() {
@@ -29,7 +34,7 @@ export function BrandPage() {
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
         <Pip variant="head" className="block" title="Pip" />
         <style>{`#asset svg { width: 720px; height: 720px; margin-top: 40px }`}</style>
-      </div>,
+      </div>
     )
 
   if (asset === 'banner')
@@ -47,7 +52,7 @@ export function BrandPage() {
         <div style={{ position: 'absolute', right: 180, top: 110, width: 780, height: 780 }}>
           <Pip variant="full" className="block size-full" title="Pip" />
         </div>
-      </>,
+      </>
     )
 
   // The link preview: what a share of paperwing.io shows on Bluesky, Slack, iMessage and the rest.
@@ -65,6 +70,6 @@ export function BrandPage() {
       <div style={{ position: 'absolute', right: 40, top: 55, width: 520, height: 520 }}>
         <Pip variant="full" className="block size-full" title="Pip" />
       </div>
-    </>,
+    </>
   )
 }
