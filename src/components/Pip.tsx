@@ -9,8 +9,8 @@ const style = (s: PipShape) => ({
   strokeLinejoin: s.round ? ('round' as const) : undefined,
 })
 
-/** Pip, PaperWing's paper owl, in the theme's colours: the whole owl, or the head the logo uses. Dressed for the season. */
-export function Pip({ variant = 'full', className, title }: { variant?: 'full' | 'head'; className?: string; title?: string }) {
+/** Pip, PaperWing's paper owl, in the theme's colours: the whole owl, the head the logo uses, or Pip done reading. Dressed for the season. */
+export function Pip({ variant = 'full', className, title }: { variant?: 'full' | 'head' | 'done'; className?: string; title?: string }) {
   const shapes = pipShapes(variant, useSeason())
   return (
     // Seasonal hats rise above the head's box; let them show.

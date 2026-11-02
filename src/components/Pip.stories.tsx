@@ -14,3 +14,5 @@ type Story = StoryObj<typeof meta>
 export const Full: Story = {}
 export const Head: Story = { args: { variant: 'head', className: 'block size-24' } }
 export const Decorative: Story = { args: { title: undefined } }
+/** Today's edition is finished: the book shut, eyes closed in a smile. */
+export const Done: Story = { args: { variant: 'done', title: 'Pip, done reading' } }

@@ -113,13 +113,41 @@ export const PIP_HATS: Record<'christmas' | 'halloween' | 'newyear' | 'valentine
   ],
 }
 
+/** Pip when the edition's finished: the book shut and held to its chest, eyes closed in a smile. Same viewBox as PIP_FULL. */
+export const PIP_DONE: PipShape[] = (() => {
+  const closedBook: PipShape[] = [
+    // The page block, peeking out below and to the right of the cover.
+    { part: 'book', d: 'M240 394h160a6 6 0 0 1 6 6v84a6 6 0 0 1-6 6h-160Z', fill: 'paper', stroke: 'ink', width: 8, round: true },
+    { part: 'book', d: 'M250 484h146', stroke: 'line', width: 5, round: true },
+    // The bookmark ribbon, hanging out of the pages: it's a book, not a tablet.
+    { part: 'book', d: 'M292 468v46l12-10 12 10v-46Z', fill: 'tint', stroke: 'ink', width: 6, round: true },
+    { part: 'book', d: 'M232 382h154a8 8 0 0 1 8 8v80a8 8 0 0 1-8 8h-154a8 8 0 0 1-8-8v-80a8 8 0 0 1 8-8Z', fill: 'signal', stroke: 'ink', width: 9, round: true },
+    { part: 'book', d: 'M246 384v92', stroke: 'ink', width: 7, round: true },
+  ]
+  const shutEyes: PipShape = { part: 'eyes', d: 'M238 298q24-28 48 0M353 298q24-28 48 0', stroke: 'ink', width: 11, round: true }
+  const out: PipShape[] = []
+  for (const s of PIP_FULL) {
+    if (s.part === 'shineL' || s.part === 'shineR') continue
+    if (s.part === 'eyes') {
+      if (!out.includes(shutEyes)) out.push(shutEyes)
+      continue
+    }
+    if (s.part === 'book') {
+      if (!out.includes(closedBook[0])) out.push(...closedBook)
+      continue
+    }
+    out.push(s)
+  }
+  return out
+})()
+
 /** Pip's shapes for a variant, dressed for the season: the hat in place of the tuft. */
-export function pipShapes(variant: 'full' | 'head', season?: keyof typeof PIP_HATS): PipShape[] {
-  const base = variant === 'head' ? PIP_HEAD : PIP_FULL
+export function pipShapes(variant: 'full' | 'head' | 'done', season?: keyof typeof PIP_HATS): PipShape[] {
+  const base = variant === 'head' ? PIP_HEAD : variant === 'done' ? PIP_DONE : PIP_FULL
   return season ? [...base.filter((s) => s.part !== 'tuft'), ...PIP_HATS[season]] : base
 }
 
-export const PIP_VIEWBOX = { full: [0, 0, 640, 640], head: [130, 65, 380, 380] } as const
+export const PIP_VIEWBOX = { full: [0, 0, 640, 640], done: [0, 0, 640, 640], head: [130, 65, 380, 380] } as const
 /** Where the owl actually is inside the full viewBox: what text should flow around. */
 export const PIP_BOUNDS = { x: 135, y: 75, w: 370, h: 470 }
 export const PIP_HEAD_BOUNDS = { x: 140, y: 74, w: 360, h: 345 }

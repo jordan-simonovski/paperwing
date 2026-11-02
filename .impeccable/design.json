@@ -1,0 +1,489 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-02T22:35:40.528809+00:00",
+  "title": "Design System: PaperWing",
+  "extensions": {
+    "colorMeta": {
+      "signal": {
+        "role": "primary",
+        "displayName": "Signal Red",
+        "tonalRamp": [
+          "oklch(0.15 0.043 27)",
+          "oklch(0.26 0.090 27)",
+          "oklch(0.37 0.138 27)",
+          "oklch(0.48 0.185 27)",
+          "oklch(0.60 0.194 27)",
+          "oklch(0.72 0.142 27)",
+          "oklch(0.84 0.090 27)",
+          "oklch(0.95 0.043 27)"
+        ]
+      },
+      "signal-soft": {
+        "role": "primary",
+        "displayName": "Signal Soft",
+        "tonalRamp": [
+          "oklch(0.15 0.043 27)",
+          "oklch(0.26 0.090 27)",
+          "oklch(0.37 0.138 27)",
+          "oklch(0.48 0.185 27)",
+          "oklch(0.60 0.194 27)",
+          "oklch(0.72 0.142 27)",
+          "oklch(0.84 0.090 27)",
+          "oklch(0.95 0.043 27)"
+        ]
+      },
+      "signal-ink": {
+        "role": "primary",
+        "displayName": "Signal Ink",
+        "tonalRamp": [
+          "oklch(0.15 0.043 27)",
+          "oklch(0.26 0.090 27)",
+          "oklch(0.37 0.138 27)",
+          "oklch(0.48 0.185 27)",
+          "oklch(0.60 0.194 27)",
+          "oklch(0.72 0.142 27)",
+          "oklch(0.84 0.090 27)",
+          "oklch(0.95 0.043 27)"
+        ]
+      },
+      "down": {
+        "role": "secondary",
+        "displayName": "Down-vote Blue",
+        "tonalRamp": [
+          "oklch(0.15 0.034 262)",
+          "oklch(0.26 0.071 262)",
+          "oklch(0.37 0.109 262)",
+          "oklch(0.48 0.146 262)",
+          "oklch(0.60 0.153 262)",
+          "oklch(0.72 0.112 262)",
+          "oklch(0.84 0.071 262)",
+          "oklch(0.95 0.034 262)"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "sunk": {
+        "role": "neutral",
+        "displayName": "Sunk",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "active": {
+        "role": "neutral",
+        "displayName": "Active",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Line Strong",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "read": {
+        "role": "neutral",
+        "displayName": "Read",
+        "tonalRamp": [
+          "oklch(0.15 0.002 95)",
+          "oklch(0.26 0.003 95)",
+          "oklch(0.37 0.005 95)",
+          "oklch(0.48 0.007 95)",
+          "oklch(0.60 0.007 95)",
+          "oklch(0.72 0.005 95)",
+          "oklch(0.84 0.003 95)",
+          "oklch(0.95 0.002 95)"
+        ]
+      },
+      "signal-dark": {
+        "role": "primary",
+        "displayName": "Signal Red (dark)"
+      },
+      "signal-ink-dark": {
+        "role": "primary",
+        "displayName": "Signal Ink (dark)"
+      },
+      "signal-soft-dark": {
+        "role": "primary",
+        "displayName": "Signal Soft (dark)"
+      },
+      "down-dark": {
+        "role": "secondary",
+        "displayName": "Down-vote Blue (dark)"
+      },
+      "ground-dark": {
+        "role": "neutral",
+        "displayName": "Ground (dark)"
+      },
+      "panel-dark": {
+        "role": "neutral",
+        "displayName": "Panel (dark)"
+      },
+      "sunk-dark": {
+        "role": "neutral",
+        "displayName": "Sunk (dark)"
+      },
+      "active-dark": {
+        "role": "neutral",
+        "displayName": "Active (dark)"
+      },
+      "line-dark": {
+        "role": "neutral",
+        "displayName": "Line (dark)"
+      },
+      "line-strong-dark": {
+        "role": "neutral",
+        "displayName": "Line Strong (dark)"
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Ink (dark)"
+      },
+      "ink-2-dark": {
+        "role": "neutral",
+        "displayName": "Ink 2 (dark)"
+      },
+      "ink-3-dark": {
+        "role": "neutral",
+        "displayName": "Ink 3 (dark)"
+      },
+      "pip-ink": {
+        "role": "tertiary",
+        "displayName": "Pip Ink"
+      },
+      "pip-paper": {
+        "role": "tertiary",
+        "displayName": "Pip Paper"
+      },
+      "pip-oat": {
+        "role": "tertiary",
+        "displayName": "Pip Oat"
+      },
+      "pip-tint": {
+        "role": "tertiary",
+        "displayName": "Pip Cheek"
+      }
+    },
+    "typographyMeta": {
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "\"PaperWing\" beside Pip only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page and channel titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings."
+      },
+      "row-title": {
+        "displayName": "Row title",
+        "purpose": "Story titles in lists; 400 in Read grey once opened."
+      },
+      "reading": {
+        "displayName": "Reading",
+        "purpose": "Article text in the reader, max 38rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Comments and inline prose."
+      },
+      "ui": {
+        "displayName": "UI",
+        "purpose": "Buttons, chips, segments, rail links."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Row headers, timestamps, labels."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Code inside articles only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 18px 40px -18px oklch(0.2 0.01 95 / 0.4)",
+        "purpose": "Palette, dialogs, popovers. Dark: oklch(0 0 0 / 0.7)."
+      },
+      {
+        "name": "card-lift",
+        "value": "0 14px 30px -18px rgb(0 0 0 / 0.35)",
+        "purpose": "Topic card hover only; tinted by the topic swatch when followed."
+      },
+      {
+        "name": "outline",
+        "value": "inset 0 0 0 1px var(--line)",
+        "purpose": "Pills, cards, quiet edges."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.2, 0.7, 0.2, 1)",
+        "purpose": "All state transitions."
+      },
+      {
+        "name": "dur-micro",
+        "value": "120ms",
+        "purpose": "Hover, press (scale 0.97), colour changes."
+      },
+      {
+        "name": "dur-short",
+        "value": "220ms",
+        "purpose": "Sheets, pane slide, dialogs, pane view transition."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "639px"
+      },
+      {
+        "name": "single-column",
+        "value": "899px"
+      },
+      {
+        "name": "rail-collapsed",
+        "value": "1279px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default action: quiet Sunk pill.",
+      "html": "<button class=\"ds-btn\">Follow</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;height:2.25rem;padding:0 1rem;border:0;border-radius:999px;background:var(--sunk);color:var(--ink);font-family: var(--font-text); font-size: 0.875rem; font-weight: 600;transition: background-color 120ms, color 120ms, transform 120ms;cursor:pointer}.ds-btn:hover{background:var(--active)}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action on a surface: ink pill.",
+      "html": "<button class=\"ds-btn-primary\">Share</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;height:2.25rem;padding:0 1rem;border:0;border-radius:999px;background:var(--ink);color:var(--ground);font-family: var(--font-text); font-size: 0.875rem; font-weight: 600;transition: background-color 120ms, color 120ms, transform 120ms;cursor:pointer}.ds-btn-primary:hover{background:var(--ink-2)}.ds-btn-primary:active{transform:scale(.97)}.ds-btn-primary:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "Save, watch, more: circle; pressed turns the glyph Signal Red.",
+      "html": "<button class=\"ds-icon-btn\" aria-pressed=\"true\" aria-label=\"Save\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z\"/></svg></button>",
+      "css": ".ds-icon-btn{display:inline-grid;place-items:center;width:2.25rem;height:2.25rem;border:0;border-radius:999px;background:transparent;color:var(--ink-2);transition: background-color 120ms, color 120ms, transform 120ms;cursor:pointer}.ds-icon-btn:hover{background:var(--sunk);color:var(--ink)}.ds-icon-btn[aria-pressed='true']{color:var(--signal)}.ds-icon-btn:active{transform:scale(.97)}.ds-icon-btn:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Filters and topic picks; on inverts to ink.",
+      "html": "<span class=\"ds-chip-row\"><button class=\"ds-chip\">Shared</button><button class=\"ds-chip\" aria-pressed=\"true\">Discussions</button><button class=\"ds-chip ds-chip-topic\" style=\"--h:250\">Space</button></span>",
+      "css": ".ds-chip-row{display:flex;gap:.5rem}.ds-chip{display:inline-flex;align-items:center;height:2rem;padding:0 .875rem;border:0;border-radius:999px;background:var(--sunk);color:var(--ink-2);font-family: var(--font-text); font-size: 0.875rem; font-weight: 600;transition: background-color 120ms, color 120ms, transform 120ms;cursor:pointer}.ds-chip:hover{background:var(--active);color:var(--ink)}.ds-chip[aria-pressed='true']{background:var(--ink);color:var(--ground)}.ds-chip-topic{background:oklch(var(--tint-l,.915) var(--tint-c,.05) var(--h));color:oklch(var(--tint-ink-l,.37) var(--tint-ink-c,.11) var(--h))}.ds-chip:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text field: Panel fill, Line border, focus ring kept.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search topics, or type anything\">",
+      "css": ".ds-input{height:2.5rem;width:100%;max-width:22rem;padding:0 1rem;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-family:var(--font-text);font-size:.875rem}.ds-input::placeholder{color:var(--ink-3)}.ds-input:focus{border-color:var(--line-strong)}.ds-input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Sorts and list switches.",
+      "html": "<div class=\"ds-seg\"><button aria-pressed=\"true\">Hot</button><button>Latest</button><button>Top</button><button>Spicy</button></div>",
+      "css": ".ds-seg{display:inline-flex;padding:3px;gap:2px;border-radius:999px;background:var(--sunk)}.ds-seg button{height:1.875rem;padding:0 .875rem;border:0;border-radius:999px;background:transparent;color:var(--ink-2);font-family: var(--font-text); font-size: 0.875rem; font-weight: 600;transition: background-color 120ms, color 120ms, transform 120ms;cursor:pointer}.ds-seg button:hover{color:var(--ink)}.ds-seg button[aria-pressed='true']{background:var(--panel);color:var(--ink)}.ds-seg button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "rail-link",
+      "description": "Desktop sidebar links with topic swatches.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-link ds-active\" href=\"#\"><span class=\"ds-swatch\" style=\"--h:27\"></span>For you</a><a class=\"ds-rail-link\" href=\"#\"><span class=\"ds-swatch\" style=\"--h:250\"></span>Space</a><a class=\"ds-rail-link\" href=\"#\"><span class=\"ds-swatch\" style=\"--h:150\"></span>Climate</a></nav>",
+      "css": ".ds-rail{display:flex;flex-direction:column;gap:2px;width:15rem}.ds-rail-link{display:flex;align-items:center;gap:.75rem;height:2.125rem;padding:0 .75rem;border-radius:10px;color:var(--ink-2);font-family:var(--font-text);font-size:.875rem;text-decoration:none;transition:background-color 120ms,color 120ms}.ds-rail-link:hover{background:var(--sunk);color:var(--ink)}.ds-rail-link.ds-active{background:var(--active);color:var(--ink);font-weight:600}.ds-swatch{width:.625rem;height:.625rem;border-radius:3px;background:oklch(var(--swatch-l,.6) var(--swatch-c,.14) var(--h))}.ds-rail-link:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    },
+    {
+      "name": "Story Row",
+      "kind": "card",
+      "refersTo": "story-row",
+      "description": "A story in a list: meta header, title, outlined pills; selected gets the red tab.",
+      "html": "<article class=\"ds-row ds-selected\"><div class=\"ds-row-head\"><b>Hacker News</b><span>quantamagazine.org</span><span>3h</span></div><h3 class=\"ds-row-title\">A new proof settles a decades-old question about prime gaps</h3><div class=\"ds-row-bar\"><span class=\"ds-pill\">▲ 412</span><span class=\"ds-pill\">186 comments</span></div></article>",
+      "css": ".ds-row{position:relative;max-width:37rem;padding:.75rem 1rem .625rem;border-bottom:1px solid var(--line);font-family:var(--font-text);transition:background-color 120ms;cursor:pointer}.ds-row:hover{background:var(--sunk)}.ds-row.ds-selected{background:var(--active)}.ds-row.ds-selected::before{content:'';position:absolute;left:0;top:.875rem;width:4px;height:1.25rem;border-radius:0 3px 3px 0;background:var(--signal)}.ds-row-head{display:flex;gap:.375rem;font-size:.8125rem;color:var(--ink-3)}.ds-row-head b{color:var(--ink-2);font-weight:700}.ds-row-title{margin:.375rem 0 0;font-size:1.0625rem;line-height:1.32;font-weight:650;color:var(--ink);text-wrap:pretty}.ds-row-bar{display:flex;gap:.5rem;margin-top:.625rem}.ds-pill{display:inline-flex;align-items:center;height:2rem;padding:0 .75rem;border-radius:999px;box-shadow:inset 0 0 0 1px var(--line);font-size:.875rem;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Discussion Bar",
+      "kind": "custom",
+      "refersTo": "discussion-bar",
+      "description": "Signature: one link's conversation split by source; current segment in Signal Red.",
+      "html": "<div class=\"ds-dbar\" role=\"group\" aria-label=\"Discussions\"><button style=\"flex:5\" aria-current=\"true\" aria-label=\"Hacker News\"></button><button style=\"flex:3\" aria-label=\"Lobsters\"></button><button style=\"flex:2\" aria-label=\"Bluesky\"></button><button style=\"flex:1\" aria-label=\"Lemmy\"></button></div>",
+      "css": ".ds-dbar{display:flex;gap:3px;height:.75rem;width:20rem}.ds-dbar button{min-width:.75rem;border:0;padding:0;border-radius:999px;background:var(--line-strong);transition:background-color 120ms;cursor:pointer}.ds-dbar button:nth-child(2n){background:var(--ink-3)}.ds-dbar button:hover{background:var(--ink-2)}.ds-dbar button[aria-current='true']{background:var(--signal)}.ds-dbar button:focus-visible{outline:2px solid var(--signal);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reading Instrument",
+    "overview": "PaperWing is a precise tool for reading, and its one object is *where a story is being discussed*. The interface is near-neutral ground and ink so the words read first; chrome stays quiet and colour is spent only where it carries information: one signal red for selection, news and the active discussion, a hue per topic for identity, and muted hues for comment depth. Everything else is tone, not colour.\n\nDensity is that of a working reader: full-width story rows, a list beside a reading pane on desktop, a single column with a sliding pane and bottom nav on phones. Shapes are soft and rounded (pills for controls, 18px panels) so the dense content never feels sharp. Depth comes from tonal steps (ground, panel, sunk, active) rather than shadows, which are reserved for things that float.\n\nCharacter lives in a few exact places: the Fraunces wordmark in ink beside Pip the paper owl, who carries the red; each channel opening on a whole field of its topic's colour; and the discussion bar, which splits one link's conversation by source. The system deliberately refuses eyebrows and tracked caps, mono labels, middle-dot meta strings, counting-mark meters, paper grain, glass blur, and the cream-plus-serif look.",
+    "keyCharacteristics": [
+      "Near-neutral ground with a hair of warmth (hue 95, chroma ≤ 0.008); dark mode is neutral near-black, never navy, and nothing glows.",
+      "One accent, Signal Red, used only on state and data.",
+      "Atkinson Hyperlegible Next for everything read or touched; Fraunces for the wordmark only; JetBrains Mono for code inside articles only.",
+      "Tonal layering for depth; one floating shadow.",
+      "Topic identity as colour fields and tints derived from a single hue per topic.",
+      "Every text pairing clears 4.5:1 in both themes; motion only on state changes, off under reduced motion."
+    ],
+    "rules": [
+      {
+        "name": "The Signal Rule",
+        "body": "Signal Red marks state and data (selected, new, hot, current, yours), never decoration, headings or chrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Hue, Not Palette Rule",
+        "body": "A topic is one hue number. Fields, tints, ink and swatches come from the shared lightness and chroma recipes, so any new topic is legible in both themes without picking colours.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Reading Face Rule",
+        "body": "Everything readable is Atkinson Hyperlegible Next. Fraunces never appears outside the wordmark; mono never appears outside code.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence-Case Rule",
+        "body": "Labels are sentence case at normal tracking. No eyebrows, no tracked caps, no mono labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Float-Only Rule",
+        "body": "Only something above the page gets a drop shadow. Rows, panes and controls at rest never do.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep Signal Red to state and data: selection, new, hot, current discussion, your votes, focus.",
+      "**Do** derive any topic colour from a single hue through the field, tint and swatch recipes.",
+      "**Do** separate meta items with spacing (0.875rem column gap), not punctuation.",
+      "**Do** convey depth with Ground, Panel, Sunk and Active; use the float shadow only for overlays.",
+      "**Do** use full pills for controls and 18px for containers.",
+      "**Do** check every new text pairing at 4.5:1 in both themes, and drop transitions under reduced motion.",
+      "**Do** keep Pip's own `--pip-*` colours for Pip, and the wordmark in Fraunces and ink beside it."
+    ],
+    "donts": [
+      "**Don't** use eyebrows, tracked caps or mono labels.",
+      "**Don't** join meta with middle dots.",
+      "**Don't** use counting-mark meters, paper grain or glass blur.",
+      "**Don't** drift into the cream-plus-serif look: the ground stays near-neutral, and serif is the wordmark's alone.",
+      "**Don't** make dark mode navy or let anything glow.",
+      "**Don't** use red in comment rails or any decorative role, so it never competes with the signal."
+    ]
+  }
+}

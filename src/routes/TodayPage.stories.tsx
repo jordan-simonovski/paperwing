@@ -41,6 +41,22 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const answering: FeedFetcher = async () => todays()
+
+/** Closing out the edition: Pip shuts the book and you're told you can stop. */
+export const DoneForToday: Story = {
+  render: () => (
+    <FeedFetcherContext.Provider value={answering}>
+      <TodayPage />
+    </FeedFetcherContext.Provider>
+  ),
+  play: async ({ canvas }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Done for today' }))
+    await expect(await canvas.findByText("You're caught up")).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Fresh edition now' })).toBeVisible()
+  },
+}
+
 /** None of For you's sources answered: say so, with a way to try again, and build the edition once they do. */
 export const SourcesComeBack: Story = {
   render: () => <Recovering />,
