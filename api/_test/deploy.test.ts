@@ -12,7 +12,7 @@ function deployed(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     if (e.name.startsWith('_') || e.name.startsWith('.')) return []
     const path = join(dir, e.name)
-    return e.isDirectory() ? deployed(path) : /\.(ts|js|mjs)$/.test(e.name) ? [relative(API, path)] : []
+    return e.isDirectory() ? deployed(path) : /\.(c|m)?[jt]sx?$/.test(e.name) ? [relative(API, path)] : []
   })
 }
 

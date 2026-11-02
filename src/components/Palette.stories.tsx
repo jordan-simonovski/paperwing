@@ -66,3 +66,12 @@ export const DottedWordsAreNotLinks: Story = {
     await expect(page.getAllByRole('option')[0]).toHaveTextContent('Post this link')
   },
 }
+
+/** Several words find a setting by any of its words ("sign in" finds accounts). */
+export const SeveralWords: Story = {
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body)
+    await userEvent.type(page.getByRole('combobox'), 'sign in')
+    await expect(page.getAllByRole('option')[0]).toHaveTextContent('Accounts and sources')
+  },
+}

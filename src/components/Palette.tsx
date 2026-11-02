@@ -143,7 +143,15 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     // not "daily"). A topic called exactly what was typed still comes first.
     const places = nav.filter((n) => {
       const label = typeof n.label === 'string' ? n.label.toLowerCase() : ''
-      return label.includes(lower) || `${label} ${n.keywords ?? ''}`.split(/[^a-z0-9]+/).some((w) => w.startsWith(lower))
+      const words = `${label} ${n.keywords ?? ''}`.split(/[^a-z0-9]+/)
+      // Every word typed starts some word of the place ("sign in", "dark mode").
+      return (
+        label.includes(lower) ||
+        lower
+          .split(/[^a-z0-9]+/)
+          .filter(Boolean)
+          .every((q) => words.some((w) => w.startsWith(q)))
+      )
     })
     const exact = hits.filter((h) => h.score >= 10).map((h) => `topic:${h.topic.id}`)
     const first = out.filter((i) => exact.includes(i.id))

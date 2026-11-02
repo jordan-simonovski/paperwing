@@ -67,4 +67,23 @@ describe('joining sync', () => {
     await Promise.all([oldRun, joined])
     expect(useSync.getState()).toMatchObject({ code: newCode, cursor: 9, error: undefined })
   })
+
+  it('a newly joined code gets everything this device holds, including what it pulled from the old code', async () => {
+    const [oldCode, newCode] = [newSyncCode(), newSyncCode()]
+    const { seal } = await import('./syncCrypto')
+    const pulled = await seal(oldCode, { key: 'prefs', updatedAt: 5, data: { followed: ['physics'] } })
+    const sentTo: Record<string, number> = {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        const code = new Headers(init?.headers).get('x-sync-code')!
+        const body = JSON.parse(String(init?.body)) as { changes: unknown[] }
+        sentTo[code] = (sentTo[code] ?? 0) + body.changes.length
+        return new Response(JSON.stringify({ records: code === oldCode ? [pulled] : [], cursor: 1, more: false }), { status: 200 })
+      }),
+    )
+    await joinSync(oldCode)
+    await joinSync(newCode)
+    expect(sentTo[newCode]).toBeGreaterThan(0)
+  })
 })

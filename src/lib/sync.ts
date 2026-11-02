@@ -31,7 +31,11 @@ export const useSync = create<SyncState>()(
       cursor: 0,
       pushedAt: 0,
       syncing: false,
-      setCode: (code, opts) => set({ code, passkey: !!code && !!opts?.passkey, cursor: 0, pushedAt: 0, lastSync: undefined, error: undefined }),
+      setCode: (code, opts) => {
+        // What came from the old code's server is this device's to give the new one: forget the echoes.
+        applied.clear()
+        set({ code, passkey: !!code && !!opts?.passkey, cursor: 0, pushedAt: 0, lastSync: undefined, error: undefined })
+      },
     }),
     { name: 'readout:sync', version: 1, partialize: ({ code, cursor, pushedAt, lastSync, passkey }) => ({ code, cursor, pushedAt, lastSync, passkey }) },
   ),
