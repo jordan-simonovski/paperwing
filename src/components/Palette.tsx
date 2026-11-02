@@ -111,7 +111,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     }
 
     // A pasted link: post it.
-    const pasted = linkFrom(query)
+    // Only what's plainly an address: "node.js" or "llama.cpp" is a topic, not a site to post.
+    const pasted = /^https?:\/\/|\S\/\S/i.test(query) ? linkFrom(query) : undefined
     if (pasted) out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <Link2 size={15} />, run: () => postLink({ url: pasted }) })
     const hits = searchTopics(query, topics).slice(0, 6)
     for (const h of hits)
@@ -138,8 +139,15 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     // Places and settings that match come first: someone typing "text size" wants the setting, not a topic.
     const lower = query.toLowerCase()
     if (!lower) return [...out, ...nav.filter((n) => n.group !== 'Settings')]
-    const places = nav.filter((n) => `${typeof n.label === 'string' ? n.label : ''} ${n.keywords ?? ''}`.toLowerCase().includes(lower))
-    return [...places, ...out]
+    // A place matches on its name, or on a word of its keywords starting with what's typed ("ai" is
+    // not "daily"). A topic called exactly what was typed still comes first.
+    const places = nav.filter((n) => {
+      const label = typeof n.label === 'string' ? n.label.toLowerCase() : ''
+      return label.includes(lower) || `${label} ${n.keywords ?? ''}`.split(/[^a-z0-9]+/).some((w) => w.startsWith(lower))
+    })
+    const exact = hits.filter((h) => h.score >= 10).map((h) => `topic:${h.topic.id}`)
+    const first = out.filter((i) => exact.includes(i.id))
+    return [...first, ...places, ...out.filter((i) => !exact.includes(i.id))]
   }, [q, interests, followed, navigate, set, addInterest, dark])
 
   useEffect(() => setActive(0), [q])

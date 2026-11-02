@@ -45,3 +45,24 @@ export const FindsSettings: Story = {
     await expect(options[0]).toHaveTextContent('Text size, theme and density')
   },
 }
+
+/** A topic's own name goes to the topic, even when it hides inside a place's words ("ai" in "daily"). */
+export const TopicNameFirst: Story = {
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body)
+    await userEvent.type(page.getByRole('combobox'), 'ai')
+    await expect(page.getAllByRole('option')[0]).toHaveTextContent(/^AI/)
+  },
+}
+
+/** A dotted topic word is a topic, not a link to post. */
+export const DottedWordsAreNotLinks: Story = {
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body)
+    await userEvent.type(page.getByRole('combobox'), 'node.js')
+    await expect(page.getAllByRole('option')[0]).not.toHaveTextContent('Post this link')
+    await userEvent.clear(page.getByRole('combobox'))
+    await userEvent.type(page.getByRole('combobox'), 'example.com/post')
+    await expect(page.getAllByRole('option')[0]).toHaveTextContent('Post this link')
+  },
+}

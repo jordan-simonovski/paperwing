@@ -143,11 +143,16 @@ async function post(code: string, body: object) {
 }
 
 let running: Promise<void> | undefined
+/** The code the running sync is for. */
+let runningFor: string | undefined
 
 /** Pushes local changes, then pulls everyone else's. Safe to call often; overlapping calls share one run. */
 export function syncNow(): Promise<void> {
   const { code } = useSync.getState()
   if (!code || !navigator.onLine) return Promise.resolve()
+  // A run for a code this device has since left finishes on its own; then the new code gets its own.
+  if (running && runningFor !== code) return running.then(() => syncNow())
+  runningFor = code
   running ??= (async () => {
     useSync.setState({ syncing: true })
     try {
@@ -171,9 +176,12 @@ export function syncNow(): Promise<void> {
           more = next.more
         }
       }
+      // Progress and errors belong to the code they were for, never to one joined since.
+      if (useSync.getState().code !== code) return
       useSync.setState({ cursor, pushedAt: startedAt, lastSync: Date.now(), error: undefined })
       void useLibrary.getState().hydrate()
     } catch (err) {
+      if (useSync.getState().code !== code) return
       useSync.setState({ error: err instanceof Error ? err.message : 'Sync failed' })
     } finally {
       useSync.setState({ syncing: false })
@@ -187,7 +195,8 @@ export function syncNow(): Promise<void> {
  * Joins this device to a sync code (typed, pasted, from a pairing link or a passkey) and runs the
  * first sync. Rejects, with a message for people, when the code isn't one or the first sync fails.
  * The code stays set after a failed sync: the failure is nearly always the network, and the next
- * sync (on the next edit, on return to the app) picks up where this one stopped.
+ * sync (on the next edit, on return to the app) picks up where this one stopped. Offline, it
+ * resolves with the code set, and the first sync runs when the connection is back.
  */
 export async function joinSync(raw: string, opts: { passkey?: boolean } = {}): Promise<void> {
   const code = normalizeCode(raw)

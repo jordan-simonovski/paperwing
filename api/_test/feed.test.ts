@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { setUpstream } from './_lib/http.js'
-import { call, fakeUpstreams } from './test/harness.js'
-import { GET, SOURCES } from './feed.js'
+import { setUpstream } from '../_lib/http.js'
+import { call, fakeUpstreams } from './harness.js'
+import { GET, SOURCES } from '../feed.js'
 
 // The feed function end to end: a request in, upstreams faked, the answer and its headers out.
 

@@ -13,6 +13,9 @@ see LICENSE in this folder), copied unmodified at commit 4ae2317.
 `release-notes` is PaperWing's own: how to write changesets (kinds, wording, bumps) and how a
 release becomes "What's new" and a production deploy.
 
+`ship` is PaperWing's own too: the gate before any push or pull request (checks, changesets, then the
+review below, then fixing what it raises).
+
 `ce-code-review` is different: a pointer to the pinned Compound Engineering review
 (EveryInc/compound-engineering-plugin, MIT), whose assets live byte-for-byte in
 `.compound-engineering/vendor/` with their own licence. See

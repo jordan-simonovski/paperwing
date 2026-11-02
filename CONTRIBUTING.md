@@ -29,7 +29,7 @@ Some features need a service behind them. Copy `.env.example` to `.env.local` an
 
 Never commit `.env.local`, keys, tokens or app passwords.
 
-## Before you open a pull request
+## Before you open a pull request (or push to main)
 
 Run the same checks CI runs:
 
@@ -121,7 +121,7 @@ What each upstream sends is in `e2e/fixtures/upstream.ts`, in its own wire shape
 ## API tests
 
 Each function in `api/` takes a `Request` and returns a `Response`, so it's tested in-process, end to end, with every
-upstream faked by `api/test/harness.ts` (`api/feed.test.ts` is the example to copy):
+upstream faked by `api/_test/harness.ts` (`api/_test/feed.test.ts` is the example to copy):
 
 ```ts
 const net = fakeUpstreams() // no real network: anything not intercepted fails the test
@@ -129,7 +129,8 @@ net.get('https://lobste.rs').intercept({ path: '/hottest.json' }).reply(200, [st
 const res = await call(GET, '/api/feed?src=lobsters')
 ```
 
-`memoryStore()` gives a file the in-process KV store, reset before each test. Test what a caller sees: the status,
+Tests and their helpers live in `api/_test/` (or beside a module in `api/_lib/`): Vercel deploys every other file under
+`api/` as a function, and `api/_test/deploy.test.ts` fails if one slips through. `memoryStore()` gives a file the in-process KV store, reset before each test. Test what a caller sees: the status,
 the body and the headers that matter (caching, sandboxing), not the internals.
 
 ## Releases

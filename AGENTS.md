@@ -18,7 +18,8 @@ Before committing:
 - If you changed what's stored or sent, the privacy and terms pages say so in the same change.
 - Commits carry no AI attribution: no `Co-Authored-By` or session trailers, and no model names anywhere in the repo.
 
-Before opening a pull request:
+Before opening a pull request, and before any push to `main` (every commit there ships in the next release),
+run the `ship` skill (`.claude/skills/ship/SKILL.md`). It runs these steps in order:
 
 - Add a changeset for every change people can notice, written for them (`release-notes` skill,
   `.changeset/README.md`), or an empty one (`npx changeset add --empty`) when there's nothing to notice.

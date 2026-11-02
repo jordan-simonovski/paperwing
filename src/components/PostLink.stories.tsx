@@ -9,7 +9,8 @@ const meta = {
   title: 'Reading/PostLink',
   component: PostLink,
   args: { onClose: fn() },
-  parameters: { app: { fetch: { 'src=card': { title: 'On reading slowly', description: 'Why it matters.' } } } },
+  // Cards by link, so a story can answer two links differently.
+  parameters: { app: { fetch: { 'blog.example%2Fslow': { title: 'On reading slowly', description: 'Why it matters.' } } } },
 } satisfies Meta<typeof PostLink>
 export default meta
 type Story = StoryObj<typeof meta>
@@ -48,5 +49,18 @@ export const NotALink: Story = {
     await userEvent.type(page().getByLabelText('Link'), 'just some words')
     await expect(page().getByText(/doesn’t look like a web link/)).toBeVisible()
     await expect(page().getByRole('button', { name: /Next/ })).toBeDisabled()
+  },
+}
+
+/** Changing the link drops the old page's title: the next link waits for its own. */
+export const ChangingTheLink: Story = {
+  parameters: { app: { fetch: { 'blog.example%2Ffast': { title: 'On reading fast' } } } },
+  play: async () => {
+    await userEvent.type(page().getByLabelText('Link'), 'blog.example/slow')
+    await waitFor(() => expect(page().getByLabelText(/Title/)).toHaveValue('On reading slowly'))
+    await userEvent.clear(page().getByLabelText('Link'))
+    await userEvent.type(page().getByLabelText('Link'), 'blog.example/fast')
+    await expect(page().getByLabelText(/Title/)).not.toHaveValue('On reading slowly')
+    await waitFor(() => expect(page().getByLabelText(/Title/)).toHaveValue('On reading fast'))
   },
 }

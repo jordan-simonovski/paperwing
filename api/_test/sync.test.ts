@@ -1,13 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { clientKey, today } from './_lib/http.js'
-import { kv } from './_lib/kv.js'
-import { call, memoryStore } from './test/harness.js'
-import { POST } from './sync.js'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clientKey, today } from '../_lib/http.js'
+import { kv } from '../_lib/kv.js'
+import { call, memoryStore } from './harness.js'
+import { POST } from '../sync.js'
 
 // Sync between devices, end to end against the in-process store: what one device sends, another
 // gets back, and the rules that keep it fair (newest wins, a daily allowance per caller).
 
 memoryStore()
+afterEach(() => vi.restoreAllMocks())
 
 const CODE = 'abcdefghijklmnopqrstuvwxyz'.replace(/[01890]/g, '2')
 const record = (key: string, updatedAt: number, data: unknown = { v: updatedAt }) => ({ key, updatedAt, data })
@@ -49,6 +50,11 @@ describe('sync', () => {
     await kv().bump(`rd:sync-write:${who}:${today()}`, 86_400, 100_000)
     const res = await sync({ since: 0, changes: [record('x:a', 100)] }, headers)
     expect(res.status).toBe(429)
+  })
+
+  it('refuses writes while the allowance can’t be counted', async () => {
+    vi.spyOn(kv(), 'bump').mockRejectedValue(new Error('Sync store answered 503'))
+    expect((await sync({ since: 0, changes: [record('x:a', 100)] })).status).toBe(429)
   })
 
   it('refuses a bad code or a body it can’t read', async () => {

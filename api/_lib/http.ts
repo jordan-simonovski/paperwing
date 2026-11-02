@@ -48,7 +48,7 @@ export async function readJson<T>(request: Request): Promise<T | undefined> {
   }
 }
 
-/** Today in UTC (2026-11-02): the key daily allowances count under. */
+/** Today's date in UTC (YYYY-MM-DD): the key daily allowances count under. */
 export const today = (now = Date.now()) => new Date(now).toISOString().slice(0, 10)
 
 /**

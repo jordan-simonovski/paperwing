@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { today } from './_lib/http.js'
-import { kv } from './_lib/kv.js'
-import { call, memoryStore } from './test/harness.js'
-import { POST } from './summarize.js'
+import { today } from '../_lib/http.js'
+import { kv } from '../_lib/kv.js'
+import { call, memoryStore } from './harness.js'
+import { POST } from '../summarize.js'
 
 // Who pays for a summary, and when the answer is no. None of these reach Anthropic: each stops
 // before the model is asked.

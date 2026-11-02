@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useRef } from 'react'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 import type { NoteView } from '../lib/notes'
 import { NOW } from '../test/fixtures'
 import { MarginNotes } from './MarginNotes'
@@ -76,6 +76,25 @@ export const SignedIn: Story = {
     const offer = await within(document.body).findByRole('button', { name: /Note this passage/ })
     await userEvent.click(offer)
     await expect(await within(document.body).findByRole('dialog', { name: 'Margin note' })).toBeVisible()
+  },
+}
+
+/** Signed out: selecting still offers a note, and the offer explains how to sign in instead of doing nothing. */
+export const SignedOut: Story = {
+  args: { url: URL, html: HTML, container: { current: null } },
+  play: async ({ canvas }) => {
+    const p = canvas.getByText(/PaperWing is a reader for that web/)
+    const range = document.createRange()
+    range.setStart(p.firstChild!, 0)
+    range.setEnd(p.firstChild!, 'PaperWing is a reader for that web.'.length)
+    document.getSelection()!.removeAllRanges()
+    document.getSelection()!.addRange(range)
+    const page = within(document.body)
+    await userEvent.click(await page.findByRole('button', { name: /Note this passage/ }))
+    const sheet = await page.findByRole('dialog', { name: 'Margin note' })
+    await expect(within(sheet).getByRole('link', { name: 'Sign in with Bluesky' })).toHaveAttribute('href', '/settings/sources')
+    // The sheet fades in.
+    await waitFor(() => expect(within(sheet).getByRole('button', { name: 'Not now' })).toBeVisible())
   },
 }
 

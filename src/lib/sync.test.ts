@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('idb-keyval', () => import('../test/memoryIdb'))
 import { useLibrary } from './library'
-import { formatCode, joinSync, newSyncCode, useSync } from './sync'
+import { formatCode, joinSync, newSyncCode, syncNow, useSync } from './sync'
 
 // Joining sync, through its interface: a code in, the first sync run, and what a person is told.
 
@@ -46,5 +46,25 @@ describe('joining sync', () => {
     expect(useSync.getState().passkey).toBe(false)
     await joinSync(code, { passkey: true })
     expect(useSync.getState()).toMatchObject({ code, passkey: true })
+  })
+
+  it('joining a new code mid-sync gives the new code its own first sync, untouched by the old run', async () => {
+    const [oldCode, newCode] = [newSyncCode(), newSyncCode()]
+    let release = () => {}
+    const slowOld = new Promise<void>((r) => (release = r))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        const code = new Headers(init?.headers).get('x-sync-code')
+        if (code === oldCode) await slowOld
+        return new Response(JSON.stringify({ records: [], cursor: code === oldCode ? 5 : 9, more: false }), { status: 200 })
+      }),
+    )
+    useSync.getState().setCode(oldCode)
+    const oldRun = syncNow()
+    const joined = joinSync(newCode)
+    release()
+    await Promise.all([oldRun, joined])
+    expect(useSync.getState()).toMatchObject({ code: newCode, cursor: 9, error: undefined })
   })
 })

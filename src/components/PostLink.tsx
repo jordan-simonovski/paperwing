@@ -29,14 +29,14 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
     staleTime: Infinity,
     queryFn: () => api('feed', { src: 'card', url: settled }) as Promise<{ title?: string; description?: string }>,
   })
-  const found = card.data?.title?.trim()
-  useEffect(() => {
-    if (found && !edited) setTitle(found)
-  }, [found, edited])
+  // The page's title belongs to the link it was read from: while a new link settles, there is none
+  // yet, so a changed link never goes out under the old one's title. Your own title always wins.
+  const found = settled === link ? card.data?.title?.trim() : undefined
+  const shown = edited ? title : (found ?? '')
 
   const next = () => {
-    if (!link || !title.trim()) return
-    const story = { ...storyFromKey(linkKey(link))!, title: title.trim() }
+    if (!link || !shown.trim()) return
+    const story = { ...storyFromKey(linkKey(link))!, title: shown.trim() }
     useComposer.getState().open({ kind: 'share', story, board })
   }
 
@@ -66,7 +66,7 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
           </span>
           <input
             className="input"
-            value={title}
+            value={shown}
             maxLength={300}
             placeholder={link ? (card.isFetching ? 'Reading the page…' : 'What is it?') : 'Paste a link first'}
             onChange={(e) => {
@@ -79,7 +79,7 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button className="btn btn-primary" disabled={!link || !title.trim()}>
+          <button className="btn btn-primary" disabled={!link || !shown.trim()}>
             Next <ArrowRight size={15} />
           </button>
         </div>

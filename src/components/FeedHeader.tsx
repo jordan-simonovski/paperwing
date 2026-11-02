@@ -11,6 +11,7 @@ import { kindOf, type Ranked, type SortMode, type StoryKind } from '../lib/rank'
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
 import { postLink } from '../lib/compose'
+import { parseChannelId } from '../lib/channelId'
 import { toggleCommunity } from '../lib/explore'
 import { Link } from 'react-router'
 import { cooccurringTopics, type Topic } from '../lib/topics'
@@ -86,9 +87,10 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
   const failed = statuses.filter((s) => s.status === 'error')
   const loading = statuses.filter((s) => s.status === 'pending').length
   // Where links can be posted: PaperWing and its topic boards.
-  const postsHere = channel.id === 'paperwing' || channel.id.startsWith('paperwing:')
+  const address = parseChannelId(channel.id)
+  const postsHere = address?.kind === 'paperwing'
   // A Lemmy community's own channel can be joined from here.
-  const community = channel.id.startsWith('c:') ? channel.id.slice(2) : undefined
+  const community = address?.kind === 'community' ? address.name : undefined
   const mixable = mixSourceFor(channel, usePrefs.getState().interests)
   const joinedIt = usePrefs((p) => !!community && p.communities.some((c) => c.name === community))
   // For you wears the colours of what it ranks: a blend of your topics' fields, with their icons.
@@ -176,7 +178,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
               )}
               {mixable && <AddToMix source={mixable.source} label={mixable.label} className="btn h-8 flex-none px-3 text-[0.8125rem] max-sm:px-2.5" textClassName="max-sm:hidden" />}
               {postsHere && (
-                <button className="btn h-8 flex-none px-3.5 text-[0.8125rem]" onClick={() => postLink({ board: channel.id.startsWith('paperwing:') ? channel.id.slice(10) : undefined })}>
+                <button className="btn h-8 flex-none px-3.5 text-[0.8125rem]" onClick={() => postLink({ board: address?.kind === 'paperwing' ? address.board : undefined })}>
                   <Link2 size={14} /> Post a link
                 </button>
               )}
