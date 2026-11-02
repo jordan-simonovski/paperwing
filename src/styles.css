@@ -1905,6 +1905,28 @@
       transform: translateY(8px);
     }
   }
+  /* Today, finished while you watched: Pip gives a small hop and lands on its feet, book shut. Once, never on return. */
+  .pip-settle {
+    transform-origin: 50% 85%;
+    animation: pip-settle 560ms var(--ease) both;
+  }
+  @keyframes pip-settle {
+    0% {
+      transform: translateY(0) scale(1, 1);
+    }
+    22% {
+      transform: translateY(2px) scale(1.04, 0.95);
+    }
+    55% {
+      transform: translateY(-9px) scale(0.98, 1.03);
+    }
+    82% {
+      transform: translateY(1px) scale(1.02, 0.98);
+    }
+    100% {
+      transform: none;
+    }
+  }
 
   /* ---------------------------------------------------- loading and status */
 

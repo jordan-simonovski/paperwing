@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { FeedFailed } from '../components/FeedState'
 import { OutageBanner } from '../components/OutageWatch'
+import { Pip } from '../components/Pip'
 import { Split, useListKeys } from '../components/Split'
 import { usePretext, useTypesetIn } from '../lib/pretext'
 import { RowSkeleton, StoryRow } from '../components/StoryRow'
@@ -89,6 +90,14 @@ export function TodayPage() {
   useTypesetIn(`today|${edition?.createdAt ?? ''}`, pretext && stories.length > 0 && !itemKey)
   const done = stories.filter((s) => read[s.key]).length
   const finished = !!edition?.finishedAt || (stories.length > 0 && done === stories.length)
+  // Pip settles in only when you finish while you're here, not every time you come back to a finished edition.
+  const state = edition ? finished : undefined
+  const [lastState, setLastState] = useState(state)
+  const [justFinished, setJustFinished] = useState(false)
+  if (state !== lastState) {
+    setLastState(state)
+    setJustFinished(lastState === false && state === true)
+  }
 
   const restart = () => {
     const sections = buildEdition(feed.stories, { followed, since: edition?.createdAt ?? now, exclude: (k) => !!read[k] || !!hidden[k] || !!savedItems[k], now })
@@ -160,8 +169,8 @@ export function TodayPage() {
             <div className="mx-4 my-8 rounded-[18px] bg-panel p-6 text-center md:mx-5">
               {finished ? (
                 <>
-                  <Check className="mx-auto text-signal" size={26} />
-                  <p className="mt-2 text-[1.25rem] font-bold">You're caught up</p>
+                  <Pip variant="done" className={`mx-auto block size-28 ${justFinished && pretext ? 'pip-settle' : ''}`} />
+                  <p className="mt-1 text-[1.25rem] font-bold">You're caught up</p>
                   <p className="mt-1 text-[0.9375rem] text-ink-3">The next edition is ready tomorrow. For more now, For you never ends.</p>
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     <Link to="/t/for-you" className="btn">
