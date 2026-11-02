@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent } from 'storybook/test'
-import { topicFeeds } from '../lib/channels'
-import { feedId } from '../lib/sources'
+import { planChannel } from '../lib/channelFeed'
+import { keys } from '../lib/query'
+import { readReader } from '../lib/reader'
 import { usePrefs } from '../lib/store'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { story } from '../test/fixtures'
@@ -29,7 +30,12 @@ export const WithALeadStory: Story = {
   parameters: {
     app: {
       // The lead must be from the last day, measured against the real clock.
-      queries: [[['feed', feedId(topicFeeds(space)[0])], [story({ title: 'Starship completes its first orbital refuelling test', createdAt: Date.now() - 2 * 3_600_000 })]]],
+      queries: [
+        [
+          keys.feed(planChannel(readReader(), space.id, { sort: 'hot', blueskyEnabled: true })!.feeds[0].id),
+          [story({ title: 'Starship completes its first orbital refuelling test', createdAt: Date.now() - 2 * 3_600_000 })],
+        ],
+      ],
     },
   },
   play: async ({ canvas }) => {

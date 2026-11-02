@@ -1,3 +1,4 @@
+import { keys } from './query'
 import type { QueryClient } from '@tanstack/react-query'
 import { hnSearch } from './sources/hn'
 import { api } from './sources/http'
@@ -33,7 +34,7 @@ export function searchLoaded(qc: QueryClient, q: string, days?: number): Story[]
   const ws = words(q)
   if (!ws.length) return []
   const seen = new Map<string, Story>()
-  for (const query of qc.getQueryCache().findAll({ queryKey: ['feed'] })) {
+  for (const query of qc.getQueryCache().findAll({ queryKey: keys.feeds })) {
     for (const s of (query.state.data as Story[] | undefined) ?? []) {
       if (seen.has(s.key)) continue
       const text = `${s.title} ${s.url ?? ''} ${s.sourceLabel}`.toLowerCase()

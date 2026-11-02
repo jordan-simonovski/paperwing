@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { refreshMastodon } from '../components/MastodonSettings'
@@ -12,6 +13,7 @@ let handled = false
 /** Where Mastodon sends you back after you approve PaperWing. */
 export function MastodonCallback() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   useEffect(() => {
     if (handled) return
     handled = true
@@ -24,7 +26,7 @@ export function MastodonCallback() {
     }
     completeSignIn(code, p.get('state') ?? '')
       .then((who) => {
-        refreshMastodon()
+        refreshMastodon(qc)
         toast(`Signed in as @${who}`)
         navigate(usePrefs.getState().welcomed ? '/t/mastodon?v=following' : '/welcome', { replace: true })
       })
@@ -32,6 +34,6 @@ export function MastodonCallback() {
         toast(err.message, { tone: 'error' })
         navigate(afterSignIn(), { replace: true })
       })
-  }, [navigate])
+  }, [navigate, qc])
   return <p className="py-24 text-center text-ink-3">Signing in to Mastodon…</p>
 }

@@ -1,3 +1,4 @@
+import { keys } from '../lib/query'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Loader2, Plus } from 'lucide-react'
 import { Link, useParams } from 'react-router'
@@ -12,7 +13,7 @@ export function MixPage() {
   const valid = AT_MIX.test(uri)
   const followed = usePrefs((s) => s.followedMixes.find((m) => m.uri === uri))
   const own = usePrefs((s) => s.mixes.find((m) => m.published === uri))
-  const found = useQuery({ queryKey: ['mix', uri], queryFn: () => fetchMix(uri), enabled: valid, staleTime: 5 * 60_000, retry: 1 })
+  const found = useQuery({ queryKey: keys.mix(uri), queryFn: () => fetchMix(uri), enabled: valid, staleTime: 5 * 60_000, retry: 1 })
 
   return (
     <div className="wide-col grid place-items-start px-4 py-10 md:px-8">

@@ -1,3 +1,4 @@
+import { keys } from './query'
 import { useQuery } from '@tanstack/react-query'
 import { webUrl } from './webUrl'
 
@@ -69,7 +70,7 @@ export function toWebmentions(data: Jf2): Webmention[] {
 
 export function useWebmentions(url: string | null | undefined) {
   return useQuery({
-    queryKey: ['webmentions', url],
+    queryKey: keys.webmentions(url),
     enabled: !!webUrl(url),
     staleTime: 30 * 60_000,
     retry: false,

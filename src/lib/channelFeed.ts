@@ -1,0 +1,200 @@
+import { allTopics, findTopic, resolveChannel, type Channel } from './channels'
+import { DEFAULT_INSTANCE } from './mastodon'
+import { moderateStory, type Labeler, type WarningMode } from './moderation'
+import type { FollowedPerson } from './people'
+import { merge, type Ranked, type SortMode } from './rank'
+import { feedLabel } from './sources'
+import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
+import { matchesTopic, storyText, type FeedRef, type Topic } from './topics'
+import type { Story } from './types'
+
+// The channel feed: from a reader and a channel to the stories it shows, in order. Every page that
+// lists stories (a channel, Today, Search) and everything that fetches ahead for one (the launch
+// warm-up, a topic card's preview) goes through here, so what For you contains and how a list is
+// ranked are decided in one place.
+//
+// Pure: no stores, no network. The reader is passed in (reader.ts builds it from the stores), and
+// the stories each planned feed brought back are passed to rankChannel; how they're fetched is the
+// caller's business (hooks.ts fetches through the query cache).
+
+/** Everything about the reader that what a channel contains, and how it's ranked, depends on. */
+export interface Reader {
+  // What they follow.
+  followed: string[]
+  interests: Interest[]
+  customFeeds: CustomFeed[]
+  bskyFeeds: BlueskyFeed[]
+  communities: LemmyCommunity[]
+  mixes: Mix[]
+  followedMixes: FollowedMix[]
+  people: FollowedPerson[]
+  boards: { uri: string; name: string }[]
+  releaseRepos: string[]
+  /** Hosts of the status pages they follow beyond the built-in ones. */
+  statusHosts: string[]
+  // Where they're signed in.
+  /** Signed in with Bluesky; `timeline` is whether that sign-in may read the timeline (undefined until known). */
+  bluesky?: { did: string; timeline?: boolean }
+  /** Their Mastodon server, signed in or not (trends come from it either way). */
+  mastodon?: { instance: string; signedIn?: boolean }
+  // What they keep out.
+  mutedWords: string[]
+  mutedDomains: string[]
+  hidden: Record<string, number>
+  labelers: Labeler[]
+  warnings: WarningMode
+  /**
+   * Their taste: read when a list is ranked, not when the reader is built, so a vote or a scroll
+   * never reorders the list on screen but the next ranking (a refresh, a feed arriving) uses it.
+   */
+  taste: () => Taste
+}
+
+export interface Taste {
+  /** Sessions each story has been on screen unopened. */
+  seen: Record<string, number>
+  affinity: Record<string, number>
+  votes: Record<string, 1 | -1>
+}
+
+export interface PlannedFeed {
+  ref: FeedRef
+  /** Stable and unique per reader: the feed's cache id. */
+  id: string
+  label: string
+}
+
+export interface ChannelPlan {
+  channel: Channel
+  feeds: PlannedFeed[]
+  sort: SortMode
+}
+
+export interface PlanOptions {
+  variant?: string
+  sort: SortMode
+  /** Whether this deployment can serve Bluesky's feeds (it says so at /api/atproto?route=status). */
+  blueskyEnabled: boolean
+}
+
+/** What a channel shows for this reader, and the feeds to fetch for it. Undefined for a channel that doesn't exist. */
+export function planChannel(reader: Reader, channelId: string, opts: PlanOptions): ChannelPlan | undefined {
+  const channel = resolveChannel(channelId, opts.variant, {
+    followed: reader.followed,
+    interests: reader.interests,
+    customFeeds: reader.customFeeds,
+    bskyFeeds: reader.bskyFeeds,
+    communities: reader.communities,
+    mixes: reader.mixes,
+    followedMixes: reader.followedMixes,
+    people: reader.people,
+    boards: reader.boards,
+    releaseRepos: reader.releaseRepos,
+    mastodon: !!reader.mastodon?.signedIn,
+    bluesky: !!reader.bluesky,
+    blueskyTimeline: reader.bluesky?.timeline,
+    statusHosts: reader.statusHosts,
+  })
+  if (!channel) return undefined
+  // Latest reads other feeds (each source's newest); Hot, Top and Spicy rank the same ones.
+  const latest = opts.sort === 'new' && !channel.native
+  const feeds = channel.feeds
+    .filter((f) => opts.blueskyEnabled || f.kind !== 'bluesky')
+    .map((f) => (latest ? newest(f) : f))
+    .map((ref) => ({ ref, id: feedId(ref, reader), label: feedLabel(ref) }))
+  return { channel, feeds, sort: opts.sort }
+}
+
+/**
+ * The channel's stories in order: what each feed brought back (undefined while it hasn't
+ * answered), re-checked against the topic a keyword search was run for, moderated, and merged
+ * and ranked for the reader.
+ */
+export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[]): Ranked[] {
+  const topicsOf = (ref: FeedRef) =>
+    ('topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []).map((id) => findTopic(id, reader.interests)).filter((t): t is Topic => !!t)
+  const checked = plan.feeds.map((f, i) => {
+    const topics = topicsOf(f.ref)
+    const data = batches[i] ?? []
+    // Keyword searches are noisy: keep only results that really are about the topic they were run for.
+    return topics.length ? data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s)))) : data
+  })
+  return rankStories(reader, checked, { sort: plan.sort, native: plan.channel.native, boost: plan.channel.boost })
+}
+
+/** Any batches of stories (search results, say), moderated and ranked for the reader the way a channel is. */
+export function rankStories(reader: Reader, batches: Story[][], opts: { sort: SortMode; native?: boolean; boost?: string[] }): Ranked[] {
+  const moderated = batches.map((b) => b.flatMap((s) => moderateStory(s, reader.labelers, reader.warnings) ?? []))
+  const { seen, affinity, votes } = reader.taste()
+  return merge(moderated, {
+    sort: opts.sort,
+    native: opts.native,
+    boost: opts.boost,
+    extraTopics: allTopics(reader.interests).filter((t) => t.id.startsWith('q:')),
+    filters: { mutedWords: reader.mutedWords, mutedDomains: reader.mutedDomains, hidden: reader.hidden },
+    seen,
+    affinity,
+    votes,
+  })
+}
+
+/** The same source, newest first: Latest is a true timeline and doesn't miss what hasn't caught on yet. */
+function newest(ref: FeedRef): FeedRef {
+  switch (ref.kind) {
+    case 'hn':
+      return ref.list === 'top' || ref.list === 'best' ? { ...ref, list: 'new' } : ref
+    case 'lobsters':
+      return ref.path === 'hottest' || ref.path === 'active' ? { ...ref, path: 'newest' } : ref
+    case 'frontpage':
+    case 'paperwing':
+      return 'feed' in ref ? { ...ref, feed: 'new' } : { ...ref, sort: 'new' }
+    case 'lemmy':
+      return { ...ref, sort: 'New' }
+    default:
+      return ref
+  }
+}
+
+/** A feed's cache id. Per account where the feed is: switching accounts or servers never shows the last one's. */
+function feedId(ref: FeedRef, reader: Pick<Reader, 'bluesky' | 'mastodon'>): string {
+  switch (ref.kind) {
+    case 'hn':
+      return `hn:${ref.list}`
+    case 'hnSearch':
+      return `hns:${ref.query}`
+    case 'frontpage':
+      return `fp:${ref.feed}`
+    case 'news':
+      return `nw:${ref.q}`
+    case 'paperwing':
+      return `pw:${ref.sort}:${ref.board ?? ''}`
+    case 'person':
+      return `pp:${ref.actor}`
+    case 'board':
+      return `cb:${ref.did}:${ref.rkey}:${ref.sort}`
+    case 'bskyFeed':
+      return `bsf:${ref.uri}`
+    case 'lobsters':
+      return `lb:${ref.path}`
+    case 'devto':
+      return `dv:${ref.tag}`
+    case 'rss':
+      return `rss:${ref.url}`
+    case 'arxiv':
+      return `ax:${ref.q}`
+    case 'hf':
+      return 'hf'
+    case 'github':
+      return `gh:${ref.q}`
+    case 'bluesky':
+      return ref.feed === 'following' ? `bs:following:${reader.bluesky?.did ?? ''}` : `bs:${ref.feed}`
+    case 'releases':
+      return `rel:${ref.repos.join(',')}`
+    case 'lemmy':
+      return `lm:${ref.community}:${ref.sort ?? 'Hot'}${ref.via ? `@${ref.via}` : ''}`
+    case 'status':
+      return `st:${ref.providers?.join(',') ?? 'all'}:${ref.active ? 'active' : 'week'}:${ref.hosts?.join(',') ?? ''}`
+    case 'mastodon':
+      return `md:${reader.mastodon?.instance ?? DEFAULT_INSTANCE}:${ref.feed}:${ref.tags?.join(',') ?? ''}`
+  }
+}

@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { canWrite, createRecord, deleteRecord, useAtproto } from './atproto'
-import { queryClient } from './query'
+import { keys } from './query'
 import { NOTE_NSID } from './social'
 
 // Margin notes: a passage of an article and what someone made of it, kept as a public record in
@@ -18,7 +18,7 @@ export interface NoteView {
 
 export const useMarginNotes = (url: string | null | undefined) =>
   useQuery({
-    queryKey: ['notes', url],
+    queryKey: keys.notes(url ?? ''),
     enabled: !!url,
     staleTime: 2 * 60_000,
     queryFn: async () => {
@@ -30,22 +30,22 @@ export const useMarginNotes = (url: string | null | undefined) =>
 /** Text as it reads: one space between words, no edges. */
 export const tidy = (s: string) => s.replace(/\s+/g, ' ').trim()
 
-export async function addNote(url: string, quote: string, note: string): Promise<string> {
+export async function addNote(qc: QueryClient, url: string, quote: string, note: string): Promise<string> {
   const { did, scope } = useAtproto.getState()
   if (!did) throw new Error('Sign in with Bluesky to leave notes (Settings, Sources)')
   if (canWrite(scope, NOTE_NSID) === false) throw new Error('Notes need one more permission: allow it under Settings, Sources (Bluesky account).')
   const ref = await createRecord(NOTE_NSID, { url, quote: tidy(quote).slice(0, 600), note: note.trim().slice(0, 1000), createdAt: new Date().toISOString() })
   // Show it straight away; the index catches up in a moment.
-  queryClient.setQueryData<NoteView[]>(['notes', url], (old = []) => [
+  qc.setQueryData<NoteView[]>(keys.notes(url), (old = []) => [
     ...old,
     { uri: ref.uri, did, handle: useAtproto.getState().handle, quote: tidy(quote).slice(0, 600), note: note.trim(), createdAt: new Date().toISOString() },
   ])
   return ref.uri
 }
 
-export async function removeNote(url: string, uri: string) {
+export async function removeNote(qc: QueryClient, url: string, uri: string) {
   await deleteRecord(uri)
-  queryClient.setQueryData<NoteView[]>(['notes', url], (old = []) => old.filter((n) => n.uri !== uri))
+  qc.setQueryData<NoteView[]>(keys.notes(url), (old = []) => old.filter((n) => n.uri !== uri))
 }
 
 /**

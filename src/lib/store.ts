@@ -63,7 +63,7 @@ export interface SiteVisits {
   url: string
 }
 
-interface Prefs {
+export interface Prefs {
   theme: 'system' | 'light' | 'dark'
   textSize: 'sm' | 'md' | 'lg'
   density: 'comfortable' | 'compact'

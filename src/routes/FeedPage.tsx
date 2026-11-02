@@ -6,15 +6,12 @@ import { OutageBanner } from '../components/OutageWatch'
 import { Split, useListKeys } from '../components/Split'
 import { RowSkeleton, StoryRow } from '../components/StoryRow'
 import { TypesetLoader } from '../components/pretext/TypesetLoader'
-import { resolveChannel } from '../lib/channels'
 import { BoardContext, useBoard } from '../lib/boards'
-import { useMastodon } from '../lib/mastodon'
 import { usePullToRefresh } from '../lib/gestures'
 import { useChannelFeed, useNow } from '../lib/hooks'
 import { usePretext, useTypesetIn } from '../lib/pretext'
 import { kindOf, type SortMode } from '../lib/rank'
 import { useActivity, usePrefs } from '../lib/store'
-import { canReadTimeline, useAtproto } from '../lib/atproto'
 import type { SourceKind } from '../lib/types'
 
 const PAGE = 50
@@ -28,38 +25,16 @@ export function FeedPage() {
   // A profile (/u/<handle>) is a channel too: what that person lists on PaperWing. So is a community board (/c/<owner>/<id>).
   const channelId = actor ? `u:${actor.replace(/^@/, '').toLowerCase()}` : boardDid && boardRkey ? `cb:${boardDid}:${boardRkey}` : (channelParam ?? 'for-you')
   const [params, setParams] = useSearchParams()
-  const { followed, interests, customFeeds, bskyFeeds, communities, mixes, followedMixes, people, boards, releaseRepos, hideRead, statusPages, feedOrder } = usePrefs()
-  const statusHosts = useMemo(() => statusPages.map((p) => p.host), [statusPages])
-  const mastodon = useMastodon((s) => !!s.acct)
-  const bluesky = useAtproto((s) => !!s.did)
-  const blueskyTimeline = useAtproto((s) => canReadTimeline(s.scope))
+  const hideRead = usePrefs((p) => p.hideRead)
+  const feedOrder = usePrefs((p) => p.feedOrder)
   const variant = params.get('v') ?? undefined
   // Your default order (Settings, Tuning) unless the address picks one.
   const defaultSort: SortMode = feedOrder === 'latest' ? 'new' : 'hot'
   const sort = (params.get('sort') as SortMode | null) ?? defaultSort
   const sourceFilter = (params.get('src') as SourceKind | null) ?? undefined
   const kindFilter = (['shared', 'discussions'] as const).find((k) => k === params.get('kind'))
-  const channel = useMemo(
-    () =>
-      resolveChannel(channelId, variant, {
-        followed,
-        interests,
-        customFeeds,
-        bskyFeeds,
-        communities,
-        mixes,
-        followedMixes,
-        people,
-        boards,
-        releaseRepos,
-        mastodon,
-        bluesky,
-        blueskyTimeline,
-        statusHosts,
-      }),
-    [channelId, variant, followed, interests, customFeeds, bskyFeeds, communities, mixes, followedMixes, people, boards, releaseRepos, mastodon, bluesky, blueskyTimeline, statusHosts],
-  )
-  const feed = useChannelFeed(channel, sort)
+  const feed = useChannelFeed(channelId, { variant, sort })
+  const channel = feed.channel
   const read = useActivity((s) => s.read)
   const now = useNow()
   const [limit, setLimit] = useState(PAGE)

@@ -5,7 +5,7 @@ import { OutageBanner } from '../components/OutageWatch'
 import { Split, useListKeys } from '../components/Split'
 import { usePretext, useTypesetIn } from '../lib/pretext'
 import { RowSkeleton, StoryRow } from '../components/StoryRow'
-import { findTopic, resolveChannel } from '../lib/channels'
+import { findTopic } from '../lib/channels'
 import { buildEdition, localDay, useEdition, type Edition } from '../lib/edition'
 import { useChannelFeed, useNow } from '../lib/hooks'
 import { stateOf, totalComments, useLibrary } from '../lib/library'
@@ -52,14 +52,15 @@ function PushOffer() {
 
 export function TodayPage() {
   const { itemKey } = useParams()
-  const { followed, interests, customFeeds } = usePrefs()
+  const followed = usePrefs((p) => p.followed)
+  const interests = usePrefs((p) => p.interests)
   const read = useActivity((s) => s.read)
   const hidden = useActivity((s) => s.hidden)
   const savedItems = useLibrary((l) => l.items)
   const { current, set, finish } = useEdition()
   const now = useNow()
-  const channel = useMemo(() => resolveChannel('for-you', undefined, { followed, interests, customFeeds }), [followed, interests, customFeeds])
-  const feed = useChannelFeed(channel, 'hot')
+  // The same For you as its own page: one module decides what it contains.
+  const feed = useChannelFeed('for-you', { sort: 'hot' })
   const settled = feed.statuses.length > 0 && feed.statuses.every((s) => s.status !== 'pending')
 
   // A new edition once a day, picked from what's appeared since the last one.

@@ -1,3 +1,4 @@
+import { keys } from './query'
 import { useQuery } from '@tanstack/react-query'
 import { useAtproto } from './atproto'
 import type { Story } from './types.js'
@@ -53,14 +54,14 @@ export async function fetchPerson(actor: string): Promise<Person> {
   return (await res.json()) as Person
 }
 
-export const usePerson = (actor: string | undefined) => useQuery({ queryKey: ['person', actor], queryFn: () => fetchPerson(actor!), enabled: !!actor, staleTime: 120_000 })
+export const usePerson = (actor: string | undefined) => useQuery({ queryKey: keys.person(actor ?? ''), queryFn: () => fetchPerson(actor!), enabled: !!actor, staleTime: 120_000 })
 
 /** You, as Bluesky shows you (signed in with Bluesky): for your face in the top bar. Public data, read from Bluesky. */
 export function useMe() {
   const did = useAtproto((a) => a.did)
   const handle = useAtproto((a) => a.handle)
   const { data } = useQuery({
-    queryKey: ['me', did],
+    queryKey: keys.me(did),
     queryFn: async () => {
       const res = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(did!)}`)
       if (!res.ok) throw new Error(`Bluesky answered ${res.status}`)

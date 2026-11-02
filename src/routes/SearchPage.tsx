@@ -7,7 +7,9 @@ import { RowSkeleton, StoryRow } from '../components/StoryRow'
 import { TopicChip } from '../components/TopicTag'
 import { allTopics } from '../lib/channels'
 import { useNow } from '../lib/hooks'
-import { merge } from '../lib/rank'
+import { rankStories } from '../lib/channelFeed'
+import { keys } from '../lib/query'
+import { useReader } from '../lib/reader'
 import { SEARCH_SOURCES } from '../lib/search'
 import { useActivity, usePrefs } from '../lib/store'
 import { relatedTopics, searchTopics } from '../lib/topics'
@@ -29,10 +31,10 @@ export function SearchPage() {
   const range = RANGES.find((r) => r.id === params.get('t')) ?? RANGES[2]
   const sort = params.get('sort') === 'new' ? 'new' : 'top'
   const [draft, setDraft] = useState(q)
-  const { interests, followed, mutedWords, mutedDomains, addInterest } = usePrefs()
+  const { interests, followed, addInterest } = usePrefs()
+  const reader = useReader()
   const inputRef = useRef<HTMLInputElement>(null)
   const [recent, setRecent] = useState(recentSearches)
-  const hidden = useActivity((s) => s.hidden)
   const read = useActivity((s) => s.read)
   const now = useNow()
 
@@ -54,7 +56,7 @@ export function SearchPage() {
   useEffect(() => setOnly(undefined), [q])
   const results = useQueries({
     queries: SEARCH_SOURCES.map((src) => ({
-      queryKey: ['search', src.id, q, range.id, sort],
+      queryKey: keys.search(src.id, q, range.id, sort),
       enabled: !!q,
       staleTime: src.id === 'loaded' ? 0 : 5 * 60_000,
       queryFn: () => src.run(q, { days: range.days, sort }, qc),
@@ -66,9 +68,10 @@ export function SearchPage() {
     // An API's copy of a story wins over the same story from a loaded feed.
     const seen = new Set<string>()
     const batches = SEARCH_SOURCES.map((src, i) => (!only || only === src.id ? (results[i].data ?? []) : [])).map((b) => b.filter((s) => !seen.has(s.key) && seen.add(s.key)))
-    return merge(batches, { sort, filters: { mutedWords, mutedDomains, hidden } })
+    // Moderated and ranked the way a channel is: what your labelers hide stays hidden here too.
+    return rankStories(reader, batches, { sort })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stamp, only, sort, mutedWords, mutedDomains, hidden])
+  }, [stamp, only, sort, reader])
   const searching = results.some((r) => r.isFetching)
   const answered = results.some((r) => r.data)
   const { cursor, open } = useListKeys(stories, itemKey, '/search')
@@ -100,7 +103,9 @@ export function SearchPage() {
       itemKey={itemKey}
       idle={
         <div className="grid h-full place-items-center p-10 text-center text-ink-3">
-          <p className="max-w-sm text-[1.125rem] font-semibold text-ink-2">Search runs across Hacker News, Bluesky, Lemmy, Mastodon hashtags and everything in your feeds. Topics that match your words show up as you type.</p>
+          <p className="max-w-sm text-[1.125rem] font-semibold text-ink-2">
+            Search runs across Hacker News, Bluesky, Lemmy, Mastodon hashtags and everything in your feeds. Topics that match your words show up as you type.
+          </p>
         </div>
       }
       list={
@@ -200,7 +205,12 @@ export function SearchPage() {
                 </button>
               )}
               {topicHits.map((h) => (
-                <button key={h.topic.id} onClick={() => navigate(`/t/${h.topic.id}`)} className="field topic flex w-full items-center gap-3 px-4 py-2.5 text-left transition-[filter] hover:brightness-[0.97]" style={{ '--h': h.topic.hue } as React.CSSProperties}>
+                <button
+                  key={h.topic.id}
+                  onClick={() => navigate(`/t/${h.topic.id}`)}
+                  className="field topic flex w-full items-center gap-3 px-4 py-2.5 text-left transition-[filter] hover:brightness-[0.97]"
+                  style={{ '--h': h.topic.hue } as React.CSSProperties}
+                >
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">{h.topic.label}</span>
                     <span className="block truncate text-[0.8125rem] opacity-80">{h.via ? `Matches “${h.via}”` : h.topic.blurb}</span>
@@ -237,7 +247,12 @@ export function SearchPage() {
                   {r.label}
                 </button>
               ))}
-              <select className="ml-auto h-8 rounded-full bg-sunk px-3 text-[0.8125rem] font-semibold text-ink-2" value={sort} onChange={(e) => setParam('sort', e.target.value === 'new' ? 'new' : undefined)} aria-label="Sort results">
+              <select
+                className="ml-auto h-8 rounded-full bg-sunk px-3 text-[0.8125rem] font-semibold text-ink-2"
+                value={sort}
+                onChange={(e) => setParam('sort', e.target.value === 'new' ? 'new' : undefined)}
+                aria-label="Sort results"
+              >
                 <option value="top">Best match</option>
                 <option value="new">Newest</option>
               </select>
@@ -252,7 +267,12 @@ export function SearchPage() {
               {counts
                 .filter((c) => c.count || c.pending || c.failed)
                 .map((c) => (
-                  <button key={c.id} className={`chip h-7 ${only === c.id ? 'on' : ''}`} onClick={() => setOnly(only === c.id ? undefined : c.id)} title={c.failed ? `${c.label} search failed` : undefined}>
+                  <button
+                    key={c.id}
+                    className={`chip h-7 ${only === c.id ? 'on' : ''}`}
+                    onClick={() => setOnly(only === c.id ? undefined : c.id)}
+                    title={c.failed ? `${c.label} search failed` : undefined}
+                  >
                     {c.label} <span className="num ml-1 opacity-70">{c.pending && !c.count ? '…' : c.failed ? '!' : c.count}</span>
                   </button>
                 ))}

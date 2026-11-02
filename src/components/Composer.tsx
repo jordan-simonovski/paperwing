@@ -1,4 +1,5 @@
 import { Loader2, Send } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { LIMITS, send, useComposer, type ComposeTarget } from '../lib/compose'
 import { graphemes } from '../lib/facets'
@@ -19,6 +20,7 @@ const TITLES: Record<ComposeTarget['kind'], string> = {
 /** One composer for every place PaperWing writes to: Bluesky replies and posts, Frontpage comments. */
 export function Composer() {
   const { target, close } = useComposer()
+  const qc = useQueryClient()
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const box = useRef<HTMLTextAreaElement>(null)
@@ -36,7 +38,7 @@ export function Composer() {
   const submit = async () => {
     setBusy(true)
     try {
-      const where = await send(target, text)
+      const where = await send(qc, target, text)
       close()
       toast(
         target.kind === 'fp-comment'

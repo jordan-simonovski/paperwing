@@ -6,8 +6,11 @@ import viteConfig from './vite.config'
 // Two suites. `unit`: the logic, in Node (npm test). `stories`: every Storybook story rendered in
 // a real browser, each one a smoke test plus whatever its play function checks (npm run
 // test:stories; needs Playwright's Chromium).
+// The app's local /api middleware stays out of tests: nothing under test reaches a server.
+const app = { ...viteConfig, plugins: (viteConfig.plugins ?? []).filter((p) => !(p && typeof p === 'object' && 'name' in p && p.name === 'vercel-api-dev')) }
+
 export default mergeConfig(
-  viteConfig,
+  app,
   defineConfig({
     test: {
       projects: [
@@ -17,6 +20,7 @@ export default mergeConfig(
         },
         {
           extends: true,
+          // The app's local /api functions stay out: a story never reaches a server.
           plugins: [storybookTest({ configDir: '.storybook' })],
           test: {
             name: 'stories',

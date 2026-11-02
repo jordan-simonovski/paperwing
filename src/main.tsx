@@ -11,14 +11,16 @@ import { startSync } from './lib/sync'
 import { preloadPretext } from './lib/pretext/engine'
 import { playSplash } from './lib/splash'
 import { prefetchLandingFeed } from './lib/warm'
-import { dehydrateOptions, PERSIST_BUSTER, PERSIST_MAX_AGE, persister, queryClient } from './lib/query'
+import { createQueryClient, dehydrateOptions, PERSIST_BUSTER, PERSIST_MAX_AGE, persister } from './lib/query'
 import './styles.css'
 
 // The splash goes up before anything else; the app starts when it says so (straight away when
 // there's no splash), so the first render doesn't stall the animation. The feed's requests don't
 // wait for it.
+// The one query cache the app uses: provided below, never imported.
+const queryClient = createQueryClient()
 const splash = playSplash()
-prefetchLandingFeed()
+prefetchLandingFeed(queryClient)
 void splash.then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

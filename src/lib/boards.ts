@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { createContext, useContext } from 'react'
 import { createRecord, putRecord, useAtproto } from './atproto'
 import { tid } from './mixes'
 import { AT_COMMUNITY } from './paperwing'
-import { queryClient } from './query'
+import { keys } from './query'
 import { BOARD_HIDE_NSID, BOARD_NSID, boardRecord, type Board } from './social'
 import { usePrefs } from './store'
 import type { Story } from './types'
@@ -45,11 +45,11 @@ export async function fetchBoard(did: string, rkey: string, sort = 'hot'): Promi
 }
 
 export const useBoard = (did: string | undefined, rkey: string | undefined) =>
-  useQuery({ queryKey: ['board', did, rkey], queryFn: () => fetchBoard(did!, rkey!).then((r) => r.board), enabled: !!did && !!rkey, staleTime: 60_000 })
+  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoard(did!, rkey!).then((r) => r.board), enabled: !!did && !!rkey, staleTime: 60_000 })
 
 export const useAllBoards = () =>
   useQuery({
-    queryKey: ['boards'],
+    queryKey: keys.boards,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const res = await fetch('/api/feed?src=boards')
@@ -63,11 +63,11 @@ export function toggleJoin(board: { uri: string; name: string }) {
 }
 
 /** Creates or updates a board in your own account. Returns its at:// URI. */
-export async function saveBoard(board: Omit<Board, 'createdAt'> & { createdAt?: string }, rkey = tid()): Promise<string> {
+export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'> & { createdAt?: string }, rkey = tid()): Promise<string> {
   if (!useAtproto.getState().did) throw new Error('Sign in with Bluesky to make a board (Settings, Sources)')
   const ref = await putRecord(BOARD_NSID, rkey, boardRecord(board))
-  void queryClient.invalidateQueries({ queryKey: ['board'] })
-  void queryClient.invalidateQueries({ queryKey: ['boards'] })
+  void qc.invalidateQueries({ queryKey: keys.anyBoard })
+  void qc.invalidateQueries({ queryKey: keys.boards })
   return ref.uri
 }
 
@@ -83,15 +83,15 @@ export async function createBlockList(boardName: string): Promise<string> {
 }
 
 /** A moderator hides a listing from the board. */
-export async function hideFromBoard(boardUri: string, postUri: string, reason?: string) {
+export async function hideFromBoard(qc: QueryClient, boardUri: string, postUri: string, reason?: string) {
   await createRecord(BOARD_HIDE_NSID, { board: boardUri, subject: postUri, ...(reason ? { reason } : {}), createdAt: new Date().toISOString() })
-  void queryClient.invalidateQueries({ queryKey: ['feed'] })
+  void qc.invalidateQueries({ queryKey: keys.feeds })
 }
 
 /** The owner keeps an account out: it goes on the board's Bluesky moderation list. */
-export async function keepOut(list: string, did: string) {
+export async function keepOut(qc: QueryClient, list: string, did: string) {
   await createRecord('app.bsky.graph.listitem', { subject: did, list, createdAt: new Date().toISOString() })
-  void queryClient.invalidateQueries({ queryKey: ['feed'] })
+  void qc.invalidateQueries({ queryKey: keys.feeds })
 }
 
 /** Resolves handles to DIDs through Bluesky's public API, for naming moderators. */

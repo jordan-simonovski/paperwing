@@ -1,4 +1,5 @@
 import { Highlighter, Loader2, Trash2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
@@ -17,6 +18,7 @@ import { Sheet } from './Sheet'
 export function MarginNotes({ url, container, html }: { url: string; container: React.RefObject<HTMLDivElement | null>; html: string }) {
   const { data: notes = [] } = useMarginNotes(url)
   const me = useAtproto((a) => a.did)
+  const qc = useQueryClient()
   const [picked, setPicked] = useState<string>()
   const [writing, setWriting] = useState<string>()
   const now = Date.now()
@@ -88,7 +90,7 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
                     <button
                       className="ml-auto inline-flex items-center gap-1 hover:text-ink"
                       onClick={() =>
-                        void removeNote(url, n.uri).then(
+                        void removeNote(qc, url, n.uri).then(
                           () => toast('Note removed'),
                           (err: Error) => toast(err.message, { tone: 'error' }),
                         )
@@ -124,14 +126,15 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
 }
 
 function NoteSheet({ url, quote, onClose }: { url: string; quote: string; onClose: () => void }) {
+  const qc = useQueryClient()
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const save = async () => {
     setBusy(true)
     try {
-      const uri = await addNote(url, quote, note)
+      const uri = await addNote(qc, url, quote, note)
       onClose()
-      toast('Note added', { action: { label: 'Undo', run: () => void removeNote(url, uri).catch(() => {}) } })
+      toast('Note added', { action: { label: 'Undo', run: () => void removeNote(qc, url, uri).catch(() => {}) } })
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Couldn’t save the note', { tone: 'error' })
     } finally {

@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { words } from './cluster'
-import { queryClient } from './query'
+import { keys } from './query'
 import { api } from './sources/http'
 import type { Story } from './types'
 
@@ -45,7 +45,7 @@ export function sameEvent(story: Pick<Story, 'title' | 'url' | 'createdAt'>, fou
 export function useCoverage(story: Story | undefined, enabled: boolean) {
   const q = story ? coverageQuery(story.title) : undefined
   return useQuery({
-    queryKey: ['coverage', story?.key],
+    queryKey: keys.coverage(story?.key),
     queryFn: async () => sameEvent(story!, (await api('feed', { src: 'news', q: q! })) as Story[]),
     enabled: enabled && !!q,
     staleTime: 15 * 60_000,
@@ -85,6 +85,6 @@ export function useOutlets(story: Story | undefined, grouped: Story[] = []) {
  * story was opened). Not a query subscription: fifty rows each registering one made the query
  * cache, and so its saved copy, churn on every list change.
  */
-export function rowOutlets(story: Story, grouped: Story[] = []) {
-  return outletsFrom(story, grouped, queryClient.getQueryData<Story[]>(['coverage', story.key]))
+export function rowOutlets(qc: QueryClient, story: Story, grouped: Story[] = []) {
+  return outletsFrom(story, grouped, qc.getQueryData<Story[]>(keys.coverage(story.key)))
 }

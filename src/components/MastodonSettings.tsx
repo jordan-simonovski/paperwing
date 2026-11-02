@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { beginSignIn, canPostToMastodon, completeSignIn, DEFAULT_INSTANCE, normalizeInstance, useMastodon } from '../lib/mastodon'
 import { isIOS, usePWA } from '../lib/pwa'
-import { queryClient } from '../lib/query'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { keys } from '../lib/query'
 import { toast } from '../lib/ui'
 
 /** Drops cached Mastodon feeds, so the next view reads from the right server with the right account. */
-export const refreshMastodon = () => queryClient.removeQueries({ predicate: (q) => q.queryKey[0] === 'feed' && String(q.queryKey[1]).startsWith('md:') })
+export const refreshMastodon = (qc: QueryClient) => qc.removeQueries({ queryKey: keys.feeds, predicate: (q) => String(q.queryKey[1]).startsWith('md:') })
 
 const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none'
 
 export function MastodonSettings() {
   const { instance, acct, pending, signOut, setInstance, cancelSignIn } = useMastodon()
+  const qc = useQueryClient()
   const canPost = useMastodon(canPostToMastodon)
   const standalone = usePWA((s) => s.standalone)
   const [server, setServer] = useState(instance)
@@ -32,7 +34,7 @@ export function MastodonSettings() {
             className="btn"
             onClick={() => {
               signOut()
-              refreshMastodon()
+              refreshMastodon(qc)
               toast('Signed out of Mastodon')
             }}
           >
@@ -46,7 +48,7 @@ export function MastodonSettings() {
               className="btn btn-primary flex-none"
               onClick={() => {
                 signOut()
-                refreshMastodon()
+                refreshMastodon(qc)
                 setServer(instance)
               }}
             >
@@ -66,7 +68,7 @@ export function MastodonSettings() {
     try {
       if (host !== instance) {
         setInstance(host)
-        refreshMastodon()
+        refreshMastodon(qc)
       }
       const url = await beginSignIn(host, useCode)
       // A redirect can leave from here. A new window can't: browsers only open one straight from
@@ -85,7 +87,7 @@ export function MastodonSettings() {
     try {
       const who = await completeSignIn(code)
       setCode('')
-      refreshMastodon()
+      refreshMastodon(qc)
       toast(`Signed in as @${who}`)
     } catch (err) {
       toast(`That code didn’t work: ${(err as Error).message}. Codes last a few minutes and work once, so try the steps again.`, { tone: 'error' })
@@ -150,7 +152,8 @@ export function MastodonSettings() {
         </button>
       </form>
       <p className="text-[0.8125rem] leading-relaxed text-ink-3">
-        PaperWing asks to read your timeline, notifications and profile, and to post and favourite only when you share or like something. The sign-in stays in this browser: it isn't synced, and it's only sent to {instance}.{' '}
+        PaperWing asks to read your timeline, notifications and profile, and to post and favourite only when you share or like something. The sign-in stays in this browser: it isn't synced, and it's
+        only sent to {instance}.{' '}
         {useCode ? (
           'Your server will show a code to paste back here.'
         ) : (

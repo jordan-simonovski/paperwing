@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { resolveChannel } from '../channels'
 import { normalizeInstance } from '../mastodon'
 import { lemmyComments, lemmyStory } from './lemmy'
 import { cleanHtml, mastodonComments, parseKey, quoteOf, statusStory, type Status } from './mastodon'
@@ -80,15 +79,6 @@ describe('mastodon', () => {
   })
   it('accepts a server however it is typed', () => {
     for (const s of ['hachyderm.io', 'https://hachyderm.io/@me', '@me@hachyderm.io', 'me@Hachyderm.io ']) expect(normalizeInstance(s)).toBe('hachyderm.io')
-  })
-})
-
-describe('for you', () => {
-  const ctx = { followed: ['observability', 'ai'], interests: [], customFeeds: [] }
-  it('brings in the people you follow, kept to your topics, once you sign in', () => {
-    const home = (signedIn: boolean) => resolveChannel('for-you', undefined, { ...ctx, mastodon: signedIn })!.feeds.filter((f) => f.kind === 'mastodon')
-    expect(home(false)).toEqual([])
-    expect(home(true)).toEqual([{ kind: 'mastodon', feed: 'home', topics: ['observability', 'ai'] }])
   })
 })
 

@@ -1,3 +1,4 @@
+import { keys } from './query'
 import { useQuery } from '@tanstack/react-query'
 import { canReadTimeline, useAtproto } from './atproto'
 import { friendsByLink, linkId, type Friend } from './sources/bluesky'
@@ -12,7 +13,7 @@ export type { Friend }
 export function useFriendMap() {
   const did = useAtproto((a) => a.did)
   const allowed = useAtproto((a) => canReadTimeline(a.scope))
-  return useQuery({ queryKey: ['friends', did], queryFn: friendsByLink, enabled: !!did && allowed !== false, staleTime: 5 * 60_000, retry: 1 })
+  return useQuery({ queryKey: keys.friends(did), queryFn: friendsByLink, enabled: !!did && allowed !== false, staleTime: 5 * 60_000, retry: 1 })
 }
 
 /** Who you follow shared or discussed this story's link (or the same link elsewhere), sharers first. */

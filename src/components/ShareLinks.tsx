@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { ChevronRight, Copy, Link2, Loader2, MessageSquareQuote, Newspaper, Send, Share, Trash2 } from 'lucide-react'
 import { useAtproto } from '../lib/atproto'
@@ -21,6 +22,7 @@ import { SourceIcon } from './SourceIcon'
  */
 export function ShareLinks({ story, onClose }: { story: Story; onClose: () => void }) {
   const open = useComposer((c) => c.open)
+  const qc = useQueryClient()
   const signedIn = useAtproto((a) => !!a.did)
   const hn = useHn((h) => !!h.user)
   const md = useMastodon(canPostToMastodon)
@@ -35,9 +37,9 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
   const sharePW = async () => {
     setBusy(true)
     try {
-      const uri = await shareOnPaperWing(story, note)
+      const uri = await shareOnPaperWing(qc, story, note)
       onClose()
-      toast('Shared on your PaperWing profile', { action: { label: 'Undo', run: () => void unshare(uri).catch(() => {}) } })
+      toast('Shared on your PaperWing profile', { action: { label: 'Undo', run: () => void unshare(qc, uri).catch(() => {}) } })
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Couldn’t share it', { tone: 'error' })
     } finally {
@@ -97,7 +99,7 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
             detail: 'Takes it off your profile and your followers’ feeds',
             run: () => {
               onClose()
-              void unshare(story.shareUri!).then(
+              void unshare(qc, story.shareUri!).then(
                 () => toast('Removed from your shared items'),
                 (err: Error) => toast(err.message, { tone: 'error' }),
               )

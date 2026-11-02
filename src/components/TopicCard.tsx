@@ -2,8 +2,11 @@ import { Check, Plus, X } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link } from 'react-router'
 import { topicFeeds } from '../lib/channels'
-import { queryClient } from '../lib/query'
-import { feedId, feedLabel } from '../lib/sources'
+import { useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { planChannel } from '../lib/channelFeed'
+import { keys } from '../lib/query'
+import { readReader } from '../lib/reader'
+import { feedLabel } from '../lib/sources'
 import { usePrefs } from '../lib/store'
 import { topicIcon } from '../lib/topicIcons'
 import { TOPIC_BY_ID, type FeedRef, type Topic } from '../lib/topics'
@@ -32,11 +35,12 @@ function sourcesOf(t: Topic): { key: string; feed: FeedRef; name: string }[] {
 }
 
 /** The topic's lead story right now, from feeds this device already has: nothing is fetched for it. */
-function cachedLead(t: Topic): Story | undefined {
+function cachedLead(qc: QueryClient, t: Topic): Story | undefined {
   const now = Date.now()
   let best: { s: Story; v: number } | undefined
-  for (const f of topicFeeds(t)) {
-    const data = queryClient.getQueryData<Story[]>(['feed', feedId(f)])
+  // The topic's own channel, as its page would fetch it.
+  for (const f of planChannel(readReader(), t.id, { sort: 'hot', blueskyEnabled: true })?.feeds ?? []) {
+    const data = qc.getQueryData<Story[]>(keys.feed(f.id))
     for (const s of data ?? []) {
       const age = now - s.createdAt
       if (age > DAY || age < 0 || s.warning) continue
@@ -53,7 +57,8 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
   const toggleFollow = usePrefs((p) => p.toggleFollow)
   const Icon = topicIcon(t.id)
   const sources = useMemo(() => sourcesOf(t), [t])
-  const lead = useMemo(() => cachedLead(t), [t])
+  const qc = useQueryClient()
+  const lead = useMemo(() => cachedLead(qc, t), [qc, t])
   const near = t.related.map((r) => TOPIC_BY_ID.get(r)).filter((r): r is Topic => !!r)
   const names = sources.slice(0, 2).map((s) => s.name)
 

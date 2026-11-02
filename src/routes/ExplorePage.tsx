@@ -1,3 +1,4 @@
+import { keys } from '../lib/query'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Heart, Loader2, Plus, Search, Users } from 'lucide-react'
 import { useDeferredValue, useState } from 'react'
@@ -47,7 +48,7 @@ function Communities() {
   const [q, setQ] = useState('')
   const query = useDeferredValue(q.trim())
   const mine = usePrefs((s) => s.communities)
-  const found = useQuery({ queryKey: ['explore', 'communities', query], queryFn: () => findCommunities(query), staleTime: 10 * 60_000 })
+  const found = useQuery({ queryKey: keys.explore('communities', query), queryFn: () => findCommunities(query), staleTime: 10 * 60_000 })
   return (
     <>
       <p className="mt-2 max-w-xl text-[0.9375rem] text-ink-2">
@@ -100,7 +101,7 @@ function BlueskyFeedsTab() {
   const [q, setQ] = useState('')
   const query = useDeferredValue(q.trim())
   const mine = usePrefs((s) => s.bskyFeeds)
-  const found = useQuery({ queryKey: ['explore', 'bsky-feeds', query], queryFn: () => findBlueskyFeeds(query), staleTime: 10 * 60_000 })
+  const found = useQuery({ queryKey: keys.explore('bsky-feeds', query), queryFn: () => findBlueskyFeeds(query), staleTime: 10 * 60_000 })
   return (
     <>
       <p className="mt-2 max-w-xl text-[0.9375rem] text-ink-2">

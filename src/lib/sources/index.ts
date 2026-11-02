@@ -1,13 +1,11 @@
 import { fetchPerson } from '../people'
 import { fetchBoard } from '../boards'
-import { useMastodon } from '../mastodon'
 import type { FeedRef } from '../topics'
 import type { Article, Story, Thread } from '../types'
 import { devtoTag, devtoThread } from './devto'
 import { hnByUrl, hnList, hnSearch, hnThread } from './hn'
 import { api, getJson, urlFromLinkKey } from './http'
 import { blueskyCustomFeed, blueskyFeed, blueskyFollowing, blueskyThread } from './bluesky'
-import { useAtproto } from '../atproto'
 import { lemmyByUrl, lemmyFeed, lemmyThread } from './lemmy'
 import { parseLemmyKey } from '../lemmyKey'
 import { useLemmyAccount } from '../lemmyAccount'
@@ -16,51 +14,6 @@ import { mastodonHome, mastodonTags, mastodonThread, mastodonTrends } from './ma
 export { linkKey, urlFromLinkKey } from './http'
 export { hnSearch } from './hn'
 export { blueskyEnabled } from './bluesky'
-
-export function feedId(ref: FeedRef): string {
-  switch (ref.kind) {
-    case 'hn':
-      return `hn:${ref.list}`
-    case 'hnSearch':
-      return `hns:${ref.query}`
-    case 'frontpage':
-      return `fp:${ref.feed}`
-    case 'news':
-      return `nw:${ref.q}`
-    case 'paperwing':
-      return `pw:${ref.sort}:${ref.board ?? ''}`
-    case 'person':
-      return `pp:${ref.actor}`
-    case 'board':
-      return `cb:${ref.did}:${ref.rkey}:${ref.sort}`
-    case 'bskyFeed':
-      return `bsf:${ref.uri}`
-    case 'lobsters':
-      return `lb:${ref.path}`
-    case 'devto':
-      return `dv:${ref.tag}`
-    case 'rss':
-      return `rss:${ref.url}`
-    case 'arxiv':
-      return `ax:${ref.q}`
-    case 'hf':
-      return 'hf'
-    case 'github':
-      return `gh:${ref.q}`
-    case 'bluesky':
-      // Following is per account: switching accounts never shows the last one's.
-      return ref.feed === 'following' ? `bs:following:${useAtproto.getState().did ?? ''}` : `bs:${ref.feed}`
-    case 'releases':
-      return `rel:${ref.repos.join(',')}`
-    case 'lemmy':
-      return `lm:${ref.community}:${ref.sort ?? 'Hot'}${ref.via ? `@${ref.via}` : ''}`
-    case 'status':
-      return `st:${ref.providers?.join(',') ?? 'all'}:${ref.active ? 'active' : 'week'}:${ref.hosts?.join(',') ?? ''}`
-    case 'mastodon':
-      // The server is part of the id, so switching servers never shows the old one's cache.
-      return `md:${useMastodon.getState().instance}:${ref.feed}:${ref.tags?.join(',') ?? ''}`
-  }
-}
 
 export function feedLabel(ref: FeedRef): string {
   switch (ref.kind) {

@@ -1,14 +1,13 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import type { Channel } from './channels'
-import { allTopics, findTopic } from './channels'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { planChannel, rankChannel, type PlannedFeed } from './channelFeed'
 import { useLibrary } from './library'
-import { merge, type Ranked, type SortMode } from './rank'
+import { keys } from './query'
+import type { Ranked, SortMode } from './rank'
+import { useReader } from './reader'
 import { spicyOrder, useSpiceStore, wantSpice } from './spice'
-import { blueskyEnabled, feedId, feedLabel, fetchArticle, fetchFeed, fetchThread, findDiscussions, storyFromKey } from './sources'
-import { useActivity, usePrefs } from './store'
-import { moderateStory } from './moderation'
-import { matchesTopic, storyText, type FeedRef } from './topics'
+import { blueskyEnabled, feedLabel, fetchArticle, fetchFeed, fetchThread, findDiscussions, storyFromKey } from './sources'
+import type { FeedRef } from './topics'
 import type { Story } from './types'
 
 /** Every story we've seen this session, so the pane can open any key instantly. */
@@ -26,86 +25,63 @@ export interface FeedStatus {
 }
 
 export function useBlueskyEnabled(): boolean | undefined {
-  return useQuery({ queryKey: ['bluesky-status'], queryFn: blueskyEnabled, staleTime: 60 * 60_000 }).data
+  return useQuery({ queryKey: keys.blueskyStatus, queryFn: blueskyEnabled, staleTime: 60 * 60_000 }).data
 }
 
 /**
- * The same sources, newest first: Latest asks each for its newest posts, not its front page in
- * another order, so it's a true timeline and doesn't miss what hasn't caught on yet.
+ * How a channel's feeds are fetched: the real sources in the app, canned stories in a test or a
+ * story (see inMemoryFeeds). The port between the channel feed and the network.
  */
-export function latestFeed(ref: FeedRef): FeedRef {
-  switch (ref.kind) {
-    case 'hn':
-      return ref.list === 'top' || ref.list === 'best' ? { ...ref, list: 'new' } : ref
-    case 'lobsters':
-      return ref.path === 'hottest' || ref.path === 'active' ? { ...ref, path: 'newest' } : ref
-    case 'frontpage':
-    case 'paperwing':
-      return 'feed' in ref ? { ...ref, feed: 'new' } : { ...ref, sort: 'new' }
-    case 'lemmy':
-      return { ...ref, sort: 'New' }
-    default:
-      return ref
-  }
-}
+export type FeedFetcher = (ref: FeedRef) => Promise<Story[]>
+export const FeedFetcherContext = createContext<FeedFetcher>(fetchFeed)
 
-/** The feeds a channel reads in this sort. Bluesky feeds only once the deployment says it can serve them. */
-export function channelFeeds(channel: Channel | undefined, sort: SortMode, bluesky: boolean | undefined): FeedRef[] {
-  const latest = sort === 'new' && !channel?.native
-  return (channel?.feeds ?? []).filter((f) => bluesky === true || f.kind !== 'bluesky').map((f) => (latest ? latestFeed(f) : f))
-}
+/** A fetcher that answers from stories you hand it, by feed label; anything else comes back empty. */
+export const inMemoryFeeds =
+  (byLabel: Record<string, Story[]>): FeedFetcher =>
+  async (ref) =>
+    byLabel[feedLabel(ref)] ?? []
 
-export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
-  // Bluesky feeds only run once the deployment says it can serve them.
-  const bluesky = useBlueskyEnabled()
-  const latest = sort === 'new' && !channel?.native
-  // Only Latest reads other feeds: Hot, Top and Spicy rank the same ones, so changing between them fetches nothing.
-  const feeds = useMemo(() => channelFeeds(channel, latest ? 'new' : 'hot', bluesky), [channel, bluesky, latest])
-  const queries = useQueries({
-    queries: feeds.map((ref) => ({
-      queryKey: ['feed', feedId(ref)],
-      queryFn: () => fetchFeed(ref),
-    })),
-  })
-  const { mutedWords, mutedDomains, interests, labelers, warnings } = usePrefs()
-  const hidden = useActivity((s) => s.hidden)
-  const extraTopics = useMemo(() => allTopics(interests).filter((t) => t.id.startsWith('q:')), [interests])
+/**
+ * A channel's stories for the reader, fetched through the query cache and ranked by the channel
+ * feed module (channelFeed.ts). Undefined channel when there's no such channel.
+ */
+export function useChannelFeed(channelId: string, opts: { variant?: string; sort: SortMode }) {
+  const reader = useReader()
+  const fetcher = useContext(FeedFetcherContext)
+  const blueskyEnabled = useBlueskyEnabled() === true
+  const { variant, sort } = opts
+  const plan = useMemo(() => planChannel(reader, channelId, { variant, sort, blueskyEnabled }), [reader, channelId, variant, sort, blueskyEnabled])
+  const feeds = plan?.feeds ?? NO_FEEDS
+  const queries = useQueries({ queries: feeds.map((f) => ({ queryKey: keys.feed(f.id), queryFn: () => fetcher(f.ref) })) })
 
   const dataStamp = queries.map((q) => q.dataUpdatedAt).join(',')
   // Rows are memoised, but ranking builds every story afresh: hand back the previous object when
   // nothing about a story changed, so changing the sort or a feed arriving only renders what's new.
   const previous = useRef(new Map<string, { json: string; story: Ranked }>())
   const stories = useMemo(() => {
-    const batches = feeds.map((ref, i) => {
-      const data = queries[i]?.data ?? []
-      // Keyword searches are noisy; keep only results that actually match the topic (or any of the topics) they were run for.
-      const ids = 'topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []
-      const topics = ids.map((id) => findTopic(id, interests)).filter((t) => !!t)
-      const kept = topics.length ? data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s)))) : data
-      // Labels and content warnings, judged against your labelers (moderation.ts).
-      return kept.flatMap((s) => moderateStory(s, labelers, warnings) ?? [])
-    })
-    // Impressions, votes and taste are read once per recompute, not subscribed to: scrolling or
-    // voting never reorders the list under you. The next refresh or visit reflects them.
-    const { impressions: seen, votes } = useActivity.getState()
-    const { affinity } = usePrefs.getState()
-    const fresh = merge(batches, { sort, native: channel?.native, boost: channel?.boost, extraTopics, filters: { mutedWords, mutedDomains, hidden }, seen, affinity, votes })
+    if (!plan) return []
+    const fresh = rankChannel(
+      plan,
+      reader,
+      queries.map((q) => q.data),
+    )
     const kept = previous.current
     if (kept.size > 3000) kept.clear()
-    const merged = fresh.map((s) => {
+    const ranked = fresh.map((s) => {
       const json = JSON.stringify(s)
       const before = kept.get(s.key)
       if (before?.json === json) return before.story
       kept.set(s.key, { json, story: s })
       return s
     })
-    for (const s of merged) {
+    for (const s of ranked) {
       storyIndex.set(s.key, s)
       for (const c of s.coverage ?? []) if (!storyIndex.has(c.key)) storyIndex.set(c.key, { ...c, heat: 0.4, alsoOn: [], topics: s.topics })
     }
-    return merged
+    return ranked
+    // `queries` is a new array every render; its data changes are what dataStamp tracks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataStamp, feeds, sort, mutedWords, mutedDomains, hidden, extraTopics, interests, labelers, warnings])
+  }, [dataStamp, plan, reader])
 
   // Spicy: every story in the feed is asked about (not just the rows on screen), and the list
   // reorders as grades come in.
@@ -116,10 +92,10 @@ export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
   }, [spicy, stories])
   const ordered = useMemo(() => (grades ? spicyOrder(stories, grades) : stories), [stories, grades])
 
-  const statuses: FeedStatus[] = feeds.map((ref, i) => ({
-    ref,
-    id: feedId(ref),
-    label: feedLabel(ref),
+  const statuses: FeedStatus[] = feeds.map((f, i) => ({
+    ref: f.ref,
+    id: f.id,
+    label: f.label,
     status: queries[i]?.status ?? 'pending',
     count: queries[i]?.data?.length ?? 0,
     error: queries[i]?.error?.message,
@@ -127,6 +103,7 @@ export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
   }))
 
   return {
+    channel: plan?.channel,
     stories: ordered,
     statuses,
     loading: queries.length > 0 && queries.every((q) => q.isPending),
@@ -135,13 +112,14 @@ export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
     updatedAt: Math.max(0, ...queries.map((q) => q.dataUpdatedAt)),
   }
 }
+const NO_FEEDS: PlannedFeed[] = []
 
 const POST_GC = 15 * 60_000
 
 export function useThread(key: string, enabled: boolean) {
   const getSaved = useLibrary((s) => s.get)
   return useQuery({
-    queryKey: ['thread', key],
+    queryKey: keys.thread(key),
     enabled,
     staleTime: 2 * 60_000,
     // Threads and articles are the big entries. Keep them long enough to flip back and forth,
@@ -162,7 +140,7 @@ export function useThread(key: string, enabled: boolean) {
 export function useArticle(url: string | null | undefined, key: string, enabled: boolean) {
   const getSaved = useLibrary((s) => s.get)
   return useQuery({
-    queryKey: ['article', url],
+    queryKey: keys.article(url),
     enabled: enabled && !!url,
     staleTime: Infinity,
     gcTime: POST_GC,
@@ -176,7 +154,7 @@ export function useArticle(url: string | null | undefined, key: string, enabled:
 }
 
 export function useDiscussions(url: string | null | undefined, enabled = true) {
-  return useQuery({ queryKey: ['discussions', url], enabled: enabled && !!url, staleTime: 10 * 60_000, queryFn: () => findDiscussions(url!) })
+  return useQuery({ queryKey: keys.discussions(url), enabled: enabled && !!url, staleTime: 10 * 60_000, queryFn: () => findDiscussions(url!) })
 }
 
 /** Resolves a key to a story from the session index, a saved copy, or the key itself. */

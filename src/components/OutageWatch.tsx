@@ -1,3 +1,4 @@
+import { keys } from '../lib/query'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ChevronDown, Radio } from 'lucide-react'
 import { useState } from 'react'
@@ -6,7 +7,7 @@ import type { OutageReport, ProviderReport } from '../lib/outageTypes'
 
 export function useOutages() {
   return useQuery({
-    queryKey: ['outages'],
+    queryKey: keys.outages,
     queryFn: async () => (await (await fetch('/api/outages')).json()) as OutageReport,
     staleTime: 60_000,
     refetchInterval: () => (document.visibilityState === 'visible' ? 2 * 60_000 : false),

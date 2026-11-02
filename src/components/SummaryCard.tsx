@@ -1,3 +1,4 @@
+import { keys } from '../lib/query'
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Loader2, RotateCcw, Sparkles } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -51,7 +52,7 @@ export function SummaryCard({ story, places, onOpen }: { story: Story; places: S
         await Promise.all(
           used.map(async (s) => ({
             story: s,
-            thread: await qc.fetchQuery<Thread | null>({ queryKey: ['thread', s.key], queryFn: () => fetchThread(s.key), staleTime: 2 * 60_000 }).catch(() => null),
+            thread: await qc.fetchQuery<Thread | null>({ queryKey: keys.thread(s.key), queryFn: () => fetchThread(s.key), staleTime: 2 * 60_000 }).catch(() => null),
           })),
         )
       ).filter((t): t is { story: Story; thread: Thread } => !!t.thread?.comments.length)
@@ -94,7 +95,7 @@ export function SummaryCard({ story, places, onOpen }: { story: Story; places: S
     const read = () => {
       const words: string[] = []
       for (const p of used) {
-        const thread = qc.getQueryData<Thread | null>(['thread', p.key])
+        const thread = qc.getQueryData<Thread | null>(keys.thread(p.key))
         for (const c of thread?.comments.slice(0, 12) ?? []) words.push(plainText(c.html))
       }
       setReadingText(words.join(' ').slice(0, 2400) || story.title)

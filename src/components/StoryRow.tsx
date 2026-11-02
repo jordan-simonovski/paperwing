@@ -3,6 +3,7 @@ import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
 import { Link } from 'react-router'
 import { ArrowBigDown, ArrowBigUp, Bookmark, BookmarkCheck, EyeOff, Image as ImageIcon, Loader2, MessageSquare, Play, Newspaper, Share2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { memo, useMemo, useRef } from 'react'
 import { compact, domainOf, fullDate, fullNumber, timeAgo } from '../lib/format'
 import { useSwipeActions } from '../lib/gestures'
@@ -59,9 +60,10 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
   const thumb = thumbnails ? thumbFor(s) : undefined
   const also = [...new Set(s.alsoOn.map(sourceLabel))]
   // Other outlets' takes on the same event: what the feed grouped, plus a news search already run for it.
+  const qc = useQueryClient()
   // Re-read when the row is selected: opening a story is what runs its news search.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const { stories: coverage, outlets } = useMemo(() => rowOutlets(s, s.coverage), [s, selected])
+  const { stories: coverage, outlets } = useMemo(() => rowOutlets(qc, s, s.coverage), [qc, s, selected])
   const covered = outlets > 1 ? coverage : []
 
   return (

@@ -1,7 +1,8 @@
 import { resolveChannel, type Channel } from '../lib/channels'
 import type { FeedStatus } from '../lib/hooks'
 import type { Ranked } from '../lib/rank'
-import { feedId, feedLabel } from '../lib/sources'
+import type { Reader } from '../lib/channelFeed'
+import { feedLabel } from '../lib/sources'
 import type { Comment, Story, Thread } from '../lib/types'
 
 // Stories and tests build their data from these, so a change to Story's shape is fixed in one place.
@@ -144,7 +145,7 @@ export function statusesFor(channel: Channel, opts: { failed?: number; loading?:
     const loading = !failed && i < (opts.failed ?? 0) + (opts.loading ?? 0)
     return {
       ref,
-      id: feedId(ref),
+      id: `${i}:${feedLabel(ref)}`,
       label: feedLabel(ref),
       status: failed ? 'error' : loading ? 'pending' : 'success',
       count: failed || loading ? 0 : 12 + ((i * 7) % 20),
@@ -153,3 +154,25 @@ export function statusesFor(channel: Channel, opts: { failed?: number; loading?:
     }
   })
 }
+
+/** A reader who follows nothing, mutes nothing and isn't signed in anywhere, with whatever you override. */
+export const testReader = (overrides: Partial<Reader> = {}): Reader => ({
+  followed: [],
+  interests: [],
+  customFeeds: [],
+  bskyFeeds: [],
+  communities: [],
+  mixes: [],
+  followedMixes: [],
+  people: [],
+  boards: [],
+  releaseRepos: [],
+  statusHosts: [],
+  mutedWords: [],
+  mutedDomains: [],
+  hidden: {},
+  labelers: [],
+  warnings: 'blur',
+  taste: () => ({ seen: {}, affinity: {}, votes: {} }),
+  ...overrides,
+})

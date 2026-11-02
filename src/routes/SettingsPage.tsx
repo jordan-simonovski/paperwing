@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Bell,
   Bookmark,
@@ -61,7 +62,6 @@ import { formatCode, isCode, newSyncCode, normalizeCode, syncAvailable, syncNow,
 import { fullDate, plural, timeAgo } from '../lib/format'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { isIOS, usePWA } from '../lib/pwa'
-import { queryClient } from '../lib/query'
 import { useActivity, usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
 
@@ -911,6 +911,7 @@ function ReaderPicker() {
 
 function AppSettings() {
   const hidden = useActivity((s) => s.hidden)
+  const qc = useQueryClient()
   const { installEvent, standalone, install } = usePWA()
   return (
     <>
@@ -938,7 +939,7 @@ function AppSettings() {
           <button className="btn" disabled={!Object.keys(hidden).length} onClick={() => (useActivity.setState({ hidden: {} }), toast('Hidden stories restored'))}>
             Unhide {Object.keys(hidden).length} stories
           </button>
-          <button className="btn" onClick={() => (queryClient.clear(), toast('Feed cache cleared'))}>
+          <button className="btn" onClick={() => (qc.clear(), toast('Feed cache cleared'))}>
             Clear feed cache
           </button>
         </div>

@@ -1,3 +1,4 @@
+import { keys } from './query'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { followsTech } from './channels'
@@ -57,7 +58,7 @@ export const isFollowed = (feed: FoundFeed, hosts: Set<string>) =>
 export const findFeeds = (url: string) => api('feed', { src: 'discover', url }) as Promise<FoundFeed[]>
 
 const DAY = 86_400_000
-const discoverQuery = (host: string, url: string) => ({ queryKey: ['discover', host], queryFn: () => findFeeds(url), staleTime: 7 * DAY, gcTime: 30 * DAY, retry: false })
+const discoverQuery = (host: string, url: string) => ({ queryKey: keys.discover(host), queryFn: () => findFeeds(url), staleTime: 7 * DAY, gcTime: 30 * DAY, retry: false })
 
 /** A site's feeds, found from a link to it and remembered by host. */
 export function useSiteFeeds(url: string | null | undefined, enabled = true) {

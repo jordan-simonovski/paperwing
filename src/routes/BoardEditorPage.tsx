@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
@@ -13,6 +14,7 @@ import { MAX_MODERATORS } from '../lib/social'
 export function BoardEditorPage() {
   const { rkey } = useParams()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const did = useAtproto((a) => a.did)
   const { data: existing } = useBoard(rkey ? (did ?? undefined) : undefined, rkey)
   const [name, setName] = useState('')
@@ -51,6 +53,7 @@ export function BoardEditorPage() {
       const moderators = (await resolveHandles(mods.split(/[\s,]+/))).filter((m) => m !== did).slice(0, MAX_MODERATORS)
       const list = existing?.blockList ?? (blockList ? await createBlockList(name.trim()) : undefined)
       const uri = await saveBoard(
+        qc,
         {
           name: name.trim(),
           description: description.trim() || undefined,

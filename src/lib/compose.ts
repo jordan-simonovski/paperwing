@@ -8,7 +8,8 @@ import { postHtml } from './bskyPost'
 import { facetsFor, graphemes } from './facets'
 import { hnComment, useHn } from './hnAccount'
 import { lemmyComment, lemmyPost, useLemmyAccount } from './lemmyAccount'
-import { queryClient } from './query'
+import type { QueryClient } from '@tanstack/react-query'
+import { keys } from './query'
 import type { Comment, Story, Thread } from './types'
 
 // Writing from PaperWing to the open network, as the signed-in account (atproto.ts): replies and
@@ -41,8 +42,8 @@ export const useComposer = create<ComposerState>()((set) => ({
 }))
 
 /** Puts a new comment into the thread on screen, under its parent (or at the top). */
-function addToThread(threadKey: string, parentUri: string | undefined, comment: Comment) {
-  queryClient.setQueryData<Thread | null>(['thread', threadKey], (t) => {
+function addToThread(qc: QueryClient, threadKey: string, parentUri: string | undefined, comment: Comment) {
+  qc.setQueryData<Thread | null>(keys.thread(threadKey), (t) => {
     if (!t) return t
     const place = (cs: Comment[]): [Comment[], boolean] => {
       let found = false
@@ -72,13 +73,13 @@ export const toBlocks = (text: string) =>
     .map((p) => ({ content: { $type: 'fyi.frontpage.richtext.block#plaintextParagraph', text: p } }))
 
 /** Sends what's in the composer. Returns where it can be seen. */
-export async function send(target: ComposeTarget, text: string): Promise<string | undefined> {
+export async function send(qc: QueryClient, target: ComposeTarget, text: string): Promise<string | undefined> {
   const body = text.trim()
   if (!body) throw new Error('Write something first')
   if (graphemes(body) > LIMITS[target.kind]) throw new Error(`That's over ${LIMITS[target.kind]} characters`)
   if (target.kind === 'lemmy-reply') {
     const url = await lemmyComment(target.postApId, body, target.parentApId)
-    addToThread(target.threadKey, target.parentId, {
+    addToThread(qc, target.threadKey, target.parentId, {
       id: `local-${Date.now()}`,
       author: useLemmyAccount.getState().user ?? 'you',
       html: postHtml(body),
@@ -93,7 +94,7 @@ export async function send(target: ComposeTarget, text: string): Promise<string 
   if (target.kind === 'hn-reply') {
     await hnComment(target.parent, body)
     // HN shows a new comment straight away; so does the thread here. It's your own words, as plain paragraphs.
-    addToThread(target.threadKey, target.story ? undefined : target.parent, {
+    addToThread(qc, target.threadKey, target.story ? undefined : target.parent, {
       id: `local-${Date.now()}`,
       author: useHn.getState().user ?? 'you',
       html: postHtml(body),
@@ -110,7 +111,7 @@ export async function send(target: ComposeTarget, text: string): Promise<string 
 
   if (target.kind === 'fp-comment') {
     const ref = await createRecord('fyi.frontpage.feed.comment', { post: target.post, ...(target.parent ? { parent: target.parent } : {}), blocks: toBlocks(body), createdAt: now })
-    addToThread(target.threadKey, target.parent?.uri, { id: ref.uri, author: handle, html: postHtml(body), createdAt: Date.now(), score: 0, ref, children: [] })
+    addToThread(qc, target.threadKey, target.parent?.uri, { id: ref.uri, author: handle, html: postHtml(body), createdAt: Date.now(), score: 0, ref, children: [] })
     return undefined
   }
 
@@ -121,7 +122,7 @@ export async function send(target: ComposeTarget, text: string): Promise<string 
   const ref = await createRecord('app.bsky.feed.post', record)
   const web = `https://bsky.app/profile/${handle}/post/${ref.uri.split('/').pop()}`
   if (target.kind === 'bsky-reply') {
-    addToThread(target.threadKey, target.parent.uri === target.root.uri ? undefined : target.parent.uri, {
+    addToThread(qc, target.threadKey, target.parent.uri === target.root.uri ? undefined : target.parent.uri, {
       id: ref.uri,
       author: handle,
       html: postHtml(body),
