@@ -27,6 +27,13 @@ export const localDay = (t = Date.now()) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/**
+ * Whether For you has finished loading, so the edition can be picked: every feed has answered (or
+ * failed) and none is still fetching. Opening the app restores the last session's stories as loaded
+ * while it refetches them, and an edition picked then would keep yesterday's news all day.
+ */
+export const readyForEdition = (feeds: { status: 'pending' | 'error' | 'success'; fetching: boolean }[]) => feeds.length > 0 && feeds.every((s) => s.status !== 'pending' && !s.fetching)
+
 interface Options {
   followed: string[]
   since: number

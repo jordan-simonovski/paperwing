@@ -7,7 +7,7 @@ import { Split, useListKeys } from '../components/Split'
 import { usePretext, useTypesetIn } from '../lib/pretext'
 import { RowSkeleton, StoryRow } from '../components/StoryRow'
 import { findTopic } from '../lib/channels'
-import { buildEdition, localDay, useEdition, type Edition } from '../lib/edition'
+import { buildEdition, localDay, readyForEdition, useEdition, type Edition } from '../lib/edition'
 import { useChannelFeed, useNow } from '../lib/hooks'
 import { stateOf, totalComments, useLibrary } from '../lib/library'
 import { pushAvailable, usePush } from '../lib/push'
@@ -62,7 +62,7 @@ export function TodayPage() {
   const now = useNow()
   // The same For you as its own page: one module decides what it contains.
   const feed = useChannelFeed('for-you', { sort: 'hot' })
-  const settled = feed.statuses.length > 0 && feed.statuses.every((s) => s.status !== 'pending')
+  const settled = readyForEdition(feed.statuses)
   const allFailed = feed.statuses.length > 0 && feed.statuses.every((s) => s.status === 'error')
 
   // A new edition once a day, picked from what's appeared since the last one.

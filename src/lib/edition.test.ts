@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildEdition } from './edition'
+import { buildEdition, readyForEdition } from './edition'
 import type { Ranked } from './rank'
 
 const now = Date.now()
@@ -35,5 +35,21 @@ describe('buildEdition', () => {
     expect(keys).not.toContain('ai1')
     expect(keys).not.toContain('old')
     expect(keys).toContain('db1')
+  })
+})
+
+describe('readyForEdition', () => {
+  const feed = (status: 'pending' | 'error' | 'success', fetching = false) => ({ status, fetching })
+
+  it('waits for a cache restored at startup to be refetched', () => {
+    // Opening the app restores the last session's stories as loaded, and refetches them.
+    expect(readyForEdition([feed('success', true), feed('success', true)])).toBe(false)
+    expect(readyForEdition([feed('success'), feed('success', true)])).toBe(false)
+    expect(readyForEdition([feed('success'), feed('success')])).toBe(true)
+  })
+  it('waits for every feed to answer, and counts a failure as an answer', () => {
+    expect(readyForEdition([feed('success'), feed('pending', true)])).toBe(false)
+    expect(readyForEdition([feed('success'), feed('error')])).toBe(true)
+    expect(readyForEdition([])).toBe(false)
   })
 })
