@@ -6,6 +6,7 @@ import { blueskyEnabled } from './sources/bluesky'
 import { lemmySearch } from './sources/lemmy'
 import { mastodonTags } from './sources/mastodon'
 import type { Story } from './types'
+import { TOPIC_BY_ID } from './topics'
 
 // Search fans out to every source that can search, and to every story already loaded in the
 // reader's feeds, which covers the sources that can't (Lobsters, dev.to, blogs, releases). Each
@@ -63,3 +64,14 @@ export const SEARCH_SOURCES: SearchSource[] = [
   },
   { id: 'loaded', label: 'Your feeds', run: async (q, o, qc) => searchLoaded(qc, q, o.days) },
 ]
+
+/** Things worth searching for, drawn from the topics this reader follows (a plain word each), or a broad few for a newcomer. */
+export function searchIdeas(followed: string[], limit = 5): string[] {
+  const ideas: string[] = []
+  for (const id of followed) {
+    const term = TOPIC_BY_ID.get(id)?.terms.find((t) => /^[a-z][a-z0-9 ]{2,}$/i.test(t))
+    if (term && !ideas.includes(term.toLowerCase())) ideas.push(term.toLowerCase())
+    if (ideas.length === limit) break
+  }
+  return ideas.length >= 2 ? ideas : ['climate', 'space telescope', 'open source', 'sourdough', 'elections'].slice(0, limit)
+}

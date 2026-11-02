@@ -76,7 +76,7 @@ function Editor({ initial }: { initial: Mix }) {
       <div className="mx-auto max-w-[48rem] px-4 pb-24 pt-8 md:px-8">
         <p className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-3">Mix</p>
         <input
-          className="mt-1 w-full bg-transparent text-[1.875rem] font-bold leading-tight tracking-[-0.02em] placeholder:text-ink-3 focus:outline-none"
+          className="mt-1 w-full border-b-2 border-line bg-transparent pb-1 text-[1.875rem] font-bold leading-tight tracking-[-0.02em] placeholder:text-ink-3 focus:border-ink focus:outline-none"
           value={mix.name}
           maxLength={100}
           placeholder="Name your mix"
@@ -310,7 +310,8 @@ function Editor({ initial }: { initial: Mix }) {
           )}
         </section>
 
-        <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5rem)] mt-8 flex items-center gap-2 min-[900px]:bottom-4">
+        {/* A solid strip, so what scrolls under the floating Save reads as under it rather than beside it. */}
+        <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5rem)] -mx-2 mt-8 flex items-center gap-2 rounded-full bg-ground/95 p-2 min-[900px]:bottom-4">
           <button type="button" className="btn btn-primary h-11 px-6 shadow-lg" disabled={!!busy || !mix.name.trim()} onClick={() => void save().then(() => navigate(`/t/${mixChannel(mix)}`))}>
             {busy === 'save' && <Loader2 size={15} className="spin" />} Save and open
           </button>

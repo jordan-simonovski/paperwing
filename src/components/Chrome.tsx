@@ -1,6 +1,6 @@
 import { profilePath, useMe } from '../lib/people'
 import { Avatar } from './Avatar'
-import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X } from 'lucide-react'
+import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Menu as MenuIcon, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
 import { bskyFeedChannel, findTopic, followsTech, sourceChannels } from '../lib/channels'
@@ -89,11 +89,11 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
       </RailLink>
       {tech && (
         <RailLink to="/t/front" icon={<Newspaper size={16} />}>
-          Front page
+          Tech front pages
         </RailLink>
       )}
 
-      <p className="rail-group rail-label">Your topics</p>
+      <p className="rail-group rail-label">{followed.length ? 'Your topics' : 'Topics'}</p>
       <div className={gap}>
         {followed.map((id) => {
           const t = findTopic(id, interests)
@@ -105,7 +105,7 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
           )
         })}
         <RailLink to="/explore" icon={<Compass size={16} />}>
-          Explore
+          {followed.length ? 'Explore' : 'Pick your topics'}
         </RailLink>
       </div>
 
@@ -219,9 +219,12 @@ export function Rail() {
         <kbd className="rail-label bg-ground">⌘K</kbd>
       </button>
 
-      <RailLinks />
+      {/* Channels scroll; where you keep things (Activity, Saved, Settings) stays in view however many you follow. */}
+      <div className="rail-scroll -mx-3 min-h-0 flex-1 px-3">
+        <RailLinks />
+      </div>
 
-      <div className="mt-auto pt-6">
+      <div className="flex-none border-t border-line pt-3">
         {installEvent && (
           <button className="rail-link w-full" onClick={() => void install()} title="Install app">
             <span className="rail-glyph">
@@ -299,12 +302,13 @@ export function MobileBar() {
   useAutoHideBar(ref)
   return (
     <div ref={ref} className="mobile-bar flex items-center justify-between px-4 min-[900px]:hidden">
-      <div className="flex items-center gap-1">
-        {/* The mark already reads as a menu: four lines. On a phone it opens the drawer. */}
-        <button className="-ml-2.5 grid size-11 place-items-center rounded-full active:bg-sunk" onClick={() => setDrawer(true)} aria-label="Menu" aria-haspopup="dialog">
-          <Mark />
+      <div className="flex items-center gap-0.5">
+        {/* Your topics, sources, mixes and the command bar live in the menu: it looks like one. */}
+        <button className="-ml-2 grid size-11 place-items-center rounded-full active:bg-sunk" onClick={() => setDrawer(true)} aria-label="Menu" aria-haspopup="dialog">
+          <MenuIcon size={22} />
         </button>
-        <NavLink to="/t/for-you" aria-label="PaperWing home">
+        <NavLink to="/t/for-you" className="flex items-center gap-1.5" aria-label="PaperWing home">
+          <Mark />
           <span className="wordmark">PaperWing</span>
         </NavLink>
       </div>

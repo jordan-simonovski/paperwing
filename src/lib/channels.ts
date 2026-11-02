@@ -221,8 +221,9 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
   if (id === 'front') {
     return {
       id,
-      label: 'Front page',
-      eyebrow: 'Everything, ranked together',
+      // Not "Front page": PaperWing has a front page of its own.
+      label: 'Tech front pages',
+      eyebrow: 'Hacker News and Lobsters',
       blurb: 'Hacker News and Lobsters front pages merged and deduplicated',
       feeds: [
         { kind: 'hn', list: 'top' },

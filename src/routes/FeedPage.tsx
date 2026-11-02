@@ -3,6 +3,7 @@ import { channelId as toChannelId } from '../lib/channelId'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { ChannelBrief } from '../components/ChannelBrief'
 import { FeedHeader } from '../components/FeedHeader'
+import { FeedEmpty, FeedFailed } from '../components/FeedState'
 import { OutageBanner } from '../components/OutageWatch'
 import { Split, useListKeys } from '../components/Split'
 import { RowSkeleton, StoryRow } from '../components/StoryRow'
@@ -148,23 +149,7 @@ export function FeedPage() {
                 <StoryRow key={s.key} story={s} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} />
               ))}
             </div>
-            {allFailed && (
-              <div className="px-6 py-16 text-center">
-                <p className="text-[1.125rem] font-bold">Nothing came through</p>
-                <p className="mt-2 text-sm text-ink-3">
-                  {navigator.onLine ? (feed.statuses.length > 1 ? 'Every source failed:' : 'It failed:') : "You're offline and nothing for this channel is cached yet."}
-                </p>
-                {navigator.onLine && (
-                  <ul className="mx-auto mt-3 max-w-md space-y-1 text-left text-sm text-ink-2">
-                    {feed.statuses.map((s) => (
-                      <li key={s.id}>
-                        <span className="font-semibold text-ink">{s.label}</span>: {s.error}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+            {allFailed && <FeedFailed offline={!navigator.onLine} statuses={feed.statuses} onRetry={() => void feed.refetch()} />}
             {channel.empty && !channel.feeds.length && (
               <div className="px-6 py-16 text-center">
                 <p className="text-[1.125rem] font-bold">{channel.empty.title}</p>
@@ -177,7 +162,20 @@ export function FeedPage() {
               </div>
             )}
             {!feed.loading && !allFailed && !channel.empty && !visible.length && (
-              <p className="px-6 py-16 text-center text-ink-3">{channel.quiet && !sourceFilter && !kindFilter ? channel.quiet : 'No stories match. Try another source or sort.'}</p>
+              <FeedEmpty
+                quiet={channel.quiet}
+                filtered={!!(sourceFilter || kindFilter)}
+                allRead={hideRead && feed.stories.length > 0 && !sourceFilter && !kindFilter}
+                related={channel.related}
+                onClearFilter={() =>
+                  setParams((p) => {
+                    p.delete('src')
+                    p.delete('kind')
+                    return p
+                  })
+                }
+                onRefresh={() => void feed.refetch()}
+              />
             )}
             {visible.length > limit && (
               <div className="p-5 text-center">

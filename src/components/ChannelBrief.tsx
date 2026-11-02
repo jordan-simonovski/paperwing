@@ -35,12 +35,16 @@ export function ChannelBrief({ channel, stories, statuses, onOpen, now }: { chan
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
   }, [stories, channel.id])
   const working = statuses.filter((s) => s.status === 'success').length
+  // Every source has failed: say so, rather than "Tuning in" beside a list of failures.
+  const failedAll = statuses.length > 0 && statuses.every((s) => s.status === 'error')
 
   return (
     <div className="h-full overflow-y-auto px-8 py-10">
       <div className="mx-auto max-w-[40rem]">
-        <h2 className="text-[1.375rem] font-bold leading-snug tracking-tight">{stories.length ? `${stories.length} stories from ${working} ${working === 1 ? 'source' : 'sources'}` : 'Tuning in'}</h2>
-        <p className="mt-1 text-[0.9375rem] text-ink-2">Open a story to read it here, or start with where the conversation is.</p>
+        <h2 className="text-[1.375rem] font-bold leading-snug tracking-tight">
+          {stories.length ? `${stories.length} stories from ${working} ${working === 1 ? 'source' : 'sources'}` : failedAll ? 'No sources answered' : 'Tuning in'}
+        </h2>
+        <p className="mt-1 text-[0.9375rem] text-ink-2">{failedAll ? 'Try again from the list in a moment.' : 'Open a story to read it here, or start with where the conversation is.'}</p>
 
         {['sre', 'observability', 'cloud-native'].includes(channel.id) && (
           <div className="mt-9">

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, waitFor } from 'storybook/test'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
 import { usePrefs } from '../lib/store'
 import { Palette } from './Palette'
 
@@ -35,3 +35,13 @@ export const SwitchesTheme: Story = {
 }
 
 export const Closed: Story = { parameters: { app: { ui: { palette: false } } } }
+
+/** Typing what a setting does finds the setting, ahead of topics and searches. */
+export const FindsSettings: Story = {
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body)
+    await userEvent.type(page.getByRole('combobox'), 'text size')
+    const options = page.getAllByRole('option')
+    await expect(options[0]).toHaveTextContent('Text size, theme and density')
+  },
+}

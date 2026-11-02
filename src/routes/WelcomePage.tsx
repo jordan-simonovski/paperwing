@@ -539,8 +539,14 @@ export function WelcomePage() {
             </button>
           )}
           <span className="text-[0.9375rem] text-ink-2">
-            {step === 'topics' ? (picks ? `${picks} picked` : 'Pick at least one') : step === 'hello' ? 'Takes about a minute' : `${at} of ${STEPS.length - 1}`}
+            {step === 'topics' ? (picks ? `${picks} picked` : 'Pick at least one') : step === 'hello' ? 'Pick topics, then read' : `${at} of ${STEPS.length - 1}`}
           </span>
+          {/* Past the topics, the rest is optional: one tap and you're reading. */}
+          {at > 1 && step !== 'passkey' && (
+            <button className="ml-1 text-[0.875rem] font-semibold text-ink-2 underline underline-offset-2 hover:text-ink" onClick={finish}>
+              Skip the tour
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {skippable.includes(step) && !(step === 'passkey' && synced) && (

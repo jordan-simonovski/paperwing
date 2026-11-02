@@ -6,7 +6,8 @@ test.use({ stubs: { feeds: { 'rss:SpaceNews': [STARSHIP] } } })
 
 test('following a topic from Explore adds it to your channels, with its stories', async ({ page }) => {
   await gotoFeed(page)
-  await navigate(page, 'Explore')
+  // Following nothing yet, the sidebar calls it "Pick your topics".
+  await navigate(page, /^(Explore|Pick your topics)$/)
   await expect(page).toHaveURL(/\/explore$/)
 
   const follow = page.getByRole('button', { name: 'Follow Space' })

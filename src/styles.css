@@ -473,7 +473,12 @@
     min-height: 0;
   }
   .rail {
+    overflow: hidden;
+  }
+  .rail-scroll {
     overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 1rem;
   }
   .list-col {
     overflow-y: auto;
@@ -1987,6 +1992,28 @@
 
   /* -------------------------------------------------------- touch and PWA */
 
+  /* A finger needs about 44px to hit something. The small controls keep their look and the rows
+     their density: the target grows invisibly past the edges instead. */
+  @media (pointer: coarse) {
+    .icon-btn,
+    .pill-icon,
+    .votes button,
+    .seg > button {
+      position: relative;
+    }
+    .icon-btn::before,
+    .pill-icon::before,
+    .votes button::before,
+    .seg > button::before {
+      content: '';
+      position: absolute;
+      inset: -0.375rem;
+    }
+    .votes button::before {
+      inset: -0.5rem -0.25rem;
+    }
+  }
+
   .swipe[data-swipe] {
     overflow: hidden;
   }
@@ -2099,6 +2126,10 @@
     font-size: 0.875rem;
   }
 
+  /* The invitation floats over the list: the list's end clears it, so no story sits under it. */
+  .with-invite [role='feed'] {
+    padding-bottom: 5.5rem;
+  }
   /* Someone opened a shared story before setting PaperWing up: a pill inviting them in. */
   .newcomer-bar {
     position: fixed;

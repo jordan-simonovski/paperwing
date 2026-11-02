@@ -1,4 +1,5 @@
 import { keys } from '../lib/query'
+import { CouldntReach } from '../components/FeedState'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Heart, Loader2, Plus, Search, Users } from 'lucide-react'
 import { useDeferredValue, useState } from 'react'
@@ -71,7 +72,7 @@ function Communities() {
       )}
       <h2 className="mt-8 text-[1.125rem] font-bold">{query ? `Matching “${query}”` : 'Busy right now'}</h2>
       {found.isPending && <Loader2 size={18} className="spin mt-4 text-ink-3" />}
-      {found.isError && <p className="mt-3 text-[0.875rem] text-signal">Couldn’t reach Lemmy: {(found.error as Error).message}</p>}
+      {found.isError && <CouldntReach what="Lemmy" onRetry={() => void found.refetch()} />}
       {found.data && !found.data.length && <p className="mt-3 text-[0.875rem] text-ink-3">No communities match that.</p>}
       <div className="mt-3 grid grid-cols-1 gap-x-8 lg:grid-cols-2">
         {found.data?.map((c) => {
@@ -110,7 +111,7 @@ function BlueskyFeedsTab() {
       <SearchBox value={q} onChange={setQ} placeholder="Search feeds: “astronomy”, “books”, “auspol”" />
       <h2 className="mt-8 text-[1.125rem] font-bold">{query ? `Matching “${query}”` : 'Most liked'}</h2>
       {found.isPending && <Loader2 size={18} className="spin mt-4 text-ink-3" />}
-      {found.isError && <p className="mt-3 text-[0.875rem] text-signal">Couldn’t reach Bluesky: {(found.error as Error).message}</p>}
+      {found.isError && <CouldntReach what="Bluesky" onRetry={() => void found.refetch()} />}
       {found.data && !found.data.length && <p className="mt-3 text-[0.875rem] text-ink-3">No feeds match that.</p>}
       <div className="mt-3 grid grid-cols-1 gap-x-8 lg:grid-cols-2">
         {found.data?.map((f) => {

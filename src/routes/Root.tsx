@@ -13,7 +13,7 @@ import { useMediaQuery } from '../lib/hooks'
 import { useBlogrollPublisher } from '../lib/blogroll'
 
 export function Root() {
-  const { theme, textSize, density, set, welcomed } = usePrefs()
+  const { theme, textSize, density, set, welcomed, followed } = usePrefs()
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const { pathname } = useLocation()
   useBlogrollPublisher()
@@ -104,6 +104,7 @@ export function Root() {
   // Newcomers start reading straight away (For you has a starter mix); the tour is an invitation,
   // not a gate. The bar goes once they take the tour or wave it away.
   const invite = !welcomed && !/^\/(welcome|atproto-callback|mastodon\/callback|pair|share)/.test(pathname)
+  const picked = followed.length > 0
 
   return (
     <>
@@ -111,18 +112,27 @@ export function Root() {
       <MobileBar />
       {invite && (
         <div className="newcomer-bar" role="region" aria-label="Welcome">
+          {/* Someone who picked topics and left setup has made it theirs already: the bar says so. */}
           <span className="min-w-0 flex-1">
-            <strong>New here?</strong> This is a starter mix. Pick your own topics in a minute.
+            {picked ? (
+              <>
+                <strong>Your topics are in.</strong> Finish setting up whenever you like.
+              </>
+            ) : (
+              <>
+                <strong>New here?</strong> This is a starter mix. Pick your own topics in a minute.
+              </>
+            )}
           </span>
           <Link to="/welcome" className="flex-none font-semibold underline underline-offset-2">
-            Make it yours
+            {picked ? 'Finish setup' : 'Make it yours'}
           </Link>
           <button className="newcomer-close" onClick={() => set({ welcomed: true })} aria-label="Not now" title="Not now">
             <X size={16} />
           </button>
         </div>
       )}
-      <div className="shell">
+      <div className={invite ? 'shell with-invite' : 'shell'}>
         <Rail />
         <Outlet />
       </div>

@@ -1,7 +1,7 @@
 import { useComposer } from '../lib/compose'
 import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
-import { Archive, ArchiveRestore, ArrowDown, Bell, BellRing, ArrowLeft, ArrowUpRight, Bookmark, BookmarkCheck, Loader2, MessageSquare, Newspaper, Share2, X } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowDown, Bell, BellRing, ArrowLeft, ArrowUpRight, Bookmark, BookmarkCheck, Loader2, Newspaper, Share2, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, Link } from 'react-router'
 import { ago, compact, domainOf, fullDate } from '../lib/format'
@@ -29,7 +29,7 @@ import { FollowSite } from './FollowBlogs'
 import { StoryActions, useCommentActions } from './Social'
 import { SummaryCard } from './SummaryCard'
 import { MediaGallery } from './Media'
-import { StoryIcon } from './SourceIcon'
+import { SourceIcon, StoryIcon } from './SourceIcon'
 import { scoreUnit, SOURCE_NAMES, sourceLabel } from './Source'
 import { WhyRanked } from './WhyRanked'
 import { Elsewhere, RelatedView } from './RelatedView'
@@ -178,8 +178,9 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
             <Share2 size={17} />
           </button>
           {story.discussionUrl && (
-            <a className="icon-btn" href={story.discussionUrl} target="_blank" rel="noopener noreferrer" title={`Open on ${sourceName}`}>
-              <MessageSquare size={17} />
+            // The source's own logo: a speech bubble read as "reply" when it means "open the discussion there".
+            <a className="icon-btn" href={story.discussionUrl} target="_blank" rel="noopener noreferrer" title={`Open on ${sourceName}`} aria-label={`Open on ${sourceName}`}>
+              <SourceIcon source={story.source} size={16} />
             </a>
           )}
           {story.url && (

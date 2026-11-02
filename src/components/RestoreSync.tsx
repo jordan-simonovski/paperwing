@@ -35,8 +35,9 @@ export function RestoreSync({ onRestored }: { onRestored: () => void }) {
       <h2 className="text-[1.0625rem] font-bold">Already use PaperWing?</h2>
       <p className="mt-1 text-[0.875rem] text-ink-2">Bring your topics, saved stories, feeds and settings across instead of starting fresh. Everything’s encrypted on your devices.</p>
       <div className="mt-3 flex flex-wrap gap-2">
+        {/* Secondary: most people here are new, and "Start fresh" is theirs. */}
         {support !== 'no' && (
-          <button className="btn btn-primary" disabled={!!busy} onClick={() => void restore('passkey')}>
+          <button className="btn" disabled={!!busy} onClick={() => void restore('passkey')}>
             {busy === 'passkey' ? <Loader2 size={15} className="spin" /> : <KeyRound size={15} />} Restore with my passkey
           </button>
         )}

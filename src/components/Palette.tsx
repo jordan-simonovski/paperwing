@@ -1,4 +1,4 @@
-import { ArrowRight, Bookmark, CornerDownLeft, Hash, Link2, Moon, Newspaper, Plus, Search, Settings, Sparkles } from 'lucide-react'
+import { ArrowRight, Bell, Bookmark, CalendarDays, CornerDownLeft, Hash, Layers, Link2, Moon, Newspaper, Plus, Search, Settings, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { allTopics, findTopic, sourceChannels } from '../lib/channels'
@@ -13,9 +13,22 @@ interface Item {
   group: string
   label: React.ReactNode
   hint?: string
+  /** Other words people might type for it ("text size" for Appearance). */
+  keywords?: string
   icon: React.ReactNode
   run: () => void
 }
+
+/** Settings people look for by name: section, what to call it, and the words they'd type. */
+const SETTINGS: [section: string, label: string, keywords: string][] = [
+  ['appearance', 'Text size, theme and density', 'appearance font dark light mode colour'],
+  ['tuning', 'Mute words, sites and sources', 'hide block filter moderation labelers content warnings tuning'],
+  ['sources', 'Accounts and sources', 'sign in log in bluesky mastodon hacker news lemmy rss feeds status pages'],
+  ['library', 'Sync, import and export', 'devices backup opml passkey'],
+  ['notifications', 'Notifications', 'alerts push edition'],
+  ['summaries', 'Discussion summaries', 'claude ai anthropic key'],
+  ['app', 'Install, storage and about', 'version diagnostics data offline'],
+]
 
 const RECENT_KEY = 'readout:recent-searches'
 export function rememberSearch(q: string) {
@@ -54,6 +67,13 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
   const { interests, followed, theme, set, addInterest } = usePrefs()
   const [q, setQ] = useState('')
+  // Suggestions from what this reader reads, not from what PaperWing started with.
+  const tryLine = useMemo(() => {
+    const near = relatedTopics(followed)
+      .slice(0, 2)
+      .map((t) => t.label.toLowerCase())
+    return near.length ? `Try ${near.join(', ')}, a site or a setting` : 'Try a topic, a site, or a setting like “text size”'
+  }, [followed])
   const [active, setActive] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -65,12 +85,18 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     const out: Item[] = []
     const nav: Item[] = [
       { id: 'for-you', group: 'Go to', label: 'For you', icon: <Sparkles size={15} />, run: go('/t/for-you') },
-      { id: 'front', group: 'Go to', label: 'Front page', icon: <Newspaper size={15} />, run: go('/t/front') },
+      { id: 'front', group: 'Go to', label: 'Tech front pages', keywords: 'hacker news lobsters front page', icon: <Newspaper size={15} />, run: go('/t/front') },
       ...sourceChannels(followed).map((c) => ({ id: c.id, group: 'Go to', label: c.label, icon: <SourceChannelIcon mark={c.mark} size={15} />, run: go(`/t/${c.id}`) })),
       { id: 'topics', group: 'Go to', label: 'Explore topics', icon: <Hash size={15} />, run: go('/explore') },
       { id: 'communities', group: 'Go to', label: 'Explore communities', icon: <Hash size={15} />, run: go('/explore/communities') },
-      { id: 'saved', group: 'Go to', label: 'Saved', icon: <Bookmark size={15} />, run: go('/saved') },
-      { id: 'settings', group: 'Go to', label: 'Settings', icon: <Settings size={15} />, run: go('/settings') },
+      { id: 'today', group: 'Go to', label: 'Today', keywords: 'edition daily digest', icon: <CalendarDays size={15} />, run: go('/today') },
+      { id: 'saved', group: 'Go to', label: 'Saved', keywords: 'read later queue bookmarks archive', icon: <Bookmark size={15} />, run: go('/saved') },
+      { id: 'activity', group: 'Go to', label: 'Activity', keywords: 'notifications replies inbox mentions', icon: <Bell size={15} />, run: go('/activity') },
+      { id: 'feeds', group: 'Go to', label: 'Explore Bluesky feeds', icon: <Hash size={15} />, run: go('/explore/feeds') },
+      { id: 'mix', group: 'Go to', label: 'Make a mix', keywords: 'mixes custom channel combine', icon: <Layers size={15} />, run: go('/mixes') },
+      { id: 'whats-new', group: 'Go to', label: 'What’s new', keywords: 'changelog release version updates', icon: <Sparkles size={15} />, run: go('/whats-new') },
+      { id: 'settings', group: 'Go to', label: 'Settings', keywords: 'preferences options', icon: <Settings size={15} />, run: go('/settings') },
+      ...SETTINGS.map(([section, label, keywords]) => ({ id: `settings:${section}`, group: 'Settings', label, keywords, icon: <SlidersHorizontal size={15} />, run: go(`/settings/${section}`) })),
       { id: 'post', group: 'Actions', label: 'Post a link to PaperWing', icon: <Link2 size={15} />, run: () => postLink() },
       { id: 'theme', group: 'Actions', label: `Switch to ${dark ? 'light' : 'dark'} mode`, icon: <Moon size={15} />, run: () => set({ theme: dark ? 'light' : 'dark' }) },
     ]
@@ -81,7 +107,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
         const t = findTopic(id, interests)
         if (t) out.push({ id: `topic:${t.id}`, group: 'Your interests', label: t.label, hint: t.blurb, icon: dot(t.hue), run: go(`/t/${t.id}`) })
       }
-      return [...out, ...nav]
+      return [...out, ...nav.filter((n) => n.group !== 'Settings')]
     }
 
     // A pasted link: post it.
@@ -96,7 +122,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
         id: 'follow',
         group: 'Search',
         label: <>Follow “{query}” as an interest</>,
-        hint: 'Builds a feed from HN and dev.to',
+        hint: 'A feed from news headlines and Hacker News',
         icon: <Plus size={15} />,
         run: () => navigate(`/t/${addInterest(query).id}`),
       })
@@ -109,8 +135,11 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
         out.push({ id: `near:${t.id}`, group: `Related to ${hits[0].topic.label}`, label: t.label, hint: t.blurb, icon: dot(t.hue), run: go(`/t/${t.id}`) })
       }
     }
+    // Places and settings that match come first: someone typing "text size" wants the setting, not a topic.
     const lower = query.toLowerCase()
-    return [...out, ...nav.filter((n) => typeof n.label === 'string' && n.label.toLowerCase().includes(lower))]
+    if (!lower) return [...out, ...nav.filter((n) => n.group !== 'Settings')]
+    const places = nav.filter((n) => `${typeof n.label === 'string' ? n.label : ''} ${n.keywords ?? ''}`.toLowerCase().includes(lower))
+    return [...places, ...out]
   }, [q, interests, followed, navigate, set, addInterest, dark])
 
   useEffect(() => setActive(0), [q])
@@ -154,7 +183,10 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
             aria-controls="palette-list"
             aria-activedescendant={`pal-${active}`}
           />
-          <kbd>esc</kbd>
+          <kbd className="max-sm:hidden">esc</kbd>
+          <button className="icon-btn sm:hidden" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
         </div>
         <div ref={listRef} id="palette-list" role="listbox" className="overflow-y-auto pb-2">
           {items.map((item, i) => {
@@ -174,13 +206,13 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
           })}
         </div>
         <div className="flex items-center gap-4 bg-sunk px-5 py-2.5 text-[0.8125rem] text-ink-3">
-          <span>
+          <span className="max-sm:hidden">
             <kbd>↑</kbd> <kbd>↓</kbd> move
           </span>
-          <span>
+          <span className="max-sm:hidden">
             <kbd>↵</kbd> open
           </span>
-          <span className="ml-auto max-sm:hidden">Try tracing, mcp or postgres</span>
+          <span className="sm:ml-auto">{tryLine}</span>
         </div>
       </div>
     </>

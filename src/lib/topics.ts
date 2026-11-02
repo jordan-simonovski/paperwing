@@ -216,7 +216,8 @@ const TECH_TOPICS: Topic[] = [
   {
     id: 'ml-research',
     mastodon: ['machinelearning', 'deeplearning'],
-    label: 'Papers',
+    // Not "Papers": that's science's topic for research from every field.
+    label: 'ML papers',
     hue: 290,
     cluster: 'intelligence',
     blurb: 'Fresh research and white papers, ranked by the people who read them',

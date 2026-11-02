@@ -103,12 +103,13 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
           },
         ]
       : []),
-    ...(canPost
+    // Shown signed out too: the next sheet says where to sign in, so posting can be found by trying it.
+    ...(story.url || story.discussionUrl
       ? [
           {
             icon: <Send size={18} />,
             title: 'Post it to your networks',
-            detail: 'Bluesky, Mastodon, Hacker News or Lemmy, and list it on PaperWing',
+            detail: canPost ? 'Bluesky, Mastodon, Hacker News or Lemmy, and list it on PaperWing' : 'Sign in to Bluesky, Mastodon, Hacker News or Lemmy to post it there, or on PaperWing',
             run: () => {
               onClose()
               open({ kind: 'share', story })

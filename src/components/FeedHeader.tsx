@@ -3,7 +3,7 @@ import { RssButton } from './RssButton'
 import { BoardHeader } from './BoardHeader'
 import { ProfileHeader } from './ProfileHeader'
 import { AlertTriangle, Check, Link2, Loader2, Plus, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { findTopic, listOf, mixSourceFor, rssPath, type Channel } from '../lib/channels'
 import { topicIcon } from '../lib/topicIcons'
 import type { FeedStatus } from '../lib/hooks'
@@ -71,13 +71,22 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
 
   // On a phone the filters and related topics live in one sheet rather than rows that scroll off-screen.
   const [sheet, setSheet] = useState(false)
+  const [sortHint, setSortHint] = useState<SortMode>()
+  const hintTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(hintTimer.current), [])
+  const chooseSort = (s: SortMode) => {
+    onSort(s)
+    setSortHint(s)
+    window.clearTimeout(hintTimer.current)
+    hintTimer.current = window.setTimeout(() => setSortHint(undefined), 4000)
+  }
   const closeSheet = useCallback(() => setSheet(false), [])
   const filterLabel = [sourceFilter && SOURCE_NAMES[sourceFilter], kindFilter && (kindFilter === 'shared' ? 'Shared' : 'Discussions')].filter(Boolean).join(', ')
 
   const failed = statuses.filter((s) => s.status === 'error')
   const loading = statuses.filter((s) => s.status === 'pending').length
-  // Where links can be posted: PaperWing's front page and its topic boards, and the Front page that includes them.
-  const postsHere = channel.id === 'paperwing' || channel.id === 'front' || channel.id.startsWith('paperwing:')
+  // Where links can be posted: PaperWing and its topic boards.
+  const postsHere = channel.id === 'paperwing' || channel.id.startsWith('paperwing:')
   // A Lemmy community's own channel can be joined from here.
   const community = channel.id.startsWith('c:') ? channel.id.slice(2) : undefined
   const mixable = mixSourceFor(channel, usePrefs.getState().interests)
@@ -142,7 +151,15 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                 )}
               </div>
               {isTopic && (
-                <button className={`btn h-8 flex-none px-3.5 text-[0.8125rem] ${following ? 'following' : ''}`} onClick={() => toggleFollow(channel.id)} aria-pressed={following}>
+                <button
+                  className={`btn h-8 flex-none px-3.5 text-[0.8125rem] ${following ? 'following' : ''}`}
+                  onClick={() => {
+                    toggleFollow(channel.id)
+                    // Unfollowing takes a topic out of For you and the sidebar: easy to take back.
+                    if (following) toast(`Unfollowed ${channel.label}`, { action: { label: 'Undo', run: () => toggleFollow(channel.id) } })
+                  }}
+                  aria-pressed={following}
+                >
                   {following ? <Check size={14} /> : <Plus size={14} />}
                   {following ? 'Following' : 'Follow'}
                 </button>
@@ -193,7 +210,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                 </button>
               ))
             : (['hot', 'new', 'top', 'spicy'] as const).map((s) => (
-                <button key={s} aria-pressed={sort === s} onClick={() => onSort(s)} title={SORT_HINTS[s]}>
+                <button key={s} aria-pressed={sort === s} onClick={() => chooseSort(s)} title={SORT_HINTS[s]}>
                   {s === 'hot' ? 'Hot' : s === 'new' ? 'Latest' : s === 'top' ? 'Top' : 'Spicy'}
                 </button>
               ))}
@@ -263,6 +280,12 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
           </button>
         </div>
       </div>
+      {/* What a sort means, said once when it changes: touch screens never see a tooltip. */}
+      {sortHint && (
+        <p className="sort-hint px-4 pb-2 text-[0.8125rem] text-ink-3 md:px-5" role="status">
+          {SORT_HINTS[sortHint]}
+        </p>
+      )}
 
       <Sheet open={sheet} onClose={closeSheet} side="bottom" label="Filter stories">
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line" aria-hidden />

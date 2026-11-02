@@ -136,13 +136,13 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
                   <span className="flex-1">
                     <span className="block text-[0.9375rem] font-semibold">List it on PaperWing</span>
                     <span className="block text-[0.8125rem] text-ink-3">
-                      {canList ? 'Your Bluesky post goes on PaperWing’s front page: likes are its votes, replies its comments.' : 'Needs one more Bluesky permission: Allow under Settings, Sources.'}
+                      {canList ? 'Your Bluesky post is listed on PaperWing: likes are its votes, replies its comments.' : 'Needs one more Bluesky permission: Allow under Settings, Sources.'}
                     </span>
                   </span>
                 </label>
                 {paperwing && canList && (
                   <select className="input mt-2.5 h-10" value={board} onChange={(e) => setBoard(e.target.value)} aria-label="Board">
-                    <option value="">Front page only</option>
+                    <option value="">No board, just PaperWing</option>
                     {joinedBoards.length > 0 && (
                       <optgroup label="Your community boards">
                         {joinedBoards.map((b) => (

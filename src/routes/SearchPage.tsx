@@ -10,7 +10,7 @@ import { useNow } from '../lib/hooks'
 import { rankStories } from '../lib/channelFeed'
 import { keys } from '../lib/query'
 import { useReader } from '../lib/reader'
-import { SEARCH_SOURCES } from '../lib/search'
+import { SEARCH_SOURCES, searchIdeas } from '../lib/search'
 import { useActivity, usePrefs } from '../lib/store'
 import { relatedTopics, searchTopics } from '../lib/topics'
 import { clearRecentSearches, recentSearches, rememberSearch } from '../components/Palette'
@@ -186,7 +186,7 @@ export function SearchPage() {
               <section>
                 <h2 className="label mb-2.5">Try</h2>
                 <div className="flex flex-wrap gap-1.5">
-                  {['opentelemetry', 'mcp', 'postgres', 'rust', 'gpu inference'].map((t) => (
+                  {searchIdeas(followed).map((t) => (
                     <button key={t} className="chip" onClick={() => submit(t)}>
                       {t}
                     </button>

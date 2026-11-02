@@ -106,8 +106,8 @@ function NotificationSettings() {
       <p className="text-[0.9375rem] leading-relaxed text-ink-2">
         {'PushManager' in window ? (
           <>
-            Notifications need the Upstash database on this deployment: add Upstash (Redis, and QStash for the schedules) from the Vercel Marketplace and redeploy. PaperWing sets up everything else
-            itself.
+            Notifications aren’t switched on for this copy of PaperWing yet.{' '}
+            <span className="text-ink-3">If you run it: add Upstash (Redis, and QStash for the schedules) from the Vercel Marketplace and redeploy; PaperWing sets up everything else itself.</span>
           </>
         ) : (
           <>This browser can't receive notifications. On iPhone and iPad, install PaperWing to your home screen first.</>
@@ -148,7 +148,7 @@ function NotificationSettings() {
         {minutes === undefined
           ? scheduler
             ? 'PaperWing checks for replies, incidents and outages every five minutes; the first check runs within a few minutes of turning one on.'
-            : 'Replies, incidents and outages need Upstash QStash: add it to this project from the Vercel Marketplace (Upstash) and redeploy, and PaperWing schedules its own checks. Until then only the daily edition arrives.'
+            : 'For now only the daily edition arrives here: alerts for replies, incidents and outages aren’t switched on for this copy of PaperWing. (If you run it: add Upstash QStash from the Vercel Marketplace and redeploy.)'
           : minutes < 30
             ? `Checked every few minutes; the last check was ${minutes < 1 ? 'just now' : `${minutes} min ago`}. The app icon counts what's new since you last opened PaperWing.`
             : `The last check was ${ago(alertsAt!)}, so the schedule may have stopped (README: Alerts).`}
@@ -248,8 +248,11 @@ function SyncSettings() {
   if (!available)
     return (
       <p className="text-[0.9375rem] leading-relaxed text-ink-2">
-        Sync needs a small database on the deployment. In Vercel, add <strong>Upstash Redis</strong> from the Marketplace to this project (the free tier is plenty), then redeploy. It sets{' '}
-        <code className="font-mono text-[0.8125rem]">KV_REST_API_URL</code> and <code className="font-mono text-[0.8125rem]">KV_REST_API_TOKEN</code>, which turn this on.
+        Sync isn’t switched on for this copy of PaperWing yet, so everything stays on this device.{' '}
+        <span className="text-ink-3">
+          If you run it: add <strong>Upstash Redis</strong> from the Vercel Marketplace (the free tier is plenty) and redeploy. It sets{' '}
+          <code className="font-mono text-[0.8125rem]">KV_REST_API_URL</code> and <code className="font-mono text-[0.8125rem]">KV_REST_API_TOKEN</code>, which turn this on.
+        </span>
       </p>
     )
 

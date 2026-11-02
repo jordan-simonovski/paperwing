@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { useAtproto } from '../lib/atproto'
 import { boardPath, createBlockList, resolveHandles, saveBoard, toggleJoin, useBoard } from '../lib/boards'
 import { TOPICS } from '../lib/topics'
@@ -43,7 +43,13 @@ export function BoardEditorPage() {
   if (!did)
     return (
       <div className="wide-col grid place-items-center p-10 text-center">
-        <p className="text-ink-3">Sign in with Bluesky (Settings, Sources) to make a community board.</p>
+        <div className="max-w-sm">
+          <p className="text-[1.125rem] font-bold">Start a community board</p>
+          <p className="mt-2 text-[0.9375rem] text-ink-3">A board has its own rules and moderators, and lives in your Bluesky account, so it belongs to you. Sign in with Bluesky to start one.</p>
+          <Link to="/settings/sources" className="btn btn-primary mt-5 inline-flex">
+            Sign in with Bluesky
+          </Link>
+        </div>
       </div>
     )
 

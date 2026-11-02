@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
-import { searchLoaded } from './search'
+import { searchIdeas, searchLoaded } from './search'
 import type { Story } from './types'
 
 const story = (key: string, title: string, ageDays = 0, url: string | null = null): Story => ({
@@ -28,5 +28,16 @@ describe('searching loaded feeds', () => {
   it('keeps to the time range', () => {
     expect(searchLoaded(qc, 'rust', 30)).toEqual([])
     expect(searchLoaded(qc, 'rust', undefined).map((s) => s.key)).toEqual(['b'])
+  })
+})
+
+describe('search ideas', () => {
+  it('come from what the reader follows, as plain words', () => {
+    const ideas = searchIdeas(['physics', '3d-printing', 'observability'])
+    expect(ideas.length).toBe(3)
+    for (const i of ideas) expect(i).toMatch(/^[a-z0-9 ]+$/)
+  })
+  it('are broad for someone who follows nothing yet', () => {
+    expect(searchIdeas([])).toContain('climate')
   })
 })
