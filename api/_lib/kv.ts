@@ -7,6 +7,8 @@ export interface Kv {
   hset(key: string, entries: [string, string][]): Promise<void>
   hdel(key: string, fields: string[]): Promise<void>
   hgetall(key: string): Promise<Record<string, string>>
+  /** How many fields a hash has. */
+  hlen(key: string): Promise<number>
   zadd(key: string, entries: [number, string][]): Promise<void>
   /** Members with score > min, lowest first. */
   zrangeAbove(key: string, min: number, limit: number): Promise<[string, number][]>
@@ -57,6 +59,9 @@ const upstash: Kv = {
     const out: Record<string, string> = {}
     for (let i = 0; i < flat.length; i += 2) out[flat[i]] = flat[i + 1]
     return out
+  },
+  async hlen(key) {
+    return Number((await pipeline([['HLEN', key]]))[0] ?? 0)
   },
   async zadd(key, entries) {
     if (entries.length) await pipeline([['ZADD', key, ...entries.flatMap(([score, member]) => [score, member])]])
@@ -111,6 +116,9 @@ const memory: Kv = {
   },
   async hgetall(key) {
     return Object.fromEntries(mem.hashes.get(key) ?? [])
+  },
+  async hlen(key) {
+    return mem.hashes.get(key)?.size ?? 0
   },
   async zadd(key, entries) {
     const z = mem.zsets.get(key) ?? new Map()

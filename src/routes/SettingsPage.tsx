@@ -57,7 +57,7 @@ import { featureLabel } from '../lib/tasteLabel'
 import { protectStorage, useLibrary } from '../lib/library'
 import { codeFromPasskey, createSyncPasskey, useSyncReadiness } from '../lib/passkey'
 import { pushAvailable, pushInfo, usePush } from '../lib/push'
-import { STATUS_PAGES } from '../lib/statusPageList'
+import { alertPages, MAX_ALERT_PAGES, STATUS_PAGES } from '../lib/statusPageList'
 import { SummarySettings } from '../components/SummarySettings'
 import { formatCode, joinSync, notSyncedText, startSyncWithNewCode, syncNow, useSync } from '../lib/sync'
 import { ago, fullDate, plural } from '../lib/format'
@@ -122,6 +122,8 @@ function NotificationSettings() {
     )
   const pages = [...STATUS_PAGES.map((p) => ({ id: p.id, name: p.name })), ...statusPages.map((p) => ({ id: p.host, name: p.name }))]
   const picked = new Set(alerts.incidents)
+  const full = alertPages.full(alerts.incidents)
+  const builtIn = new Set(STATUS_PAGES.map((p) => p.id))
   const minutes = alertsAt ? Math.round((Date.now() - alertsAt) / 60_000) : undefined
   return (
     <>
@@ -136,6 +138,7 @@ function NotificationSettings() {
               key={p.id}
               className={`chip h-8 px-3 ${picked.has(p.id) ? 'on' : ''}`}
               aria-pressed={picked.has(p.id)}
+              disabled={full && !picked.has(p.id) && !builtIn.has(p.id)}
               onClick={() => setAlerts({ incidents: picked.has(p.id) ? alerts.incidents.filter((x) => x !== p.id) : [...alerts.incidents, p.id] })}
             >
               {picked.has(p.id) && <Check size={13} />}
@@ -143,6 +146,7 @@ function NotificationSettings() {
             </button>
           ))}
         </div>
+        {full && <p className="mt-2 text-[0.8125rem] text-ink-3">Alerts take up to {MAX_ALERT_PAGES} of the status pages you follow yourself. Unpick one to choose another.</p>}
       </div>
       <p className="text-[0.8125rem] leading-relaxed text-ink-3">
         {minutes === undefined

@@ -74,8 +74,8 @@ export function PrivacyPage() {
 
         <Part title="Notifications">
           <p>
-            If you turn on alerts, the server stores your browser’s push address and keys, and what you asked to be alerted about (for example, threads you watch), so it can send them. Turning alerts
-            off removes the device.
+            If you turn on alerts, the server stores your browser’s push address and keys, what you asked to be alerted about (for example, threads you watch), what it has already told you, and when
+            you last opened PaperWing on that device, so it can send them. Turning alerts off removes the device, and a device PaperWing hasn’t been opened on for 60 days is removed on its own.
           </p>
         </Part>
 

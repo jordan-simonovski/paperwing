@@ -27,12 +27,23 @@ export interface AlertState {
   replies: Record<string, { lookedAt: number; count: number }>
   /** Provider -> when we last said it might be down. */
   outages: Record<string, number>
+  /** The device's last `seenAt` the badge was counted from: a later one starts it again from nothing. */
+  badgeFrom?: number
+  /** When the alert run first knew this device, for devices from before `seenAt` was kept. */
+  firstSeenAt?: number
 }
 
+/**
+ * A device, as only the device's own requests write it. What the alert run has told it lives
+ * apart, in its own key (see api/push.ts), so neither can undo the other's changes.
+ */
 export interface SubRecord {
   endpoint: string
   keys: { p256dh: string; auth: string }
   alerts?: AlertPrefs
+  /** When PaperWing was last opened on this device (it re-registers at launch and says when it's opened). */
+  seenAt?: number
+  /** Where alert state lived before it had its own key; read once, by the alert run. */
   state?: AlertState
 }
 

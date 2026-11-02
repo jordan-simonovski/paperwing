@@ -36,3 +36,14 @@ export const STATUS_PAGES: StatusPage[] = [
   { id: 'incidentio', name: 'incident.io', host: 'status.incident.io', site: 'incident.io', group: 'observability' },
   { id: 'discord', name: 'Discord', host: 'discordstatus.com', site: 'discord.com', group: 'comms' },
 ]
+
+/** Status pages of your own (not built in) one device may follow for alerts: every alert run reads them all. */
+export const MAX_ALERT_PAGES = 10
+
+const isBuiltIn = (id: string) => STATUS_PAGES.some((p) => p.id === id)
+
+/** The status pages a device's alerts can follow: every built-in one, and the first ten of your own. */
+export const alertPages = Object.assign((ids: string[]) => [...ids.filter(isBuiltIn), ...ids.filter((id) => !isBuiltIn(id)).slice(0, MAX_ALERT_PAGES)], {
+  /** Whether that's as many of your own as alerts take. */
+  full: (ids: string[]) => ids.filter((id) => !isBuiltIn(id)).length >= MAX_ALERT_PAGES,
+})
