@@ -1,6 +1,6 @@
 import { profilePath, useMe } from '../lib/people'
 import { Avatar } from './Avatar'
-import { Activity, Bell, Layers, Bookmark, CalendarDays, Compass, Download, FileText, FolderGit2, Moon, Newspaper, Rss, Search, Settings, Sparkles, Sun, Tag, WifiOff, X } from 'lucide-react'
+import { Activity, Bell, Bookmark, CalendarDays, Compass, Download, FileText, FolderGit2, Layers, Moon, Newspaper, Plus, Rss, Search, Settings, Sparkles, Sun, Tag, WifiOff, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
 import { bskyFeedChannel, findTopic, followsTech } from '../lib/channels'
@@ -156,18 +156,18 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
         </RailLink>
       </div>
 
-      {mixes.length + followedMixes.length > 0 && (
-        <>
-          <p className="rail-group rail-label">Mixes</p>
-          <div className={gap}>
-            {[...mixes, ...followedMixes].map((m) => (
-              <RailLink key={'id' in m ? m.id : m.uri} to={`/t/${mixChannel(m)}`} icon={<Layers size={16} />}>
-                {m.name || 'Untitled mix'}
-              </RailLink>
-            ))}
-          </div>
-        </>
-      )}
+      {/* Mixes are your own channels: always here, with a way to start one. */}
+      <p className="rail-group rail-label">Mixes</p>
+      <div className={gap}>
+        {[...mixes, ...followedMixes].map((m) => (
+          <RailLink key={'id' in m ? m.id : m.uri} to={`/t/${mixChannel(m)}`} icon={<Layers size={16} />}>
+            {m.name || 'Untitled mix'}
+          </RailLink>
+        ))}
+        <RailLink to="/mixes/new" icon={<Plus size={16} />}>
+          {mixes.length + followedMixes.length ? 'New mix' : 'Make a mix'}
+        </RailLink>
+      </div>
 
       {people.length > 0 && (
         <>

@@ -143,3 +143,31 @@ export async function refreshFollowedMixes(maxAge = 12 * 3600_000) {
     }
   }
 }
+
+/** Whether two sources are the same thing (the same feed, community, topic…), ignoring their labels. */
+export function sameSource(a: MixSource, b: MixSource): boolean {
+  if (a.kind !== b.kind) return false
+  switch (a.kind) {
+    case 'topic':
+      return a.id === (b as typeof a).id
+    case 'rss':
+      return a.url === (b as typeof a).url
+    case 'lemmy':
+      return a.community === (b as typeof a).community
+    case 'bskyFeed':
+      return a.uri === (b as typeof a).uri
+    case 'news':
+      return a.q.toLowerCase() === (b as typeof a).q.toLowerCase()
+  }
+}
+
+/**
+ * Adds a source to a mix, or takes it out. A published mix is republished in the background so its
+ * followers (and its Bluesky feed) see the change; if that fails, it's still saved here.
+ */
+export function toggleInMix(mix: Mix, source: MixSource): { mix: Mix; added: boolean; republish?: Promise<Mix> } {
+  const has = mix.sources.some((s) => sameSource(s, source))
+  const next = saveMix({ ...mix, sources: has ? mix.sources.filter((s) => !sameSource(s, source)) : [...mix.sources, source] })
+  const republish = next.published && next.sources.length ? publishMix(next) : undefined
+  return { mix: next, added: !has, republish }
+}

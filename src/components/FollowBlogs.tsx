@@ -1,3 +1,4 @@
+import { AddToMix } from './AddToMix'
 import { Check, Loader2, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { findFeeds, follow, isFollowed, useFollowedHosts, useSiteFeeds, useSuggestedBlogs, type FoundFeed } from '../lib/follow'
@@ -10,11 +11,16 @@ export function FollowSite({ story }: { story: Story }) {
   const known = story.source === 'rss'
   const feeds = useSiteFeeds(story.url, !known)
   const feed = feeds.data?.[0]
-  if (known || !feed || isFollowed(feed, hosts)) return null
+  if (known || !feed) return null
   return (
-    <button className="pill h-7 px-2.5 text-[0.8125rem]" onClick={() => follow(feed)} title={`Get new posts from ${feed.title} in Blogs`}>
-      <Plus size={13} /> Follow {feed.title.length > 28 ? 'this blog' : feed.title}
-    </button>
+    <>
+      {!isFollowed(feed, hosts) && (
+        <button className="pill h-7 px-2.5 text-[0.8125rem]" onClick={() => follow(feed)} title={`Get new posts from ${feed.title} in Blogs`}>
+          <Plus size={13} /> Follow {feed.title.length > 28 ? 'this blog' : feed.title}
+        </button>
+      )}
+      <AddToMix source={{ kind: 'rss', url: feed.url, label: feed.title }} label={feed.title} />
+    </>
   )
 }
 
@@ -30,6 +36,7 @@ export function FeedRow({ feed, note }: { feed: FoundFeed; note?: string }) {
           {feed.latest ? ` · last post ${timeAgo(feed.latest)} ago` : ''}
         </p>
       </div>
+      <AddToMix source={{ kind: 'rss', url: feed.url, label: feed.title }} label={feed.title} iconOnly className="icon-btn size-8 flex-none" />
       <button className={`btn h-8 flex-none px-3 ${following ? '' : 'btn-primary'}`} disabled={following} onClick={() => follow(feed)}>
         {following ? (
           <>

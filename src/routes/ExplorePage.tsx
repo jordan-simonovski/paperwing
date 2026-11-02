@@ -15,10 +15,10 @@ import { TopicsBody } from './TopicsPage'
 
 const TABS = [
   { id: 'topics', label: 'Topics' },
+  { id: 'mixes', label: 'Mixes' },
   { id: 'communities', label: 'Communities' },
   { id: 'feeds', label: 'Feeds' },
   { id: 'publishers', label: 'Publishers' },
-  { id: 'mixes', label: 'Mixes' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 

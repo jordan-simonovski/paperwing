@@ -2,7 +2,7 @@ import type { FollowedPerson } from './people'
 import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
 import { isTechTopic, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
 import { mixFeedRefs } from './mixes'
-import { sourceLabel } from './mixSources'
+import { sourceLabel, type MixSource } from './mixSources'
 import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
 
 export interface Channel {
@@ -517,5 +517,22 @@ export function rssPath(channelId: string): string | undefined {
   if (channelId.startsWith('u:')) return `/rss/u/${encodeURIComponent(channelId.slice(2))}`
   const mix = /^mix:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(channelId)
   if (mix) return `/rss/mix/${mix[1]}/${mix[2]}`
+  return undefined
+}
+
+/** What a channel would be as a mix source, for Add to mix: a topic, interest, community, Bluesky feed or blog. */
+export function mixSourceFor(channel: Channel, interests: Interest[] = []): { source: MixSource; label: string } | undefined {
+  const id = channel.id
+  if (TOPIC_BY_ID.has(id)) return { source: { kind: 'topic', id }, label: channel.label }
+  if (id.startsWith('q:')) {
+    const interest = interests.find((i) => i.id === id)
+    return interest ? { source: { kind: 'news', q: interest.label }, label: interest.label } : undefined
+  }
+  if (id.startsWith('c:')) return { source: { kind: 'lemmy', community: id.slice(2) }, label: channel.label }
+  if (id.startsWith('bf-')) {
+    const uri = bskyFeedUri(id)
+    return uri ? { source: { kind: 'bskyFeed', uri, name: channel.label }, label: channel.label } : undefined
+  }
+  if (id.startsWith('feed:')) return { source: { kind: 'rss', url: id.slice(5), label: channel.label }, label: channel.label }
   return undefined
 }

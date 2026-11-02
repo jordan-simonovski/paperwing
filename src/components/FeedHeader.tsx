@@ -1,8 +1,9 @@
+import { AddToMix } from './AddToMix'
 import { RssButton } from './RssButton'
 import { ProfileHeader } from './ProfileHeader'
 import { AlertTriangle, Check, Loader2, Plus, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { findTopic, listOf, rssPath, type Channel } from '../lib/channels'
+import { findTopic, listOf, mixSourceFor, rssPath, type Channel } from '../lib/channels'
 import { topicIcon } from '../lib/topicIcons'
 import type { FeedStatus } from '../lib/hooks'
 import { kindOf, type Ranked, type SortMode, type StoryKind } from '../lib/rank'
@@ -75,6 +76,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
   const loading = statuses.filter((s) => s.status === 'pending').length
   // A Lemmy community's own channel can be joined from here.
   const community = channel.id.startsWith('c:') ? channel.id.slice(2) : undefined
+  const mixable = mixSourceFor(channel, usePrefs.getState().interests)
   const joinedIt = usePrefs((p) => !!community && p.communities.some((c) => c.name === community))
   // For you wears the colours of what it ranks: a blend of your topics' fields, with their icons.
   const interests = usePrefs((p) => p.interests)
@@ -149,6 +151,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                   {joinedIt ? 'Joined' : 'Join'}
                 </button>
               )}
+              {mixable && <AddToMix source={mixable.source} label={mixable.label} className="btn h-8 flex-none px-3 text-[0.8125rem] max-sm:px-2.5" textClassName="max-sm:hidden" />}
               {rssPath(channel.id) && <RssButton path={rssPath(channel.id)!} />}
               {channel.action && (
                 <Link className="btn h-8 flex-none px-3.5 text-[0.8125rem]" to={channel.action.to}>
