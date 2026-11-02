@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Pip, the Readout paper owl</title>
+  <desc id="desc">A curious, cream-colored little owl with page-shaped feathers, a red bookmark tuft, and an open book tucked under its wings.</desc>
+  <!-- Palette: ink #23221F, paper #FFFDF5, oat #E8E3D6, signal #D62F35, blush #F3C8B9. -->
+  <g id="feet" stroke="#23221F" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M229 489c-13 8-29 22-33 35-3 9 6 14 17 12l42-9 14-32" fill="#D62F35"/>
+    <path d="M360 493l11 34 44 9c12 2 19-3 16-12-5-14-21-28-35-36" fill="#D62F35"/>
+  </g>
+  <g id="body">
+    <path d="M176 130c27 4 44 20 57 40 25-11 55-17 85-17 33 0 63 6 89 18 14-21 31-35 57-39 0 35-6 66-18 88 24 38 37 86 37 135 0 99-62 161-165 161-101 0-163-61-163-160 0-51 13-98 38-135-12-25-17-56-17-91Z" fill="#E8E3D6" stroke="#23221F" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M180 143c8 38 20 59 41 73l-26 9c-12-24-18-53-15-82Z" fill="#D3CDBF"/>
+    <path d="M460 145c-9 36-21 58-41 70l25 13c13-24 18-54 16-83Z" fill="#D3CDBF"/>
+    <path d="M216 450c24 38 60 53 103 53 48 0 90-22 111-59-33 17-69 23-108 23-39 0-75-5-106-17Z" fill="#D3CDBF"/>
+  </g>
+  <g id="bookmark-tuft">
+    <path d="M338 162c-1-28 4-54 17-78 3-5 8-7 13-5l39 17c5 2 7 8 4 13-13 22-22 45-25 71l-20-18-28 0Z" fill="#D62F35" stroke="#23221F" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M367 94c-9 17-14 32-16 48" stroke="#F58D82" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g id="page-face">
+    <path d="M319 231c-23-27-56-40-86-28-36 14-49 50-45 88 5 55 45 91 131 116 86-25 127-61 131-116 4-38-10-74-45-88-31-12-63 1-86 28Z" fill="#FFFDF5"/>
+    <path d="M319 232v121" stroke="#E8E3D6" stroke-width="6" stroke-linecap="round"/>
+    <path d="M210 255c8-20 22-31 41-32M427 255c-7-20-22-31-41-32" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g id="eyes">
+    <ellipse cx="262" cy="289" rx="26" ry="35" fill="#23221F"/>
+    <ellipse cx="377" cy="289" rx="26" ry="35" fill="#23221F"/>
+    <ellipse cx="254" cy="278" rx="8" ry="10" fill="#FFFDF5"/>
+    <ellipse cx="369" cy="278" rx="8" ry="10" fill="#FFFDF5"/>
+    <path d="M243 241c11-7 24-8 35-3M359 238c12-5 25-4 35 3" stroke="#23221F" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g id="expression">
+    <ellipse cx="223" cy="335" rx="20" ry="10" fill="#F3C8B9"/>
+    <ellipse cx="415" cy="335" rx="20" ry="10" fill="#F3C8B9"/>
+    <path d="M306 329q13-10 26 0c5 3 6 7 2 12l-10 15c-3 4-7 4-10 0l-10-15c-4-5-3-9 2-12Z" fill="#D62F35"/>
+  </g>
+  <g id="open-book" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M197 405c47-2 85 13 122 36 37-23 75-38 122-36l-9 108c-43 0-78 11-113 30-35-19-70-30-113-30l-9-108Z" fill="#D62F35" stroke="#23221F" stroke-width="9"/>
+    <path d="M209 389c45 0 79 14 110 36 31-22 65-36 110-36l-7 110c-40 0-72 11-103 30-31-19-63-30-103-30l-7-110Z" fill="#FFFDF5" stroke="#23221F" stroke-width="8"/>
+    <path d="M319 426v102" stroke="#23221F" stroke-width="7"/>
+    <path d="M237 423c19 3 36 9 53 18M239 445c18 3 35 9 51 18M241 468c13 3 25 7 37 13M349 441c17-9 34-15 53-18M349 463c16-9 33-15 51-18M349 485c12-6 24-10 37-13" stroke="#C5BFB2" stroke-width="6"/>
+  </g>
+  <g id="wings" stroke="#23221F" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M164 350c-22 21-31 58-20 83 9 20 28 28 50 23 19-5 35-22 45-43 3-7-1-14-9-15l-23-2-7-17" fill="#E8E3D6"/>
+    <path d="M475 350c22 21 31 58 20 83-9 20-28 28-50 23-19-5-35-22-45-43-3-7 1-14 9-15l23-2 7-17" fill="#E8E3D6"/>
+    <path d="M171 421c5 9 13 14 23 15M468 421c-5 9-13 14-23 15" stroke="#C5BFB2" stroke-width="6"/>
+  </g>
+</svg>

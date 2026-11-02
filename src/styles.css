@@ -1,0 +1,2139 @@
+/* PaperWing · custom direction (Hallmark-guided, app scope) · idea: a reading instrument whose one object is where a story is being discussed
+ * look: near-neutral ground and ink so text reads first, one signal red on selection, news and the active discussion; topic colour fields for identity
+ * faces: Atkinson Hyperlegible Next (all reading and UI, and the wordmark at 800 in signal red), JetBrains Mono (code inside articles only)
+ * brand: Pip the paper owl (design/) beside the wordmark; Pip's red is the app's signal red
+ * refused: eyebrows, tracked caps, mono labels, middle-dot meta, hairline row rules, counting-mark meters, grain, glass blur, cream + serif */
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-code);
+  --color-ground: var(--ground);
+  --color-panel: var(--panel);
+  --color-sunk: var(--sunk);
+  --color-active: var(--active);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-signal-soft: var(--signal-soft);
+}
+
+/* ------------------------------------------------------------------ tokens */
+
+:root {
+  --font-text: 'Atkinson Hyperlegible Next Variable', ui-sans-serif, sans-serif;
+  --font-mark: var(--font-text);
+  --font-code: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  /* Light: a near-neutral ground so the words read first; a hair of warmth keeps it from feeling clinical (not cream). */
+  --ground: oklch(0.966 0.003 95);
+  --panel: oklch(0.993 0.002 95);
+  --sunk: oklch(0.935 0.004 95);
+  --active: oklch(0.905 0.005 95);
+  --line: oklch(0.885 0.004 95);
+  --line-strong: oklch(0.75 0.005 95);
+  --ink: oklch(0.2 0.008 95);
+  --ink-2: oklch(0.4 0.008 95);
+  --ink-3: oklch(0.49 0.008 95);
+  --read: oklch(0.49 0.007 95);
+  --signal: oklch(0.55 0.215 27);
+  --signal-ink: oklch(0.99 0.004 27);
+  --signal-soft: oklch(0.93 0.045 27);
+  /* Pip, the paper owl (src/lib/pip.ts): the designer's palette. */
+  --pip-ink: #23221f;
+  --pip-paper: #fffdf5;
+  --pip-oat: #e8e3d6;
+  --pip-shade: #d3cdbf;
+  --pip-line: #c5bfb2;
+  --pip-signal: var(--signal);
+  /* Comment rails by reply depth: blue, teal, green, amber, pink, violet. */
+  --rail-0: oklch(0.66 0.12 255);
+  --rail-1: oklch(0.68 0.1 195);
+  --rail-2: oklch(0.68 0.12 150);
+  --rail-3: oklch(0.74 0.12 80);
+  --rail-4: oklch(0.68 0.12 345);
+  --rail-5: oklch(0.64 0.12 300);
+  --pip-tint: #f58d82;
+  --pip-blush: #f3c8b9;
+  --pip-shine: #ffffff;
+  /* Your votes: up in the signal colour, down in a cool blue. */
+  --up: var(--signal);
+  --down: oklch(0.52 0.17 262);
+  /* Topic identity: a hue per topic, set as --h on the element. */
+  --field-l: 0.885;
+  --field-c: 0.075;
+  --field-ink-l: 0.27;
+  --field-ink-c: 0.08;
+  --tint-l: 0.915;
+  --tint-c: 0.05;
+  --tint-ink-l: 0.37;
+  --tint-ink-c: 0.11;
+  --swatch-l: 0.6;
+  --swatch-c: 0.14;
+  --float: 0 18px 40px -18px oklch(0.2 0.01 95 / 0.4);
+  --plate: transparent;
+  --plate-pad: 0px;
+
+  --fs-meta: 0.8125rem;
+  --fs-ui: 0.875rem;
+  --fs-body: 1rem;
+  --fs-row: 1.0625rem;
+  --fs-reading: 1.1875rem;
+  --fs-h2: 1.375rem;
+  --fs-h1: 1.875rem;
+
+  --r-panel: 18px;
+  --r-control: 10px;
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: light;
+}
+
+/* Dark: neutral near-black, never navy, and nothing glows. */
+[data-theme='dark'] {
+  /* Pip in the dark: the same owl on dimmer, warmer paper, so it doesn't glare off a black page.
+     Its ink stays dark: it's the owl's own outline, inside the paper. */
+  --pip-ink: #1d1c19;
+  --pip-paper: #ece6d6;
+  --pip-oat: #d4ccba;
+  --pip-shade: #b9b09d;
+  --pip-line: #a39a87;
+  --pip-signal: var(--signal);
+  --rail-0: oklch(0.62 0.1 255);
+  --rail-1: oklch(0.64 0.08 195);
+  --rail-2: oklch(0.64 0.1 150);
+  --rail-3: oklch(0.7 0.1 80);
+  --rail-4: oklch(0.64 0.1 345);
+  --rail-5: oklch(0.6 0.1 300);
+  --pip-tint: #f08a80;
+  --pip-blush: #e2ab9b;
+  --pip-shine: #f6f1e4;
+  --ground: oklch(0.17 0.003 95);
+  --panel: oklch(0.205 0.004 95);
+  --sunk: oklch(0.145 0.003 95);
+  --active: oklch(0.27 0.005 95);
+  --line: oklch(0.29 0.004 95);
+  --line-strong: oklch(0.42 0.005 95);
+  --ink: oklch(0.95 0.004 95);
+  --ink-2: oklch(0.8 0.005 95);
+  --ink-3: oklch(0.7 0.005 95);
+  --read: oklch(0.67 0.005 95);
+  --signal: oklch(0.7 0.18 30);
+  --signal-ink: oklch(0.17 0.02 30);
+  --signal-soft: oklch(0.31 0.075 30);
+  --down: oklch(0.72 0.13 262);
+  --field-l: 0.31;
+  --field-c: 0.065;
+  --field-ink-l: 0.93;
+  --field-ink-c: 0.05;
+  --tint-l: 0.3;
+  --tint-c: 0.05;
+  --tint-ink-l: 0.86;
+  --tint-ink-c: 0.08;
+  --swatch-l: 0.72;
+  --swatch-c: 0.12;
+  --float: 0 18px 40px -18px oklch(0 0 0 / 0.7);
+  --plate: oklch(0.93 0.003 95);
+  --plate-pad: 1px;
+  color-scheme: dark;
+}
+
+[data-text='sm'] {
+  --fs-reading: 1.0625rem;
+  --fs-row: 1rem;
+}
+[data-text='lg'] {
+  --fs-reading: 1.3125rem;
+  --fs-row: 1.1875rem;
+}
+
+/* Component styles live in a layer so Tailwind utilities (in the later utilities layer) can override them.
+   Never put vertical padding for a safe-area element in a utility: it would beat the inset. */
+@layer components {
+  /* -------------------------------------------------------------------- base */
+
+  html,
+  body {
+    overflow-x: clip;
+  }
+  html {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-text);
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    /* No double-tap zoom, so quick taps feel like an app; pinch-zoom stays for anyone who needs it. */
+    touch-action: manipulation;
+  }
+  body {
+    background: var(--ground);
+    font-size: var(--fs-ui);
+    line-height: 1.5;
+    overscroll-behavior-y: none;
+  }
+  ::selection {
+    background: var(--signal-soft);
+    color: var(--ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button {
+    cursor: pointer;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wordmark {
+    font-family: var(--font-mark);
+    font-weight: 800;
+    font-size: 1.75rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--signal);
+  }
+  /* The mark: Pip's head, sized to sit beside the wordmark. */
+  .mark {
+    display: inline-block;
+    width: 1.875rem;
+    height: 1.875rem;
+    flex: none;
+  }
+
+  /* Topic identity: --h on the element; tints for chips, a field for a channel's header, a swatch for nav. */
+  .topic {
+    --t-bg: oklch(var(--tint-l) var(--tint-c) var(--h, 160));
+    --t-ink: oklch(var(--tint-ink-l) var(--tint-ink-c) var(--h, 160));
+    --t-field: oklch(var(--field-l) var(--field-c) var(--h, 160));
+    --t-field-ink: oklch(var(--field-ink-l) var(--field-ink-c) var(--h, 160));
+    --t-swatch: oklch(var(--swatch-l) var(--swatch-c) var(--h, 160));
+  }
+  .swatch {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 3px;
+    background: var(--t-swatch);
+    flex: none;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    height: 1.375rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--t-ink);
+    background: var(--t-bg);
+    white-space: nowrap;
+    transition: filter var(--dur-micro);
+  }
+  .tag:hover {
+    filter: brightness(0.96) saturate(1.2);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2rem;
+    padding: 0 0.875rem;
+    border-radius: 999px;
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--ink-2);
+    background: var(--sunk);
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  .chip:hover {
+    color: var(--ink);
+    background: var(--active);
+  }
+  .chip.topic {
+    color: var(--t-ink);
+    background: var(--t-bg);
+  }
+  .chip[aria-pressed='true'],
+  .chip.on {
+    color: var(--ground);
+    background: var(--ink);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 1rem;
+    border-radius: 999px;
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--sunk);
+    transition:
+      background-color var(--dur-micro),
+      transform var(--dur-micro);
+  }
+  .btn:hover {
+    background: var(--active);
+  }
+  .btn:active,
+  .icon-btn:active,
+  .chip:active {
+    transform: scale(0.97);
+  }
+  .btn:disabled {
+    color: var(--ink-3);
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--ground);
+  }
+  .btn-primary:hover {
+    background: var(--ink-2);
+  }
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    color: var(--ink-2);
+    transition:
+      color var(--dur-micro),
+      background-color var(--dur-micro),
+      transform var(--dur-micro);
+  }
+  .icon-btn:hover {
+    color: var(--ink);
+    background: var(--sunk);
+  }
+  .icon-btn[aria-pressed='true'] {
+    color: var(--signal);
+  }
+  .icon-btn:disabled {
+    opacity: 0.4;
+  }
+  .input {
+    height: 2.5rem;
+    width: 100%;
+    padding: 0 1rem;
+    border-radius: var(--r-control);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: var(--fs-ui);
+  }
+  .input::placeholder {
+    color: var(--ink-3);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--line-strong);
+  }
+  kbd,
+  .kbd {
+    display: inline-block;
+    min-width: 1.375rem;
+    padding: 0 0.375rem;
+    border-radius: 6px;
+    background: var(--sunk);
+    font-family: var(--font-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.375rem;
+    text-align: center;
+    color: var(--ink-2);
+  }
+
+  /* Segmented control for sorts and lists. */
+  .seg {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 999px;
+    background: var(--sunk);
+  }
+  .seg button,
+  .seg a {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    height: 1.875rem;
+    padding: 0 0.875rem;
+    border-radius: 999px;
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--ink-2);
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  .seg button:hover,
+  .seg a:hover {
+    color: var(--ink);
+  }
+  .seg button[aria-pressed='true'],
+  .seg button[aria-selected='true'],
+  .seg a[aria-current='page'] {
+    background: var(--panel);
+    color: var(--ink);
+  }
+
+  /* A single row that scrolls sideways; the right edge fades so it reads as more-to-come, not cut off. */
+  .scroll-x {
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent);
+  }
+  .scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Source logos: brand colour by default; near-black logos turn to ink in dark mode, pale ones in light. */
+  .logo {
+    flex: none;
+    color: var(--brand, currentColor);
+  }
+  .logo.logo-light {
+    color: var(--ink);
+  }
+  [data-theme='dark'] .logo.logo-light {
+    color: var(--brand);
+  }
+  [data-theme='dark'] .logo.logo-dark {
+    color: var(--ink);
+  }
+  /* Favicons are drawn for a light browser tab; a small plate keeps dark ones visible in dark mode. */
+  .media-frame {
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: var(--active);
+  }
+  .media-frame img {
+    transition: filter 160ms var(--ease);
+  }
+  .media-frame:hover img {
+    filter: brightness(0.94);
+  }
+
+  .favicon {
+    flex: none;
+    border-radius: 4px;
+    object-fit: contain;
+    background: var(--plate);
+    padding: var(--plate-pad);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.875rem;
+    row-gap: 0.125rem;
+    font-size: var(--fs-meta);
+    color: var(--ink-3);
+  }
+  .label {
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+
+  /* ------------------------------------------------------------------ layout */
+
+  .shell {
+    display: grid;
+    grid-template-columns: 15rem minmax(24rem, 37rem) minmax(0, 1fr);
+    height: 100dvh;
+  }
+  .shell > * {
+    min-height: 0;
+  }
+  .rail {
+    overflow-y: auto;
+  }
+  .list-col {
+    overflow-y: auto;
+    scroll-padding-top: 7rem;
+  }
+  .pane-col {
+    overflow: hidden;
+    background: var(--panel);
+    border-top-left-radius: var(--r-panel);
+  }
+  .wide-col {
+    grid-column: 2 / -1;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 1279px) {
+    .shell {
+      grid-template-columns: 4.5rem minmax(22rem, 31rem) minmax(0, 1fr);
+    }
+    .rail-label {
+      display: none;
+    }
+  }
+
+  /* Under 900px: one column; the pane slides over the list so the list keeps its scroll position. */
+  @media (max-width: 899px) {
+    .shell {
+      display: block;
+      height: auto;
+    }
+    /* A page shorter than the screen (Search, Saved, Settings) lets iOS, as an installed app, lift
+       the fixed bottom nav off the bottom of the screen; long pages never do. So every page is at
+       least a screen (and a pixel) tall: the nav sits on the bottom edge everywhere. */
+    body {
+      min-height: calc(100lvh + 1px);
+    }
+    .list-col {
+      overflow: visible;
+      padding-bottom: 5.5rem;
+    }
+    .pane-col {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      border-radius: 0;
+      transform: translateX(100%);
+      transition: transform var(--dur-short) var(--ease);
+      visibility: hidden;
+    }
+    .pane-col.open {
+      transform: none;
+      visibility: visible;
+    }
+    .pane-col.idle {
+      display: none;
+    }
+    .wide-col {
+      overflow: visible;
+      padding-bottom: 5.5rem;
+    }
+  }
+
+  /* -------------------------------------------------------------------- rail */
+
+  .rail-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 2.125rem;
+    padding: 0 0.75rem;
+    border-radius: var(--r-control);
+    color: var(--ink-2);
+    font-size: var(--fs-ui);
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  .rail-link:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+  .rail-link.active {
+    color: var(--ink);
+    background: var(--active);
+    font-weight: 600;
+  }
+  /* Settings: the phone's menu of pages, and the desktop sidebar. */
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-height: 4rem;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    font-size: var(--fs-ui);
+    transition: background-color var(--dur-micro);
+  }
+  .settings-row:last-child {
+    border-bottom: 0;
+  }
+  .settings-row:active {
+    background: var(--sunk);
+  }
+  .settings-icon {
+    width: 2.125rem;
+    height: 2.125rem;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: var(--r-control);
+    background: var(--sunk);
+    color: var(--ink-2);
+  }
+  .settings-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: 2.25rem;
+    padding: 0 0.75rem;
+    border-radius: var(--r-control);
+    color: var(--ink-2);
+    font-size: var(--fs-ui);
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  .settings-nav:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+  .settings-nav[aria-current='page'] {
+    background: var(--active);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .settings-nav svg {
+    flex: none;
+    color: var(--ink-3);
+  }
+  .settings-nav[aria-current='page'] svg {
+    color: var(--ink);
+  }
+  .rail-glyph {
+    width: 1.125rem;
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: var(--ink-3);
+  }
+  .rail-link.active .rail-glyph {
+    color: var(--ink);
+  }
+  .rail-group {
+    padding: 1.5rem 0.75rem 0.375rem;
+    font-size: var(--fs-meta);
+    color: var(--ink-3);
+  }
+
+  /* ------------------------------------------------------- view transitions */
+
+  /* Desktop: switching stories fades the old one out and lifts the new one in; the list stays put. */
+  @media (min-width: 900px) {
+    .pane-col {
+      view-transition-name: pane;
+    }
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+  ::view-transition-old(pane) {
+    animation: 120ms var(--ease) both pane-out;
+  }
+  ::view-transition-new(pane) {
+    animation: 220ms var(--ease) 40ms both pane-in;
+  }
+  @keyframes pane-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes pane-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+
+  /* ------------------------------------------------------------------ sheets */
+
+  /* Phone overlays: the navigation drawer from the left, filter sheets from the bottom. */
+  .sheet-root {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    visibility: hidden;
+    transition: visibility 0s linear var(--dur-short);
+  }
+  .sheet-root.open {
+    pointer-events: auto;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.4);
+    opacity: 0;
+    transition: opacity var(--dur-short) var(--ease);
+  }
+  .sheet-root.open .sheet-backdrop {
+    opacity: 1;
+  }
+  .sheet-panel {
+    position: absolute;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--ground);
+    outline: none;
+    transition: transform var(--dur-short) var(--ease);
+  }
+  .sheet-left .sheet-panel {
+    inset: 0 auto 0 0;
+    width: min(20rem, 86vw);
+    padding: calc(env(safe-area-inset-top) + 0.75rem) 0.75rem calc(env(safe-area-inset-bottom) + 1rem);
+    border-radius: 0 var(--r-panel) var(--r-panel) 0;
+    transform: translateX(-100%);
+  }
+  .sheet-bottom .sheet-panel {
+    inset: auto 0 0 0;
+    max-height: 85dvh;
+    padding: 0.75rem 1.25rem calc(env(safe-area-inset-bottom) + 1.25rem);
+    border-radius: var(--r-panel) var(--r-panel) 0 0;
+    transform: translateY(100%);
+  }
+  .sheet-root.open .sheet-panel {
+    transform: none;
+  }
+  /* The drawer shows the sidebar's labels whatever the collapsed sidebar does. */
+  .sheet-panel .rail-label {
+    display: revert;
+  }
+  .sheet-panel .rail-link {
+    height: 2.75rem;
+    font-size: 1rem;
+  }
+  @media (min-width: 900px) {
+    .sheet-left {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sheet-panel,
+    .sheet-backdrop {
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------- channel field */
+
+  /* Each channel opens on a whole field of its own colour: the topic's face. */
+  .field {
+    background: var(--t-field, var(--sunk));
+    color: var(--t-field-ink, var(--ink));
+    border-radius: var(--r-panel);
+  }
+  .field-ink {
+    --t-field: var(--ink);
+    --t-field-ink: var(--ground);
+  }
+  /* On an ink field, topic chips keep their own hue as a tint they can carry. */
+  .field.field-ink .chip.topic {
+    background: oklch(var(--tint-l) var(--tint-c) var(--h, 160));
+    color: oklch(var(--tint-ink-l) var(--tint-ink-c) var(--h, 160));
+  }
+  .field.field-ink .chip.topic:hover {
+    filter: brightness(1.06);
+  }
+  .field .chip.topic {
+    background: color-mix(in oklab, var(--t-field-ink) 12%, transparent);
+    color: var(--t-field-ink);
+  }
+  .field .chip.topic:hover {
+    background: color-mix(in oklab, var(--t-field-ink) 20%, transparent);
+  }
+  .field .btn {
+    background: var(--t-field-ink);
+    color: var(--t-field);
+  }
+  .field .btn.following {
+    background: color-mix(in oklab, var(--t-field-ink) 14%, transparent);
+    color: var(--t-field-ink);
+  }
+
+  /* "5 outlets" on a row: how widely a story is covered; opens the side-by-side. */
+  .outlets-chip {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    height: 1.625rem;
+    margin-left: 0.25rem;
+    padding: 0 0.625rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    background: var(--sunk);
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  .outlets-chip:hover {
+    color: var(--ink);
+    background: var(--active);
+  }
+
+  /* On the old address: the offer to move to paperwing.io (MoveHome.tsx). */
+  .move-home {
+    position: fixed;
+    left: 50%;
+    bottom: 1.25rem;
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(36rem, calc(100vw - 2rem));
+    padding: 0.875rem 0.875rem 0.875rem 1.125rem;
+    border-radius: 18px;
+    background: var(--panel);
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 18px 40px -16px rgb(0 0 0 / 0.4);
+    transform: translateX(-50%);
+  }
+  @media (max-width: 899px) {
+    .move-home {
+      bottom: calc(env(safe-area-inset-bottom) + 4.75rem);
+    }
+  }
+
+  /* ---------------------------------------------------------------- activity */
+
+  .count-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding: 0 0.3125rem;
+    border-radius: 999px;
+    background: var(--signal);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .inbox-row {
+    position: relative;
+    display: flex;
+    width: 100%;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    transition: background-color var(--dur-micro);
+  }
+  @media (min-width: 768px) {
+    .inbox-row {
+      padding: 0.875rem 1.25rem;
+    }
+  }
+  .inbox-row:hover,
+  .inbox-row.selected {
+    background: var(--active);
+  }
+  .inbox-row.fresh {
+    background: color-mix(in oklab, var(--signal) 6%, transparent);
+  }
+  .inbox-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: var(--sunk);
+  }
+  .inbox-kind {
+    position: absolute;
+    right: -0.25rem;
+    bottom: -0.25rem;
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--ground);
+    box-shadow: 0 0 0 2px var(--ground);
+  }
+  .inbox-kind.k-like {
+    background: #e0245e;
+    color: #fff;
+  }
+  .inbox-kind.k-repost {
+    background: #17a34a;
+    color: #fff;
+  }
+  .inbox-kind.k-follow {
+    background: #2563eb;
+    color: #fff;
+  }
+  .inbox-dot {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: 0.5rem;
+    border-radius: 999px;
+    background: var(--signal);
+  }
+
+  /* ------------------------------------------------------------ topic cards */
+
+  /* Explore's topic cards: quiet until followed, then the topic's whole field colour. */
+  .tcard {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    min-height: 13.5rem;
+    padding: 1.125rem 1.25rem 1rem;
+    overflow: hidden;
+    border-radius: var(--r-panel);
+    background: var(--panel);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition:
+      transform var(--dur-micro) ease-out,
+      box-shadow var(--dur-micro) ease-out,
+      background-color 220ms ease,
+      color 220ms ease,
+      opacity 160ms;
+  }
+  .tcard.on {
+    background: var(--t-field);
+    color: var(--t-field-ink);
+    box-shadow: none;
+  }
+  .tcard.dim {
+    opacity: 0.35;
+  }
+  .tcard:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklab, var(--t-swatch) 45%, var(--line)),
+      0 14px 30px -18px rgb(0 0 0 / 0.35);
+  }
+  .tcard.on:hover {
+    box-shadow: 0 14px 30px -16px color-mix(in oklab, var(--t-swatch) 60%, transparent);
+  }
+  /* The topic's picture, large and faint, running off the corner. */
+  .tcard-glyph {
+    position: absolute;
+    right: -1.25rem;
+    bottom: -1.5rem;
+    z-index: -1;
+    width: 8.5rem;
+    height: 8.5rem;
+    color: var(--t-swatch);
+    opacity: 0.13;
+    transform: rotate(-12deg);
+    transition:
+      transform 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3),
+      opacity 220ms;
+    pointer-events: none;
+  }
+  .tcard.on .tcard-glyph {
+    color: var(--t-field-ink);
+    opacity: 0.1;
+  }
+  .tcard:hover .tcard-glyph {
+    transform: rotate(-4deg) scale(1.06);
+    opacity: 0.2;
+  }
+  .tcard.on:hover .tcard-glyph {
+    opacity: 0.15;
+  }
+  .tcard-badge {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: none;
+    border-radius: 12px;
+    background: var(--t-bg);
+    color: var(--t-ink);
+  }
+  .tcard.on .tcard-badge {
+    background: color-mix(in oklab, var(--t-field-ink) 14%, transparent);
+    color: var(--t-field-ink);
+  }
+  /* The title's link covers the card; everything else that's clickable sits above it. */
+  .tcard-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .tcard-link:focus-visible {
+    outline: none;
+  }
+  .tcard:has(.tcard-link:focus-visible) {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .tcard-follow,
+  .tcard-near a,
+  .tcard-near button {
+    position: relative;
+    z-index: 1;
+  }
+  .tcard-follow {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: none;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--ground);
+    transition:
+      background-color 180ms,
+      color 180ms,
+      transform var(--dur-micro);
+  }
+  .tcard-follow:active {
+    transform: scale(0.92);
+  }
+  .tcard-follow[aria-pressed='true'] {
+    background: color-mix(in oklab, var(--t-field-ink) 16%, transparent);
+    color: var(--t-field-ink);
+  }
+  .tcard-follow svg {
+    animation: tcard-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1.5);
+  }
+  @keyframes tcard-pop {
+    from {
+      transform: scale(0.4) rotate(-45deg);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+  .tcard-now {
+    padding: 0.5rem 0.625rem;
+    border-radius: 10px;
+    background: color-mix(in oklab, currentColor 7%, transparent);
+  }
+  /* Overlapping source logos, each on its own disc so favicons and brand marks read alike. */
+  .tcard-logos {
+    display: inline-flex;
+    flex: none;
+  }
+  .tcard-logo {
+    display: grid;
+    place-items: center;
+    width: 1.625rem;
+    height: 1.625rem;
+    border-radius: 999px;
+    background: var(--ground);
+    box-shadow: 0 0 0 2px var(--panel);
+  }
+  .tcard.on .tcard-logo {
+    box-shadow: 0 0 0 2px var(--t-field);
+  }
+  .tcard-logo + .tcard-logo {
+    margin-left: -0.375rem;
+  }
+  .tcard-logo img {
+    border-radius: 3px;
+  }
+
+  /* A section's cards: a grid on wider screens, a row you swipe through on a phone. */
+  .tcard-rail {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 0.75rem;
+  }
+  @media (max-width: 639px) {
+    .tcard-rail {
+      display: flex;
+      gap: 0.625rem;
+      margin: 0 -1rem;
+      padding: 0.25rem 1rem 0.75rem;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-padding: 0 1rem;
+      scrollbar-width: none;
+    }
+    .tcard-rail::-webkit-scrollbar {
+      display: none;
+    }
+    .tcard-rail > * {
+      flex: none;
+      width: min(80vw, 20rem);
+      scroll-snap-align: start;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tcard,
+    .tcard-glyph,
+    .tcard-follow {
+      transition: none;
+    }
+    .tcard:hover,
+    .tcard:hover .tcard-glyph {
+      transform: none;
+    }
+    .tcard-follow svg {
+      animation: none;
+    }
+  }
+
+  /* For you: a blend of your topics' fields instead of one colour. */
+  .field.blend {
+    background: var(--blend);
+  }
+  /* Channel headers carry their topics' marks, large and faint, like the topic cards. */
+  .field-glyph {
+    position: absolute;
+    z-index: -1;
+    color: currentColor;
+    opacity: 0.1;
+    pointer-events: none;
+  }
+  .field-glyph.g0 {
+    right: -0.75rem;
+    top: -1.25rem;
+    width: 7.5rem;
+    height: 7.5rem;
+    transform: rotate(-12deg);
+  }
+  .field-glyph.g1 {
+    right: 6.5rem;
+    bottom: -1.5rem;
+    width: 4.5rem;
+    height: 4.5rem;
+    transform: rotate(14deg);
+    opacity: 0.08;
+  }
+  .field-glyph.g2 {
+    right: 11.5rem;
+    top: -0.75rem;
+    width: 3.25rem;
+    height: 3.25rem;
+    transform: rotate(-20deg);
+    opacity: 0.07;
+  }
+  @media (max-width: 639px) {
+    .field-glyph.g2 {
+      display: none;
+    }
+  }
+  .field-marks {
+    display: inline-flex;
+    flex: none;
+  }
+  .field-mark {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: var(--t-bg);
+    color: var(--t-ink);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--t-field-ink) 18%, transparent);
+  }
+  .field-mark + .field-mark {
+    margin-left: -0.3125rem;
+  }
+
+  /* -------------------------------------------------------------- story rows */
+
+  .swipe {
+    position: relative;
+    touch-action: pan-y;
+  }
+  /* Reddit-style: full-width posts on hairlines. A header, the title beside its picture, an action bar. */
+  .row {
+    position: relative;
+    padding: 0.75rem 1rem 0.625rem;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 8.5rem;
+    transition: background-color var(--dur-micro);
+  }
+  .row:hover {
+    background: var(--sunk);
+  }
+  .row.selected {
+    background: var(--active);
+  }
+  .row.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.875rem;
+    width: 4px;
+    height: 1.25rem;
+    border-radius: 0 3px 3px 0;
+    background: var(--signal);
+  }
+  .row-head {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+    font-size: var(--fs-meta);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .row-source {
+    min-width: 0;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 700;
+    color: var(--ink-2);
+  }
+  .row-domain {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .row-domain:hover {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .row-body {
+    display: flex;
+    gap: 0.875rem;
+    margin-top: 0.375rem;
+  }
+  .row-title {
+    font-size: var(--fs-row);
+    line-height: 1.32;
+    font-weight: 650;
+    color: var(--ink);
+    text-wrap: pretty;
+    overflow-wrap: break-word;
+    min-width: 0;
+  }
+  .row.read .row-title {
+    color: var(--read);
+    font-weight: 400;
+  }
+  .row.downvoted .row-body {
+    opacity: 0.6;
+  }
+  .row-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.625rem;
+  }
+  .pill {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2rem;
+    padding: 0 0.75rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--line);
+    font-size: var(--fs-ui);
+    font-weight: 600;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  button.pill:hover {
+    background: var(--active);
+    color: var(--ink);
+  }
+  .pill-icon {
+    width: 2.25rem;
+    justify-content: center;
+    padding: 0;
+  }
+  .pill.on {
+    color: var(--ink);
+    background: var(--active);
+  }
+  .pill.hot {
+    color: var(--signal);
+  }
+  .row.read .pill.hot {
+    color: var(--ink-2);
+  }
+  /* A quoted post inside a post or comment. */
+  .quote-card {
+    display: block;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--r-control);
+    box-shadow: inset 0 0 0 1px var(--line);
+    background: var(--panel);
+    cursor: pointer;
+  }
+  .quote-card:hover {
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+  .quote-card .prose-c {
+    font-size: 0.9375rem;
+  }
+  .row-quote {
+    padding-left: 0.625rem;
+    box-shadow: inset 2px 0 0 var(--line-strong);
+  }
+  /* Reply and like/vote under a comment, once signed in with Bluesky. */
+  .cmt-acts {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0.125rem 0 0.375rem -0.5rem;
+  }
+  .cmt-act {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 1.75rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+  .cmt-act:hover {
+    background: var(--sunk);
+    color: var(--ink);
+  }
+  .cmt-act.on {
+    color: var(--signal);
+  }
+  /* Spice: chillies beside the comment count on a heated discussion. */
+  .spice {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 2rem;
+    padding: 0 0.25rem;
+  }
+  .row.read .spice {
+    opacity: 0.6;
+  }
+  /* The vote pill: arrows either side of the source's own score. */
+  .votes {
+    gap: 0.125rem;
+    padding: 0 0.1875rem;
+  }
+  .votes .num {
+    min-width: 1.5rem;
+    text-align: center;
+  }
+  .votes button {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    color: var(--ink-3);
+    transition:
+      background-color var(--dur-micro),
+      color var(--dur-micro);
+  }
+  .votes button:hover {
+    background: var(--active);
+    color: var(--ink);
+  }
+  .votes.up,
+  .votes.up button:first-child {
+    color: var(--up);
+  }
+  .votes.down,
+  .votes.down button:last-child {
+    color: var(--down);
+  }
+  [data-density='compact'] .row {
+    padding-top: 0.5rem;
+    padding-bottom: 0.375rem;
+  }
+  [data-density='compact'] .row-bar {
+    margin-top: 0.375rem;
+  }
+  @media (max-width: 639px) {
+    .row {
+      padding-left: 0.875rem;
+      padding-right: 0.875rem;
+    }
+    .row-bar {
+      gap: 0.375rem;
+    }
+  }
+  /* A Claude summary of the discussion, above the comments. */
+  .summary-card {
+    border-radius: 18px;
+    background: var(--panel);
+    padding: 1.125rem 1.25rem;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .ref-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    background: var(--sunk);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    transition: background-color var(--dur-micro);
+  }
+  .ref-chip:hover {
+    background: var(--active);
+    color: var(--ink);
+  }
+  .cmt.flash {
+    animation: flash 1.6s var(--ease);
+  }
+  @keyframes flash {
+    0%,
+    40% {
+      background: var(--signal-soft);
+    }
+    100% {
+      background: transparent;
+    }
+  }
+
+  /* Something new behind a link. */
+  .dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--signal);
+  }
+
+  /* How far into a saved article you are. */
+  .progress {
+    display: inline-block;
+    width: 2.5rem;
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--ink-2) calc(var(--p) * 100%), var(--line-strong) 0);
+  }
+
+  /* A picture when the story has one: the post's image, the feed's, or the link's preview. */
+  .row-thumb {
+    --thumb: 5.5rem;
+    position: relative;
+    flex: none;
+    width: var(--thumb);
+    height: var(--thumb);
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--active);
+  }
+  .row-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .row.read .row-thumb img {
+    opacity: 0.6;
+  }
+  .row-thumb-play {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: white;
+    background: oklch(0 0 0 / 0.25);
+  }
+  [data-density='compact'] .row-thumb {
+    --thumb: 3.5rem;
+  }
+  @media (max-width: 639px) {
+    .row-thumb {
+      --thumb: 4.75rem;
+    }
+  }
+
+  /* ------------------------------------------------------- discussion bar */
+
+  /* The signature: how one link's conversation splits across sources. */
+  .dbar {
+    display: flex;
+    gap: 3px;
+    height: 0.75rem;
+  }
+  .dbar button {
+    min-width: 0.75rem;
+    border-radius: 999px;
+    background: var(--line-strong);
+    transition: background-color var(--dur-micro);
+  }
+  .dbar button:nth-child(2n) {
+    background: var(--ink-3);
+  }
+  .dbar button:hover {
+    background: var(--ink-2);
+  }
+  .dbar button[aria-current='true'] {
+    background: var(--signal);
+  }
+
+  /* -------------------------------------------------------------- comments */
+
+  .thread {
+    --indent: 1.25rem;
+  }
+  @media (max-width: 640px) {
+    .thread {
+      --indent: 0.875rem;
+    }
+    .thread .cmt .cmt .cmt .cmt .cmt .cmt {
+      --indent: 0.375rem;
+    }
+  }
+  .cmt {
+    position: relative;
+    padding-left: var(--indent);
+    content-visibility: auto;
+    contain-intrinsic-size: auto 5rem;
+  }
+  .cmt.root {
+    padding-left: 0;
+    margin-top: 1.25rem;
+  }
+  .cmt-body {
+    position: relative;
+    padding: 0.5rem 0 0.125rem 1rem;
+    border-radius: 10px;
+  }
+  /* The rail is the collapse target: a 16px hit area around a 2px track. */
+  .cmt-rail {
+    position: absolute;
+    left: 0;
+    top: 0.625rem;
+    bottom: 0;
+    width: 1rem;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+  }
+  .cmt-rail::after {
+    content: '';
+    width: 2px;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--line);
+    transition: background-color var(--dur-micro);
+  }
+  .cmt-rail:hover::after {
+    background: var(--signal);
+  }
+  /* Colour-coded threads (Settings, Appearance): each reply depth's rail in its own muted hue, six
+   * and then round again. No reds, so they never read as the signal colour. */
+  .thread[data-rails='colour'] .cmt-rail::after {
+    width: 3px;
+  }
+  .thread[data-rails='colour'] .cmt[data-depth='0'] > .cmt-body > .cmt-rail::after {
+    background: var(--rail-0);
+  }
+  .thread[data-rails='colour'] .cmt[data-depth='1'] > .cmt-body > .cmt-rail::after {
+    background: var(--rail-1);
+  }
+  .thread[data-rails='colour'] .cmt[data-depth='2'] > .cmt-body > .cmt-rail::after {
+    background: var(--rail-2);
+  }
+  .thread[data-rails='colour'] .cmt[data-depth='3'] > .cmt-body > .cmt-rail::after {
+    background: var(--rail-3);
+  }
+  .thread[data-rails='colour'] .cmt[data-depth='4'] > .cmt-body > .cmt-rail::after {
+    background: var(--rail-4);
+  }
+  .thread[data-rails='colour'] .cmt[data-depth='5'] > .cmt-body > .cmt-rail::after {
+    background: var(--rail-5);
+  }
+  .thread[data-rails='colour'] .cmt-rail:hover::after {
+    background: var(--signal);
+  }
+  .cmt.collapsed > .cmt-body > .cmt-rail {
+    display: none;
+  }
+  .cmt-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+    cursor: pointer;
+    user-select: none;
+    font-size: var(--fs-meta);
+    color: var(--ink-3);
+  }
+  .cmt-author {
+    font-weight: 700;
+    font-size: var(--fs-ui);
+    color: var(--ink);
+  }
+  .cmt-new {
+    font-weight: 700;
+    color: var(--signal);
+  }
+  .cmt-more {
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--sunk);
+  }
+  /* Lines up with the replies it stands in for. */
+  .cmt-expand {
+    margin: 0.25rem 0 0.375rem calc(var(--indent) + 1rem);
+    padding: 0.125rem 0.625rem;
+    border-radius: 999px;
+    font-size: var(--fs-meta);
+    font-weight: 700;
+    color: var(--ink-2);
+    background: var(--sunk);
+  }
+  .cmt-expand:hover {
+    color: var(--ink);
+  }
+  .cmt.flash > .cmt-body {
+    animation: flash 1.2s var(--ease);
+  }
+  @keyframes flash {
+    from {
+      background: var(--signal-soft);
+    }
+    to {
+      background: transparent;
+    }
+  }
+  .op {
+    padding: 0 0.375rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background: var(--signal-soft);
+    color: var(--ink);
+  }
+
+  /* ----------------------------------------------------------------- prose */
+
+  .prose-c {
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .prose-c p,
+  .prose-c pre,
+  .prose-c blockquote,
+  .prose-c ul,
+  .prose-c ol {
+    margin: 0.25rem 0 0.625rem;
+  }
+  .prose-c a,
+  .prose a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--signal);
+  }
+  .prose-c a:hover,
+  .prose a:hover {
+    background: var(--signal-soft);
+  }
+  .prose-c pre,
+  .prose pre {
+    font-family: var(--font-code);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    padding: 0.875rem 1rem;
+    background: var(--sunk);
+    border-radius: 12px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .prose-c code,
+  .prose code {
+    font-family: var(--font-code);
+    font-size: 0.85em;
+  }
+  .prose-c :not(pre) > code,
+  .prose :not(pre) > code {
+    padding: 0.0625rem 0.3125rem;
+    background: var(--sunk);
+    border-radius: 5px;
+  }
+  .prose-c blockquote,
+  .prose blockquote {
+    padding: 0.125rem 0 0.125rem 1rem;
+    border-left: 3px solid var(--line-strong);
+    color: var(--ink-2);
+  }
+  .prose-c ul,
+  .prose ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .prose-c ol,
+  .prose ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+
+  /* Reader view: a measure of about 66 characters, generous leading, one family. */
+  .prose {
+    font-size: var(--fs-reading);
+    line-height: 1.7;
+    color: var(--ink);
+    max-width: 38rem;
+    overflow-wrap: break-word;
+  }
+  .prose > * + * {
+    margin-top: 1.05em;
+  }
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4 {
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    margin-top: 1.8em;
+  }
+  .prose h1 {
+    font-size: 1.4em;
+  }
+  .prose h2 {
+    font-size: 1.22em;
+  }
+  .prose h3,
+  .prose h4 {
+    font-size: 1.05em;
+  }
+  .prose img,
+  .prose video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    margin-inline: auto;
+  }
+  .prose figure {
+    margin: 1.6em 0;
+  }
+  .prose figcaption {
+    font-size: var(--fs-meta);
+    color: var(--ink-3);
+    margin-top: 0.5rem;
+  }
+  .prose table {
+    display: block;
+    overflow-x: auto;
+    font-size: var(--fs-ui);
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .prose th,
+  .prose td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  .prose hr {
+    border: 0;
+    height: 4px;
+    width: 3rem;
+    margin: 2.5em auto;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+  .prose li + li {
+    margin-top: 0.35em;
+  }
+
+  /* --------------------------------------------------------------- palette */
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: color-mix(in oklab, var(--ink) 30%, transparent);
+    animation: fade var(--dur-micro) ease-out;
+  }
+  .palette {
+    position: fixed;
+    left: 50%;
+    top: 12vh;
+    translate: -50% 0;
+    width: min(40rem, calc(100vw - 2rem));
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 61;
+    background: var(--panel);
+    border-radius: var(--r-panel);
+    box-shadow: var(--float);
+    overflow: hidden;
+    animation: rise var(--dur-short) var(--ease);
+  }
+  @media (max-width: 640px) {
+    .palette {
+      top: calc(env(safe-area-inset-top) + 0.75rem);
+      max-height: calc(100dvh - 1.5rem);
+    }
+  }
+  .pal-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: calc(100% - 1rem);
+    margin: 0 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--r-control);
+    text-align: left;
+    color: var(--ink-2);
+  }
+  .pal-item[aria-selected='true'] {
+    background: var(--active);
+    color: var(--ink);
+  }
+  .pal-item[aria-selected='true'] .pal-enter {
+    opacity: 1;
+  }
+  .pal-enter {
+    opacity: 0;
+    margin-left: auto;
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  /* ---------------------------------------------------- loading and status */
+
+  .skel {
+    background: var(--sunk);
+    border-radius: 6px;
+    animation: breathe 1.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    50% {
+      opacity: 0.55;
+    }
+  }
+  .spin {
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* -------------------------------------------------------------- mobile nav */
+
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: none;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 0.375rem 0.5rem env(safe-area-inset-bottom);
+    background: var(--panel);
+    box-shadow: 0 -1px 0 var(--line);
+  }
+  @media (max-width: 899px) {
+    .bottom-nav {
+      display: grid;
+      transition:
+        transform var(--dur-short) var(--ease),
+        visibility var(--dur-short);
+    }
+    /* While the keyboard is up, it's the bottom of the screen: the nav steps aside (Root.tsx). */
+    html[data-keyboard] .bottom-nav {
+      transform: translateY(110%);
+      visibility: hidden;
+    }
+  }
+  .bottom-nav a,
+  .bottom-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.375rem 0;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-3);
+  }
+  .bottom-nav .active {
+    color: var(--ink);
+    background: var(--active);
+  }
+
+  /* Content warnings: covered until tapped, and a note on the row. */
+  .covered {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 14px;
+    background: var(--sunk);
+  }
+  .row-cw {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .row-thumb.blurred img {
+    filter: blur(14px) saturate(0.6);
+    transform: scale(1.15);
+  }
+
+  /* The welcome page's choice, kept in reach above the bottom nav. */
+  .welcome-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 0.625rem 0.625rem 0.625rem 1.25rem;
+    border-radius: 999px;
+    background: var(--panel);
+    box-shadow:
+      0 0 0 1px var(--line),
+      0 12px 32px -12px rgb(0 0 0 / 0.35);
+  }
+  @media (max-width: 899px) {
+    .welcome-bar {
+      bottom: calc(env(safe-area-inset-bottom) + 4.75rem);
+      margin: 0 1rem;
+    }
+  }
+
+  .sticky-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--ground);
+  }
+
+  /* -------------------------------------------------------- touch and PWA */
+
+  .swipe[data-swipe] {
+    overflow: hidden;
+  }
+  .swipe[data-swipe] > .row {
+    background: var(--ground);
+  }
+  .swipe::before,
+  .swipe::after {
+    position: absolute;
+    top: 50%;
+    /* Labels revealed by a swipe; invisible otherwise, and never in the way of a tap. */
+    pointer-events: none;
+    translate: 0 -50%;
+    font-size: var(--fs-ui);
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity var(--dur-micro);
+  }
+  .swipe::before {
+    content: attr(data-right-label);
+    left: 1.25rem;
+    color: var(--signal-ink);
+  }
+  .swipe::after {
+    content: attr(data-left-label);
+    right: 1.25rem;
+    color: var(--ink);
+  }
+  .swipe[data-swipe='right'] {
+    background: var(--signal);
+  }
+  .swipe[data-swipe='left'] {
+    background: var(--active);
+  }
+  .swipe[data-swipe='right']::before,
+  .swipe[data-swipe='left']::after {
+    opacity: 0.6;
+  }
+  .swipe[data-swipe][data-armed]::before,
+  .swipe[data-swipe][data-armed]::after {
+    opacity: 1;
+  }
+
+  .ptr {
+    position: fixed;
+    left: 50%;
+    top: calc(env(safe-area-inset-top) - 2.5rem);
+    z-index: 20;
+    margin-left: -5.5rem;
+    width: 11rem;
+    padding: 0.5rem 0;
+    border-radius: 999px;
+    text-align: center;
+    font-size: var(--fs-meta);
+    font-weight: 600;
+    color: var(--ink-2);
+    background: var(--panel);
+    box-shadow: var(--float);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--dur-short) ease-out,
+      opacity var(--dur-short);
+  }
+  .ptr .ptr-release,
+  .ptr[data-armed='true'] .ptr-pull {
+    display: none;
+  }
+  .ptr[data-armed='true'] .ptr-release {
+    display: inline;
+    color: var(--signal);
+  }
+
+  .status-shim {
+    display: none;
+  }
+
+  /* Someone opened a shared story before setting PaperWing up: a pill inviting them in. */
+  .newcomer-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 1.25rem;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: min(36rem, calc(100vw - 2rem));
+    transform: translateX(-50%);
+    padding: 0.75rem 1.125rem;
+    border-radius: 1.375rem;
+    background: var(--ink);
+    color: var(--ground);
+    font-size: 0.875rem;
+    line-height: 1.35;
+    box-shadow: var(--float);
+  }
+  @media (max-width: 899px) {
+    .newcomer-bar {
+      bottom: calc(env(safe-area-inset-bottom) + 4.75rem);
+    }
+  }
+  @media (max-width: 899px) {
+    .status-shim {
+      display: block;
+      position: fixed;
+      inset: 0 0 auto;
+      height: env(safe-area-inset-top);
+      z-index: 35;
+      background: var(--ground);
+    }
+    .mobile-bar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding-top: calc(env(safe-area-inset-top) + 0.625rem);
+      padding-bottom: 0.625rem;
+      background: var(--ground);
+      transition: transform var(--dur-short) var(--ease);
+    }
+    [data-appbar='hidden'] .mobile-bar {
+      transform: translateY(-100%);
+    }
+    /* Sort row tucks under the app bar, and moves up with it (transform, never top). */
+    .sticky-head {
+      top: var(--appbar-h, env(safe-area-inset-top));
+      transition: transform var(--dur-short) var(--ease);
+    }
+    [data-appbar='hidden'] .sticky-head {
+      transform: translateY(calc(env(safe-area-inset-top) - var(--appbar-h, 0px)));
+    }
+    .pane-col {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
+  #pane-scroll {
+    overscroll-behavior: contain;
+  }
+
+  /* Thread minimap: one bar per top-level comment, sized by its replies. */
+  .spine {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 0.375rem;
+  }
+  .spine button {
+    min-height: 4px;
+    border-radius: 999px;
+    background: var(--line);
+    transition: background-color var(--dur-micro);
+  }
+  .spine button:hover {
+    background: var(--ink-3);
+  }
+  .spine button.fresh {
+    background: var(--signal);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* iOS zooms the page in when a text field under 16px gets focus. On touch screens every text field
+ * is at least 16px, which stops it without taking pinch-zoom away. Important, and outside the
+ * layers, so it beats the smaller text utilities some fields use. */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'], [type='button'], [type='submit']),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
