@@ -31,10 +31,11 @@ export function fakeUpstreams(): MockAgent {
   return agent
 }
 
-/** Uses the in-process store for this file's tests, as SYNC_MEMORY=1 does in local development. */
+/** Uses the in-process store for this file's tests, as SYNC_MEMORY=1 does in local development, empty for each test. */
 export function memoryStore(): void {
   beforeEach(() => {
     process.env.SYNC_MEMORY = '1'
+    resetMemoryKv()
   })
   afterEach(() => {
     delete process.env.SYNC_MEMORY

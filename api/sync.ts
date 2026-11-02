@@ -146,14 +146,14 @@ export async function POST(request: Request): Promise<Response> {
       recKey,
       theirs.map(([k]) => k),
     )
-    return new Response(
-      JSON.stringify({
+    return json(
+      {
         records: values.filter(Boolean).map((v) => JSON.parse(v!) as SyncRecord),
         cursor: changed.length ? Math.max(since, changed[changed.length - 1][1]) : since,
         more: changed.length === PAGE,
         accepted: accepted.length,
-      }),
-      { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } },
+      },
+      0,
     )
   } catch (err) {
     return fail(err instanceof Error ? err.message : 'sync failed', 502)
