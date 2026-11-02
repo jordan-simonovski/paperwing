@@ -121,11 +121,26 @@ export async function session(): Promise<OAuthSession> {
     const scope = await grantedScope(current)
     if (scope) useAtproto.getState().set({ scope })
     return current
-  } catch {
+  } catch (err) {
+    // Restoring can need the network (to refresh the tokens). Offline, the client keeps the sign-in
+    // for next time, so keep ours too; anything else (revoked, invalid) signs out here as well.
+    if (await unreachable(err)) throw new Error('Couldn’t reach Bluesky. Check your connection and try again.')
     useAtproto.getState().set({ did: undefined, handle: undefined, scope: undefined })
     throw new Error('Your Bluesky sign-in has expired. Sign in again in Settings, Sources')
   }
 }
+
+/** Whether the browser's fetch itself failed somewhere under this error: no answer came back at all. */
+const unreachable = (err: unknown) =>
+  import('@atproto/oauth-client-browser').then(
+    ({ FetchRequestError }) => {
+      // The client wraps a failed fetch in a FetchRequestError with the browser's error as its cause;
+      // its own refusals (a forbidden address, say) have no cause. Others may wrap that in turn.
+      for (let e = err; e instanceof Error; e = e.cause) if (e instanceof FetchRequestError && e.cause !== undefined) return true
+      return false
+    },
+    () => false,
+  )
 
 export async function signOut() {
   const did = useAtproto.getState().did
