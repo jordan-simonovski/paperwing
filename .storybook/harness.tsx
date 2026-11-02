@@ -6,6 +6,7 @@ import type { StoreApi, UseBoundStore } from 'zustand'
 import type { Story } from '../src/lib/types'
 import { useAtproto } from '../src/lib/atproto'
 import { useReactions, useComposer } from '../src/lib/compose'
+import { useEdition } from '../src/lib/edition'
 import { useHn } from '../src/lib/hnAccount'
 import { useInboxSeen } from '../src/lib/inbox'
 import { useLemmyAccount } from '../src/lib/lemmyAccount'
@@ -47,6 +48,7 @@ export interface AppParameters {
   lemmy?: Partial<ReturnType<typeof useLemmyAccount.getState>>
   watch?: Partial<ReturnType<typeof useWatch.getState>>
   spice?: Partial<ReturnType<typeof useSpiceStore.getState>>
+  edition?: Partial<ReturnType<typeof useEdition.getState>>
   queries?: [QueryKey, unknown][]
   /** What a channel's feeds bring back, by feed label ("Hacker News", "Quanta"); any other feed is empty. */
   feeds?: Record<string, Story[]>
@@ -66,6 +68,7 @@ const STORES: Record<string, AnyStore> = {
   lemmy: useLemmyAccount,
   watch: useWatch,
   spice: useSpiceStore,
+  edition: useEdition,
   composer: useComposer,
   reactions: useReactions,
   summaries: useSummaries,

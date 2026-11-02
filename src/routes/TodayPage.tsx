@@ -1,6 +1,7 @@
 import { Bell, Check, RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { FeedFailed } from '../components/FeedState'
 import { OutageBanner } from '../components/OutageWatch'
 import { Split, useListKeys } from '../components/Split'
 import { usePretext, useTypesetIn } from '../lib/pretext'
@@ -62,20 +63,23 @@ export function TodayPage() {
   // The same For you as its own page: one module decides what it contains.
   const feed = useChannelFeed('for-you', { sort: 'hot' })
   const settled = feed.statuses.length > 0 && feed.statuses.every((s) => s.status !== 'pending')
+  const allFailed = feed.statuses.length > 0 && feed.statuses.every((s) => s.status === 'error')
 
   // A new edition once a day, picked from what's appeared since the last one.
   const stale = !current || current.day !== localDay(now)
   useEffect(() => {
     document.title = 'Today – PaperWing'
   }, [])
+  const anyStories = feed.stories.length > 0
   useEffect(() => {
-    if (!stale || !settled || !feed.stories.length) return
+    if (!stale || !settled || !anyStories) return
     const since = current?.createdAt ?? now - 24 * 3_600_000
     const sections = buildEdition(feed.stories, { followed, since, exclude: (k) => !!read[k] || !!hidden[k] || !!savedItems[k], now })
     set({ day: localDay(now), createdAt: now, since, sections })
-    // Only the day boundary or a finished load should start a new edition.
+    // Only the day boundary or a finished load should start a new edition. A load that failed
+    // finishes with nothing, so stories arriving later (a retry, the connection coming back) count too.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stale, settled])
+  }, [stale, settled, anyStories])
 
   const edition: Edition | undefined = stale ? undefined : current
   const stories = useMemo<Ranked[]>(() => (edition?.sections ?? []).flatMap((sec) => sec.stories.map((s) => ({ alsoOn: [], ...s, heat: 0.5, topics: topicsForStory(s) }))), [edition])
@@ -128,7 +132,8 @@ export function TodayPage() {
           <OutageBanner />
           <SinceYouWereHere />
 
-          {!edition && Array.from({ length: 6 }, (_, i) => <RowSkeleton key={i} />)}
+          {!edition && allFailed && <FeedFailed offline={!navigator.onLine} statuses={feed.statuses} onRetry={() => void feed.refetch()} />}
+          {!edition && !allFailed && Array.from({ length: 6 }, (_, i) => <RowSkeleton key={i} />)}
           {edition?.sections.map((sec, i) => {
             const topic = sec.topic ? findTopic(sec.topic, interests) : undefined
             return (
