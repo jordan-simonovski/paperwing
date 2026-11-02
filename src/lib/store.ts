@@ -159,7 +159,7 @@ export const usePrefs = create<Prefs>()(
       seasonal: true,
       hideRead: false,
       pretext: true,
-      feedMotion: true,
+      feedMotion: false,
       summaryLoader: 'mascot',
       // A new install picks its own on the welcome page.
       followed: [],
@@ -207,15 +207,18 @@ export const usePrefs = create<Prefs>()(
     }),
     {
       name: 'readout:prefs',
-      version: 5,
+      version: 6,
       // v2 dropped Reddit, and with it the subreddit list. v3 turned Pretext motion off while it was
       // experimental; v4 turns it back on, now that the feed animation is a gentle settle. v5 added
-      // the welcome page, which anyone already reading has no need for.
+      // the welcome page, which anyone already reading has no need for. v6 made the feed headline
+      // animation opt-in.
       migrate: (state, version) => {
         const s = state as Partial<Prefs> & { subreddits?: string[] }
         if (version < 2) delete s.subreddits
         if (version < 4) s.pretext = true
         if (version < 5) s.welcomed = true
+        // v6: feed headlines no longer fade in on every topic change unless you turn it on (it read as a flicker).
+        if (version < 6) s.feedMotion = false
         return s as Prefs
       },
     },

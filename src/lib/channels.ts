@@ -31,6 +31,9 @@ export interface Channel {
   action?: { label: string; to: string }
 }
 
+/** For you for someone who follows nothing yet: a bit of everything. */
+export const STARTER_TOPICS = ['world-news', 'science', 'web', 'ai']
+
 /** Following any tech topic, or nothing yet: tech-only sources (HN, Lobsters, releases…) are shown. */
 export const followsTech = (followed: string[]) => !followed.length || followed.some(isTechTopic)
 
@@ -175,12 +178,15 @@ export const SOURCE_CHANNELS = [
 
 export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx): Channel | undefined {
   if (id === 'for-you') {
-    const topics = ctx.followed.map((f) => findTopic(f, ctx.interests)).filter((t): t is Topic => !!t)
+    // Following nothing yet (a newcomer who skipped the tour): a starter mix, so there's news to read
+    // straight away. It gives way to your own topics as soon as you follow one.
+    const starter = !ctx.followed.length
+    const topics = (starter ? STARTER_TOPICS : ctx.followed).map((f) => findTopic(f, ctx.interests)).filter((t): t is Topic => !!t)
     return {
       id,
       label: 'For you',
-      eyebrow: `${topics.length} interests`,
-      blurb: topics.length ? `Ranked across ${listOf(topics.map((t) => t.label))}` : 'Follow a few topics to shape this feed',
+      eyebrow: starter ? 'A starter mix' : `${topics.length} interests`,
+      blurb: starter ? `A starter mix of ${listOf(topics.map((t) => t.label))}. Follow topics to make it yours.` : `Ranked across ${listOf(topics.map((t) => t.label))}`,
       // The people you follow on Mastodon, kept to your topics: they're the one source you curated yourself.
       // HN's front page is tech: it's in For you only for someone following tech (or nothing yet).
       feeds: uniqueFeeds([

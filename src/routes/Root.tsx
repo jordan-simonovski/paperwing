@@ -1,5 +1,6 @@
+import { X } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, Navigate, Outlet, useLocation } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import { BottomNav, Drawer, Help, MobileBar, Rail, Toaster } from '../components/Chrome'
 import { Palette } from '../components/Palette'
 import { useLibrary } from '../lib/library'
@@ -99,24 +100,27 @@ export function Root() {
     return () => window.removeEventListener('keydown', onKey)
   }, [set])
 
-  // A new install starts by picking what to read. Pages that finish something started elsewhere
-  // (a sign-in, pairing, a share) are left alone.
   if (pathname === '/brand') return <Outlet />
-  // A story someone shared (/t/<channel>/<story>) opens straight away, with a note to set up after.
-  const sharedStory = /^\/(t\/[^/]+\/[^/]+|u\/[^/]+|c\/[^/]+\/[^/]+)/.test(pathname)
-  if (!welcomed && !sharedStory && !/^\/(welcome|privacy|terms|principles|pair|share|settings|mix\/|atproto-callback|mastodon\/callback)/.test(pathname)) return <Navigate to="/welcome" replace />
+  // Newcomers start reading straight away (For you has a starter mix); the tour is an invitation,
+  // not a gate. The bar goes once they take the tour or wave it away.
+  const invite = !welcomed && !/^\/(welcome|atproto-callback|mastodon\/callback|pair|share)/.test(pathname)
 
   return (
     <>
       <div className="status-shim" aria-hidden />
       <MobileBar />
-      {!welcomed && sharedStory && (
-        <Link to="/welcome" className="newcomer-bar">
+      {invite && (
+        <div className="newcomer-bar" role="region" aria-label="Welcome">
           <span className="min-w-0 flex-1">
-            <strong>New to PaperWing?</strong> One reader for Hacker News, Lemmy, Bluesky, Mastodon and RSS.
+            <strong>New here?</strong> This is a starter mix. Pick your own topics in a minute.
           </span>
-          <span className="flex-none font-semibold underline underline-offset-2">Set it up</span>
-        </Link>
+          <Link to="/welcome" className="flex-none font-semibold underline underline-offset-2">
+            Make it yours
+          </Link>
+          <button className="newcomer-close" onClick={() => set({ welcomed: true })} aria-label="Not now" title="Not now">
+            <X size={16} />
+          </button>
+        </div>
       )}
       <div className="shell">
         <Rail />

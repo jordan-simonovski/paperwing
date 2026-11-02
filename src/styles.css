@@ -1168,9 +1168,14 @@
     padding: 0.75rem 1rem 0.625rem;
     border-bottom: 1px solid var(--line);
     cursor: pointer;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 8.5rem;
     transition: background-color var(--dur-micro);
+  }
+  /* Rows past the first screenful skip layout until they're near the screen. Not the first ones: a
+     new row in view is drawn at the placeholder height for a frame, then snaps to its real height,
+     and a whole screen of that is what makes changing topics look jumpy. */
+  .swipe:nth-child(n + 13) > .row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 10rem;
   }
   .row:hover {
     background: var(--sunk);
@@ -2081,6 +2086,21 @@
     font-size: 0.875rem;
     line-height: 1.35;
     box-shadow: var(--float);
+  }
+  .newcomer-close {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-right: -0.375rem;
+    border-radius: 999px;
+    opacity: 0.75;
+  }
+  .newcomer-close:hover,
+  .newcomer-close:focus-visible {
+    opacity: 1;
+    background: color-mix(in oklab, var(--ground) 14%, transparent);
   }
   @media (max-width: 899px) {
     .newcomer-bar {

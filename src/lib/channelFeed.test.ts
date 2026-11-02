@@ -76,7 +76,7 @@ describe('ranking a channel', () => {
             story({ key: 'hn-3', title: 'Crypto is back', url: 'https://example.com/3' }),
             story({ key: 'hn-4', title: 'A labelled post', url: 'https://example.com/4', labels: [{ src: 'did:plc:labeler', val: 'spam' }] }),
           ]
-        : [],
+        : []
     )
     expect(rankChannel(p, r, batches).map((s) => s.key)).toEqual(['hn-1'])
   })
@@ -86,7 +86,7 @@ describe('ranking a channel', () => {
     const p = plan(r)
     const search = p.feeds.findIndex((f) => f.ref.kind === 'hnSearch')
     const batches = p.feeds.map((_, i) =>
-      i === search ? [story({ key: 'hn-10', title: 'Distributed tracing with OpenTelemetry' }), story({ key: 'hn-11', title: 'My grandmother’s observatory', url: 'https://example.com/11' })] : [],
+      i === search ? [story({ key: 'hn-10', title: 'Distributed tracing with OpenTelemetry' }), story({ key: 'hn-11', title: 'My grandmother’s observatory', url: 'https://example.com/11' })] : []
     )
     expect(rankChannel(p, r, batches).map((s) => s.key)).toEqual(['hn-10'])
   })
@@ -98,8 +98,8 @@ describe('ranking a channel', () => {
       rankChannel(
         p,
         r,
-        p.feeds.map(() => undefined),
-      ),
+        p.feeds.map(() => undefined)
+      )
     ).toEqual([])
   })
 })
@@ -130,5 +130,17 @@ describe("planning Bluesky's Following", () => {
       expect(p.feeds.map((f) => f.ref)).toEqual([{ kind: 'bluesky', feed: 'following' }])
       expect(p.channel.empty).toBeUndefined()
     }
+  })
+})
+
+describe('For you before following anything', () => {
+  it('reads a starter mix, so a newcomer lands on news rather than an empty page', () => {
+    const p = planChannel(reader(), 'for-you', { sort: 'hot', blueskyEnabled: true })!
+    expect(p.feeds.length).toBeGreaterThan(5)
+    expect(p.channel.blurb).toMatch(/starter mix/i)
+  })
+  it('switches to your own topics as soon as you follow one', () => {
+    const p = planChannel(reader({ followed: ['space'] }), 'for-you', { sort: 'hot', blueskyEnabled: true })!
+    expect(p.channel.blurb).toBe('Ranked across Space')
   })
 })
