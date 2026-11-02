@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
   { ignores: ['dist', '.vercel', 'node_modules', 'sw', 'scripts'] },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', '.storybook/**/*.{ts,tsx}'],
     languageOptions: { parser: tseslint.parser },
     plugins: { 'react-hooks': reactHooks },
     rules: {
