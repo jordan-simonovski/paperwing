@@ -179,7 +179,12 @@ export async function favourite(key: string, on: boolean) {
   if (on) next[key] = true
   else delete next[key]
   useMastodon.setState({ favourites: next })
-  const res = await fetch(`https://${instance}/api/v1/statuses/${encodeURIComponent(id)}/${on ? 'favourite' : 'unfavourite'}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+  const res = await fetch(`https://${instance}/api/v1/statuses/${encodeURIComponent(id)}/${on ? 'favourite' : 'unfavourite'}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(
+    () => {
+      useMastodon.setState({ favourites })
+      throw new Error(`Couldn’t reach ${instance}. Check your connection and try again.`)
+    },
+  )
   if (!res.ok) {
     useMastodon.setState({ favourites })
     throw new Error(res.status === 403 ? 'Your Mastodon sign-in can’t favourite: sign in again under Settings, Sources.' : `Mastodon didn’t take that (${res.status})`)
