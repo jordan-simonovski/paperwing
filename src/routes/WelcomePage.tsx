@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Check, Code2, ExternalLink, Heart, KeyRound, Loader2, Plus, Rss, Send, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, Check, Code2, ExternalLink, Heart, Highlighter, KeyRound, Layers, Loader2, MessageSquareQuote, Plus, Rss, Send, UserPlus, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { BlueskyAccount } from '../components/BlueskyAccount'
@@ -200,7 +200,13 @@ function Feeds() {
         )}
         <FeedFinder />
       </div>
-      <p className="mt-4 max-w-xl text-[0.8125rem] text-ink-3">Later: in the reader, a Follow button appears beside any story whose site has a feed, and Settings suggests blogs you keep opening.</p>
+      <p className="mt-4 max-w-xl text-[0.8125rem] text-ink-3">
+        Coming from another reader? Import its OPML file under Settings, Sources, Your feeds. And it works the other way too: every topic, board, mix and profile here has an RSS feed of its own, so
+        nothing only works inside PaperWing.
+      </p>
+      <p className="mt-2 max-w-xl text-[0.8125rem] text-ink-3">
+        Later: in the reader, Follow and Add to mix appear beside any story whose site has a feed, and Settings suggests blogs you keep opening.
+      </p>
     </>
   )
 }
@@ -330,8 +336,38 @@ function Sharing() {
             </a>
           </span>
         </Point>
-        <Point icon={<Sparkles size={16} />} title="Mixes">
-          Bundle sources into your own channel and publish it. Others can follow it in PaperWing, or read it on Bluesky as a feed.
+      </div>
+    </>
+  )
+}
+
+function Social() {
+  return (
+    <>
+      <Heading kicker="Step 6: the social web" title="The social web, the way it was">
+        <p>
+          Before feeds were tuned to keep you scrolling, the web was social through people: what they shared, the blogs they read, the places they gathered. PaperWing brings that back, built on
+          Bluesky, so everything you make lives in your own account.
+        </p>
+      </Heading>
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        <Point icon={<MessageSquareQuote size={16} />} title="Share with a note">
+          Like Google Reader’s shared items: a link and a line on why it’s worth reading. It goes on your profile and into the feed of anyone who follows you here, without posting to Bluesky.
+        </Point>
+        <Point icon={<UserPlus size={16} />} title="Follow people, not just topics">
+          Follow someone on PaperWing and what they share and list joins For you. Signed in with Bluesky, you’ll also see when people you follow shared or discussed a story.
+        </Point>
+        <Point icon={<Users size={16} />} title="Community boards">
+          Spaces with their own rules and moderators, started by anyone. A board lives in its owner’s Bluesky account, so it belongs to its community, not to PaperWing.
+        </Point>
+        <Point icon={<Highlighter size={16} />} title="Margin notes">
+          Select a passage in the reader view and add a note. Notes from other readers show highlighted in the article.
+        </Point>
+        <Point icon={<Rss size={16} />} title="Blogrolls">
+          Show the blogs you read on your profile, and follow someone else’s blogroll in one tap. The way people found good blogs before algorithms did.
+        </Point>
+        <Point icon={<Layers size={16} />} title="Mixes">
+          Your own channels, built from any blogs, topics, communities and feeds: tap Add to mix wherever you can follow. Publish one and others can follow it, here or as a Bluesky feed.
         </Point>
       </div>
     </>
@@ -341,7 +377,7 @@ function Sharing() {
 function Saving() {
   return (
     <>
-      <Heading kicker="Step 6: saving" title="Saved means readable offline">
+      <Heading kicker="Step 7: saving" title="Saved means readable offline">
         <p>Saving isn’t just a bookmark. PaperWing downloads the story so it’s there on a plane, underground, or after the link dies.</p>
       </Heading>
       <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -365,7 +401,7 @@ function Saving() {
 function Ai() {
   return (
     <>
-      <Heading kicker="Step 7: summaries (optional)" title="Bring your own AI key">
+      <Heading kicker="Step 8: summaries (optional)" title="Bring your own AI key">
         <p>
           PaperWing can summarise a long discussion across every network that covered a story: the main points, where people disagree, and the comments worth reading. It uses Claude, with your own
           Anthropic API key.
@@ -486,6 +522,7 @@ export function WelcomePage() {
     ranking: <Ranking />,
     accounts: <Accounts />,
     sharing: <Sharing />,
+    social: <Social />,
     saving: <Saving />,
     ai: <Ai />,
     passkey: <Passkey onDone={finish} />,

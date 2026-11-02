@@ -5,7 +5,7 @@ import { usePrefs } from './store'
 // Where a new reader is in the welcome tour. Kept on the device so signing in to Bluesky or
 // Mastodon (which leaves the app and comes back) lands on the same step.
 
-export const STEPS = ['hello', 'topics', 'feeds', 'ranking', 'accounts', 'sharing', 'saving', 'ai', 'passkey'] as const
+export const STEPS = ['hello', 'topics', 'feeds', 'ranking', 'accounts', 'sharing', 'social', 'saving', 'ai', 'passkey'] as const
 export type Step = (typeof STEPS)[number]
 
 export const useOnboarding = create<{ step: Step; go: (step: Step) => void }>()(
