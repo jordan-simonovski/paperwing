@@ -48,13 +48,16 @@ function Editor({ initial }: { initial: Mix }) {
     if (!has(s) && mix.sources.length >= MAX_SOURCES) return toast(`A mix holds up to ${MAX_SOURCES} sources`, { tone: 'error' })
     setMix((m) => ({ ...m, sources: has(s) ? m.sources.filter((x) => !same(x, s)) : [...m.sources, s] }))
   }
+  /** Runs one action, saying what went wrong if it fails. True when it worked. */
   const run = async (label: string, job: () => Promise<Mix | void>) => {
     setBusy(label)
     try {
       const next = await job()
       if (next) setMix(next)
+      return true
     } catch (err) {
       toast((err as Error).message, { tone: 'error' })
+      return false
     } finally {
       setBusy(undefined)
     }
@@ -312,7 +315,7 @@ function Editor({ initial }: { initial: Mix }) {
 
         {/* A solid strip, so what scrolls under the floating Save reads as under it rather than beside it. */}
         <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+5rem)] -mx-2 mt-8 flex items-center gap-2 rounded-full bg-ground/95 p-2 min-[900px]:bottom-4">
-          <button type="button" className="btn btn-primary h-11 px-6 shadow-lg" disabled={!!busy || !mix.name.trim()} onClick={() => void save().then(() => navigate(`/t/${mixChannel(mix)}`))}>
+          <button type="button" className="btn btn-primary h-11 px-6 shadow-lg" disabled={!!busy || !mix.name.trim()} onClick={() => void save().then((ok) => ok && navigate(`/t/${mixChannel(mix)}`))}>
             {busy === 'save' && <Loader2 size={15} className="spin" />} Save and open
           </button>
           <span className="flex-1" />
