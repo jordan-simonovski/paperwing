@@ -1,5 +1,37 @@
 # What's new
 
+## 0.6.0
+
+_Released 2 November 2026_
+
+### Improved
+
+- **Post a link from your phone.** The round + button in the phone's top bar posts a link from any page, and a Paste button fills in the address you copied. On a computer, "Post a link" sits in the sidebar. On Android, press and hold the app icon to post straight away. Your profile and the light/dark switch are now in the phone's menu.
+
+### Fixes
+
+- **The app always starts.** A link with a stray % in it, or a launch screen whose font fails to load, no longer leaves a blank screen. If you open the app offline, sync, summaries and alerts are checked again once you're back.
+- **Going offline no longer signs you out of Bluesky.** If PaperWing couldn't reach Bluesky while picking your sign-in back up, it treated the sign-in as expired and made you sign in again. Now it says it couldn't connect and keeps you signed in for when you're back online; a sign-in that has really ended still signs you out.
+- **Editing a board waits for it to load.** Opening your board's editor used to show an empty "Start a board" form until the board arrived, and saving that form replaced your board with a new, empty one. The editor now waits for your board, and says so with a way to try again if it can't reach it.
+- **A board's moderation always holds.** When the services behind a community board's moderation were slow or down, listings its moderators had hidden and people on its block list could show up on the board, and in its feed, for a while. The board now shows an error until its moderation can be read again, every hide counts however many others pile up, and its owner can still open the board's settings meanwhile.
+- **The busiest discussion leads.** When a link is being talked about in three or more places, its row now opens the liveliest discussion and shows its comment count, instead of sometimes keeping a quieter one.
+- **Interests with symbols in them work.** An interest like "\*NSYNC" or "C++" no longer stops your feeds from loading; it matches the words as you typed them.
+- **Shortcuts stay out of your way.** Escape on an open sheet closes just the sheet, not the story under it, and n and p no longer jump through the discussion while you type a reply. Typing in a sheet keeps your cursor where it is.
+- **Votes and comments land on the right post after switching Lemmy servers.** Signing in to a different Lemmy server without reopening PaperWing could send an upvote or comment to an unrelated post there, because each server numbers its posts differently. PaperWing now looks each post up again on the server you're signed in to.
+- **A Mastodon favourite that didn't go through no longer stays lit.** If your Mastodon server couldn't be reached, the up arrow stayed on as if the post had been favourited, and pressing it again took back a favourite that was never made. It now goes back off and says your server couldn't be reached, so you can try again.
+- **Mix edits made while publishing stay.** Renaming a mix or changing its sources while it was being published, saved or unpublished could put the editor back the way it was when you pressed the button, so the change vanished. Those edits now stay in the editor, ready to save.
+- **Save and open stays put when saving fails.** If republishing a published mix didn't work (offline, or a Bluesky sign-in that needs renewing), Save and open still took you to the mix, away from the editor, and the people following it never got the change. It now keeps you in the editor so you can try again.
+- **The offline copy stays small.** PaperWing kept a copy of every article and list it loaded, for reading offline, and never let any go, so over months it could take up a lot of your device's storage. It now keeps the most recent few hundred. Stories you save for offline are kept as before.
+- **Pressing like twice quickly makes one like.** Pressing the up arrow on a Bluesky or Frontpage story again before the first like had gone through could make two likes, and taking it back then left one behind. A press while a like is still going through, or being taken back, now waits for it instead.
+- **Previews, feeds and alerts recover from slow sites.** When a site is slow or down, PaperWing's link previews and RSS feeds try again within minutes instead of serving a stand-in for a day, and reply alerts still arrive when some watched threads are on slow servers.
+- **Replies post once, in the right place.** Pressing Cmd+Enter or Ctrl+Enter again while a reply is sending no longer posts it twice, and a comment on a Hacker News or Lemmy story now shows at the top of the thread rather than under the first comment.
+- **Saved stories keep what you do to them.** Archiving, removing or reading a story on the Saved page while it was being checked for new discussion could be undone a moment later, and a removed story could come back. Stories that couldn't download for offline because the connection dropped now try again, instead of staying without their article.
+- **Chillies come back after a hiccup.** If PaperWing couldn't find out how heated discussions were, because you were offline for a moment or the server was busy, those stories showed no chillies until you reloaded. It now asks again shortly after.
+- **Heated discussions get their chillies sooner.** A new story's chillies could be held up for everyone for five minutes when someone else asking about it had used up their share for the day. Now it's graded for the next person who asks.
+- **Sync carries all your settings.** People you follow, boards you've joined and your blogroll setting now reach your other devices, and a long list of feeds syncs too. If something is still too large to sync, Settings says so instead of looking up to date.
+- **Today's edition is made from today's news.** Opening the app straight into Today, say from the morning notification, could build the edition from the stories you'd last seen, before the new ones arrived, and keep it that way all day. Today now waits for your sources to answer before it picks.
+- **Today recovers when its sources come back.** If none of your sources answered when you opened Today, it kept saying it was putting your edition together, even once they were back. It now says it couldn't reach them, with a way to try again, and builds the edition as soon as they answer.
+
 ## 0.5.0
 
 _Released 2 November 2026_
