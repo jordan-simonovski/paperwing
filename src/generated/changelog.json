@@ -1,6 +1,36 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "releases": [
+    {
+      "version": "0.4.0",
+      "date": "2 November 2026",
+      "sections": [
+        {
+          "kind": "highlight",
+          "title": "Highlights",
+          "changes": [
+            {
+              "title": "Papers: new research, shared by the people who did it.",
+              "detail": "Follow Papers to see preprints and papers that researchers post on Bluesky, alongside Retraction Watch, eLife and The Scholarly Kitchen. Any story in your feeds that links to arXiv, bioRxiv, medRxiv, OSF or a DOI is picked up by Papers too, wherever it was posted."
+            }
+          ]
+        },
+        {
+          "kind": "new",
+          "title": "New",
+          "changes": [
+            {
+              "title": "3D printing and electronics.",
+              "detail": "A new Making section has 3D printing and Electronics topics, with Hackaday, Prusa, Hackster.io and CNX Software, plus the 3D printing and electronics crowds on Lemmy, Bluesky and Mastodon."
+            },
+            {
+              "title": "Science by field.",
+              "detail": "Physics, Maths, Chemistry, Biology, Ecology, Earth sciences, Brain and mind, and Archaeology are now topics of their own under Science, each with its own publishers, Bluesky feeds and Mastodon hashtags."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.3.0",
       "date": "2 November 2026",
