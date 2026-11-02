@@ -8,10 +8,13 @@ export function remembered<T>(load: () => Promise<T>, fallback: T): (fresh?: boo
   let answer: Promise<T> | undefined
   return (fresh = false) => {
     if (fresh) answer = undefined
-    return (answer ??= load().catch(() => {
-      answer = undefined
+    if (answer) return answer
+    const asking: Promise<T> = load().catch(() => {
+      // Forget only this ask: a fresh one may have replaced it meanwhile.
+      if (answer === asking) answer = undefined
       return fallback
-    }))
+    })
+    return (answer = asking)
   }
 }
 

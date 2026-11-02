@@ -24,4 +24,12 @@ describe('RSS out when something goes wrong', () => {
     expect(res.status).toBe(502)
     expect(res.headers.get('cache-control')).toBe('no-store')
   })
+
+  it('someone or something that isn’t there upstream is a 404 too, cached: an unknown handle, a deleted mix', async () => {
+    const { person } = await import('./people.js')
+    vi.mocked(person).mockRejectedValueOnce(new Error('Upstream 400 for public.api.bsky.app'))
+    const res = await rss('u/nobody.example')
+    expect(res.status).toBe(404)
+    expect(res.headers.get('cache-control')).toMatch(/s-maxage=300/)
+  })
 })

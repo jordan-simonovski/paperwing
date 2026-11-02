@@ -8,7 +8,7 @@ import { readMix } from './_lib/mixfeed.js'
 import { paperwingFront } from './_lib/paperwing.js'
 import { actorOf, person } from './_lib/people.js'
 import { marginNotes } from './_lib/notes.js'
-import { allBoards, boardFront } from './_lib/boards.js'
+import { allBoards, boardFront, readBoard } from './_lib/boards.js'
 import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './_lib/sources.js'
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
 
@@ -70,6 +70,9 @@ export const SOURCES: Record<string, Source> = {
   fpactivity: { ttl: 60, run: (p) => frontpageActivity(need(p, 'did')) },
   // A community board and its listings (also cached in KV).
   board: { ttl: 60, run: (p) => boardFront(p.get('did') ?? '', p.get('rkey') ?? '', sortOf(p.get('sort'))) },
+  // A board's own record (name, moderators, rules), without its listings or moderation: what its
+  // editor and header need, and still there when the board's moderation can't be read.
+  boardinfo: { ttl: 60, run: (p) => readBoard(need(p, 'did'), need(p, 'rkey')) },
   // Every community board, for Explore.
   boards: { ttl: 300, run: () => allBoards() },
   // Margin notes on an article, from anyone.

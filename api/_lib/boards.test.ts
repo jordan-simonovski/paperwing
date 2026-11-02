@@ -34,7 +34,7 @@ const unreachable = new Set<string>()
 
 vi.mock('./frontpage.js', () => ({
   getRecord: vi.fn(async (uri: string) => {
-    if (!(uri in records)) throw new Error('gone')
+    if (!(uri in records)) throw new Error('Upstream 400 for pds.example')
     if (unreachable.has(uri)) throw new Error('PDS timed out')
     return { uri, cid: 'c', value: records[uri] }
   }),
@@ -42,7 +42,9 @@ vi.mock('./frontpage.js', () => ({
   pool: async <T, R>(items: T[], _n: number, fn: (t: T) => Promise<R>) => Promise.all(items.map((i) => fn(i).catch(() => undefined))),
 }))
 vi.mock('./atlinks.js', () => ({
-  linking: vi.fn(async (_target: string, collection: string) => (collection === 'io.paperwing.boardhide' ? [`at://${MOD}/io.paperwing.boardhide/1`, `at://${STRANGER}/io.paperwing.boardhide/1`] : [])),
+  linking: vi.fn(async () => []),
+  // Every hide on the board, page by page.
+  linkingAll: vi.fn(async () => [`at://${MOD}/io.paperwing.boardhide/1`, `at://${STRANGER}/io.paperwing.boardhide/1`]),
   posts: vi.fn(async (uris: string[]) =>
     uris.map(
       (u) =>
@@ -67,7 +69,7 @@ vi.mock('./paperwing.js', () => ({
 vi.mock('./http.js', () => ({ fetchJson: vi.fn(async () => ({ items: [{ subject: { did: BOB } }] })) }))
 
 const { boardFront } = await import('./boards.js')
-const { linking } = await import('./atlinks.js')
+const { linkingAll } = await import('./atlinks.js')
 const { fetchJson } = await import('./http.js')
 
 describe('community boards', () => {
@@ -87,7 +89,7 @@ describe('community boards', () => {
   // When a moderation input can't be read, the board isn't served (or kept) without it: hidden
   // listings and kept-out accounts would come back, for everyone, for as long as it's cached.
   const moderationDown: [string, () => unknown][] = [
-    ['the list of hides', () => vi.mocked(linking).mockRejectedValueOnce(new Error('Constellation is down'))],
+    ['the list of hides', () => vi.mocked(linkingAll).mockRejectedValueOnce(new Error('Constellation is down'))],
     ["a moderator's hide", () => unreachable.add(`at://${MOD}/io.paperwing.boardhide/1`)],
     ['the block list', () => vi.mocked(fetchJson).mockRejectedValueOnce(new Error('AppView is down'))],
   ]
@@ -97,5 +99,24 @@ describe('community boards', () => {
     unreachable.clear()
     const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
     expect(stories.map((s) => s.title)).toEqual(['aaaaaaaaaaaaa'])
+  })
+
+  it('reads every hide, however many strangers have added their own', async () => {
+    const junk = Array.from({ length: 300 }, (_, i) => `at://${STRANGER}/io.paperwing.boardhide/j${i}`)
+    vi.mocked(linkingAll).mockResolvedValueOnce([...junk, `at://${MOD}/io.paperwing.boardhide/1`])
+    const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
+    expect(stories.map((s) => s.title)).toEqual(['aaaaaaaaaaaaa'])
+  })
+
+  it('a hide its moderator has since taken back counts as not hidden, rather than taking the board down', async () => {
+    vi.mocked(linkingAll).mockResolvedValueOnce([`at://${MOD}/io.paperwing.boardhide/1`, `at://${MOD}/io.paperwing.boardhide/undone`])
+    const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
+    expect(stories.map((s) => s.title)).toEqual(['aaaaaaaaaaaaa'])
+  })
+
+  it('a block list its owner deleted keeps nobody out, rather than taking the board down', async () => {
+    vi.mocked(fetchJson).mockRejectedValueOnce(new Error('Upstream 400 for public.api.bsky.app'))
+    const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
+    expect(stories.map((s) => s.title).sort()).toEqual(['aaaaaaaaaaaaa', 'bbbbbbbbbbbbb'])
   })
 })

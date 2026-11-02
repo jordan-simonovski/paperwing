@@ -40,7 +40,7 @@ describe('free-text interests', () => {
 
   // Whatever someone types is a literal: a "*" or "?" or a stray backslash must not become regex
   // syntax, or compiling the topic throws and every ranked feed goes with it.
-  it.each(['*NSYNC', 'what?', 'C++', 'foo\\', '(old) news', '=caps'])('matches "%s" as written, without throwing', (query) => {
+  it.each(['*NSYNC', 'what?', 'C++', 'foo\\', '(old) news', '=caps', 'wow*', 'C*'])('matches "%s" as written, without throwing', (query) => {
     const topic = interest(query)
     expect(() => matchesTopic(topic, 'nothing here')).not.toThrow()
     expect(matchesTopic(topic, `News about ${query} today`)).toBeTruthy()

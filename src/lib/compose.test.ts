@@ -6,7 +6,7 @@ import { keys } from './query'
 import type { Comment, Thread } from './types'
 
 vi.mock('./hnAccount', async (real) => ({ ...(await real<typeof import('./hnAccount')>()), hnComment: vi.fn(async () => {}) }))
-vi.mock('./atproto', async (importOriginal) => ({ ...(await importOriginal<typeof import('./atproto')>()), createRecord: vi.fn() }))
+vi.mock('./atproto', async (importOriginal) => ({ ...(await importOriginal<typeof import('./atproto')>()), createRecord: vi.fn(), deleteRecord: vi.fn() }))
 
 describe('the link in what someone pastes', () => {
   it('takes a full link as it is', () => {
@@ -51,6 +51,20 @@ describe('a reply you post appears in the thread on screen', () => {
 })
 
 describe('liking and voting', () => {
+  it('a press while a like is being taken back waits for it, rather than writing a like that can’t be removed', async () => {
+    const { deleteRecord } = await import('./atproto')
+    const post = { uri: 'at://did:plc:author/app.bsky.feed.post/2', cid: 'bafy-post2' }
+    useReactions.getState().set(post.uri, 'at://did:plc:reader/app.bsky.feed.like/2')
+    let done!: () => void
+    vi.mocked(deleteRecord).mockReturnValue(new Promise<void>((resolve) => (done = resolve)))
+    vi.mocked(createRecord).mockClear()
+    const unlike = react('like', post)
+    const again = react('like', post)
+    done()
+    await expect(Promise.all([unlike, again])).resolves.toEqual([false, false])
+    expect(createRecord).not.toHaveBeenCalled()
+  })
+
   it('writes one like however fast the arrow is pressed again', async () => {
     // The first like is still on its way when the reader presses again.
     let done!: (ref: { uri: string; cid: string }) => void

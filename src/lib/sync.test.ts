@@ -118,7 +118,14 @@ describe('preferences from another device', () => {
 describe('a record the server won’t store', () => {
   it('is remembered and named, without failing the sync, until it goes up', async () => {
     usePrefs.setState({ ...usePrefs.getInitialState(), followed: ['physics'], syncedPrefsAt: Date.now() })
-    vi.stubGlobal('fetch', answer(200, { records: [], cursor: 1, more: false, accepted: 0, tooLarge: ['prefs'] }))
+    // The server only ever sees sealed keys, so it can only name those back.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        const { changes } = JSON.parse(String(init?.body)) as { changes: { key: string }[] }
+        return new Response(JSON.stringify({ records: [], cursor: 1, more: false, accepted: 0, tooLarge: changes.map((c) => c.key) }), { status: 200 })
+      }),
+    )
     await joinSync(newSyncCode())
     expect(useSync.getState()).toMatchObject({ error: undefined, notSynced: ['prefs'] })
     expect(notSyncedText(useSync.getState().notSynced)).toBe('your settings')
@@ -195,5 +202,15 @@ describe('plain records from before sync was encrypted', () => {
     pull({ key: 's:hn-3', updatedAt: before, data: item })
     await joinSync(newSyncCode())
     expect(useLibrary.getState().items['hn-3'].updatedAt).toBeLessThanOrEqual(before)
+  })
+})
+
+describe('plain settings records', () => {
+  it('can’t switch on anything public: only sealed settings can publish your blogroll', async () => {
+    usePrefs.setState({ ...usePrefs.getInitialState(), syncedPrefsAt: 0 })
+    const before = Date.UTC(2026, 9, 29, 8)
+    vi.stubGlobal('fetch', answer(200, { records: [{ key: 'prefs', updatedAt: before, data: { followed: ['physics'], blogrollPublic: true } }], cursor: 1, more: false }))
+    await joinSync(newSyncCode())
+    expect(usePrefs.getState()).toMatchObject({ followed: ['physics'], blogrollPublic: false })
   })
 })

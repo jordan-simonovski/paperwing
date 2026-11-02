@@ -171,6 +171,14 @@ export const canFavourite = (s: Pick<MastodonState, 'token' | 'scope'>) => !!s.t
 /** Favourites a status on your own server (or takes it back). Only statuses read through your server have its ids. */
 export async function favourite(key: string, on: boolean) {
   const { token, instance, favourites = {} } = useMastodon.getState()
+  // Undoes this post's mark only: others may have been favourited while this one was on its way.
+  const undo = () =>
+    useMastodon.setState((s) => {
+      const f = { ...(s.favourites ?? {}) }
+      if (favourites[key]) f[key] = true
+      else delete f[key]
+      return { favourites: f }
+    })
   const p = parseStoryKey(key)
   const host = p?.kind === 'md' ? p.instance : undefined
   const id = p?.kind === 'md' ? p.id : ''
@@ -181,12 +189,12 @@ export async function favourite(key: string, on: boolean) {
   useMastodon.setState({ favourites: next })
   const res = await fetch(`https://${instance}/api/v1/statuses/${encodeURIComponent(id)}/${on ? 'favourite' : 'unfavourite'}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(
     () => {
-      useMastodon.setState({ favourites })
+      undo()
       throw new Error(`Couldn’t reach ${instance}. Check your connection and try again.`)
     },
   )
   if (!res.ok) {
-    useMastodon.setState({ favourites })
+    undo()
     throw new Error(res.status === 403 ? 'Your Mastodon sign-in can’t favourite: sign in again under Settings, Sources.' : `Mastodon didn’t take that (${res.status})`)
   }
 }

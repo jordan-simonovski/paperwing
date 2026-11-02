@@ -45,8 +45,15 @@ export async function fetchBoard(did: string, rkey: string, sort = 'hot'): Promi
   return (await res.json()) as { board: BoardView; stories: Story[] }
 }
 
+/** A board's own record, without its listings: it loads even while the board's moderation can't be read. */
+async function fetchBoardInfo(did: string, rkey: string): Promise<BoardView> {
+  const res = await fetch(`/api/feed?src=boardinfo&did=${encodeURIComponent(did)}&rkey=${encodeURIComponent(rkey)}`)
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'That board didn’t load')
+  return (await res.json()) as BoardView
+}
+
 export const useBoard = (did: string | undefined, rkey: string | undefined) =>
-  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoard(did!, rkey!).then((r) => r.board), enabled: !!did && !!rkey, staleTime: 60_000 })
+  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoardInfo(did!, rkey!), enabled: !!did && !!rkey, staleTime: 60_000 })
 
 export const useAllBoards = () =>
   useQuery({

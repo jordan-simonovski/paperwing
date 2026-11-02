@@ -19,11 +19,10 @@ interface SyncRecord {
 // keys, except for links the inbox saves, which it seals with the code before storing.
 const CODE = /^[a-z2-7]{26}$/
 const MAX_CHANGES = 500
-// Encryption and its base64 add about a third to a record.
-const MAX_RECORD = 24_000
-// Your settings are one record holding every list you keep (feeds from an OPML import, mixes,
-// people), so they get more room. There's one per sync space, and the daily allowance still applies.
-const MAX_PREFS_RECORD = 200_000
+// Encryption and its base64 add about a third to a record. Keys arrive sealed, so this can't tell
+// your settings (one record holding every list you keep, a few hundred feeds from an OPML import
+// included) from a saved story: one limit fits both. The daily allowance bounds what anyone stores.
+const MAX_RECORD = 64_000
 const PAGE = 500
 const TTL = 400 * 86_400
 // What one caller (an address, or an IPv6 /64) may store in a day, in KB: a whole library's first
@@ -124,7 +123,7 @@ export async function POST(request: Request): Promise<Response> {
       const held = existing[i] ? (JSON.parse(existing[i]!) as SyncRecord) : undefined
       if (held && held.updatedAt > c.updatedAt) return
       const record: SyncRecord = { key: c.key, updatedAt: c.updatedAt, ...(c.deleted ? { deleted: true } : { data: c.data }) }
-      if (JSON.stringify(record).length <= (c.key === 'prefs' ? MAX_PREFS_RECORD : MAX_RECORD)) accepted.push(record)
+      if (JSON.stringify(record).length <= MAX_RECORD) accepted.push(record)
       else tooLarge.push(c.key)
     })
     if (accepted.length) {

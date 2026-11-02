@@ -20,15 +20,16 @@ const sync = (body: unknown, headers: Record<string, string> = {}) =>
 
 describe('sync', () => {
   it('names any record it won’t store for size, so the device can say so rather than think it synced', async () => {
-    const big = 'x'.repeat(30_000)
+    const big = 'x'.repeat(80_000)
     const sent = await sync({ since: 0, changes: [record('s:huge', 100, big), record('x:small', 100)] })
     expect(sent.body).toMatchObject({ accepted: 1, tooLarge: ['s:huge'] })
   })
 
-  it('gives your settings more room than a single saved item: a long list of feeds still syncs', async () => {
-    const sent = await sync({ since: 0, changes: [record('prefs', 100, 'x'.repeat(120_000))] })
+  it('takes a record the size of a long settings list (a few hundred feeds), sealed and all', async () => {
+    // Devices send sealed keys, so the server can't tell settings from a saved item: one limit for all.
+    const sent = await sync({ since: 0, changes: [record('x:settingsish', 100, 'x'.repeat(50_000))] })
     expect(sent.body).toMatchObject({ accepted: 1, tooLarge: [] })
-    expect((await sync({ since: 0, changes: [record('prefs', 200, 'x'.repeat(300_000))] })).body.tooLarge).toEqual(['prefs'])
+    expect((await sync({ since: 0, changes: [record('x:huge', 200, 'x'.repeat(80_000))] })).body.tooLarge).toEqual(['x:huge'])
   })
 
   it('hands one device’s changes to the next, and never caches the answer', async () => {

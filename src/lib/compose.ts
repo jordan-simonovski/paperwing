@@ -184,8 +184,9 @@ export const useReactions = create<Reactions>()(
 )
 
 /**
- * Likes being written, by subject: the record's address is only known once it's written, so a
- * second press meanwhile would write a second like that taking back could never remove.
+ * Likes being written or taken back, by subject. A press meanwhile shares that result: a like's
+ * address is only known once it's written, so a second write would leave one taking back could
+ * never remove.
  */
 const liking = new Map<string, Promise<boolean>>()
 
@@ -195,25 +196,23 @@ export async function react(kind: 'like' | 'vote', subject: StrongRef): Promise<
   if (pending) return pending
   const { made, set } = useReactions.getState()
   const existing = made[subject.uri]
-  if (existing) {
-    set(subject.uri)
-    try {
-      await deleteRecord(existing)
-    } catch (err) {
-      set(subject.uri, existing)
-      throw err
-    }
-    return false
-  }
-  const collection = kind === 'like' ? 'app.bsky.feed.like' : 'fyi.frontpage.feed.vote'
-  const write = createRecord(collection, { subject, createdAt: new Date().toISOString() })
-    .then((ref) => {
-      set(subject.uri, ref.uri)
-      return true
-    })
-    .finally(() => liking.delete(subject.uri))
-  liking.set(subject.uri, write)
-  return write
+  // Taking back is in flight too: a press meanwhile shares its result rather than writing a like.
+  const write = existing
+    ? (set(subject.uri),
+      deleteRecord(existing).then(
+        () => false,
+        (err: unknown) => {
+          set(subject.uri, existing)
+          throw err
+        },
+      ))
+    : createRecord(kind === 'like' ? 'app.bsky.feed.like' : 'fyi.frontpage.feed.vote', { subject, createdAt: new Date().toISOString() }).then((ref) => {
+        set(subject.uri, ref.uri)
+        return true
+      })
+  const shared = write.finally(() => liking.delete(subject.uri))
+  liking.set(subject.uri, shared)
+  return shared
 }
 
 /* ---------------------------------------------------------------- sharing */

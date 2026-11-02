@@ -2,13 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The networks are the boundary: fetchJson answers by URL, and records what was asked.
 const asked: string[] = []
+let inFlight = 0
+let peak = 0
 vi.mock('./http.js', () => ({
   assertPublicUrl: async () => {},
   fetchJson: async (url: string) => {
     asked.push(url)
     // A server that never answers (a tarpit): only the overall budget gets past it.
     if (url.includes('tarpit.example')) return new Promise(() => {})
-    if (url.includes('firebaseio')) return { descendants: 12 }
+    // HN answers after a moment, so a test can see how many are asked at once.
+    if (url.includes('firebaseio')) {
+      inFlight++
+      peak = Math.max(peak, inFlight)
+      return new Promise((done) => setTimeout(() => (inFlight--, done({ descendants: 12 })), 10))
+    }
     if (url.includes('/api/v1/statuses/')) return { replies_count: 4 }
     if (url.includes('getPosts')) return { posts: [{ replyCount: 7 }] }
     if (url.includes('/api/v3/post')) return { post_view: { counts: { comments: 3 } } }
@@ -45,5 +52,23 @@ describe('counting many threads for an alert run', () => {
     expect(Date.now() - start).toBeLessThan(1000)
     // The slow server holds up only its own threads.
     expect(counts.get('hn-42')).toBe(12)
+  })
+
+  it('asks a slow Mastodon server at most twice at once', async () => {
+    await commentCounts(
+      Array.from({ length: 10 }, (_, i) => `md-tarpit.example-${i}`),
+      { budgetMs: 50 },
+    )
+    expect(asked.filter((u) => u.includes('tarpit.example'))).toHaveLength(2)
+  })
+
+  it('asks the networks everyone shares as many at once as it can', async () => {
+    peak = 0
+    const counts = await commentCounts(
+      Array.from({ length: 16 }, (_, i) => `hn-${100 + i}`),
+      { budgetMs: 2000 },
+    )
+    expect(counts.size).toBe(16)
+    expect(peak).toBe(8)
   })
 })

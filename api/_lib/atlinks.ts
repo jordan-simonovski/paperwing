@@ -30,6 +30,26 @@ export async function linking(target: string, collection: string, path: string, 
   return res.linking_records.map((r) => `at://${r.did}/${r.collection}/${r.rkey}`)
 }
 
+/**
+ * Every record linking to `target`, page by page: for anything where one missing record matters
+ * (a board's hides), since anyone can add links and push the ones that count past a single page.
+ * Throws past `maxPages` rather than answer with part of the list.
+ */
+export async function linkingAll(target: string, collection: string, path: string, { pageSize = 100, maxPages = 10 } = {}): Promise<string[]> {
+  const out: string[] = []
+  let cursor: string | null | undefined
+  for (let page = 0; page < maxPages; page++) {
+    const res = await fetchJson<{ linking_records: { did: string; collection: string; rkey: string }[]; cursor?: string | null }>(
+      `${CONSTELLATION}/links?target=${encodeURIComponent(target)}&collection=${collection}&path=${encodeURIComponent(path)}&limit=${pageSize}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      { timeoutMs: 8000 },
+    )
+    out.push(...res.linking_records.map((r) => `at://${r.did}/${r.collection}/${r.rkey}`))
+    cursor = res.cursor
+    if (!cursor) return out
+  }
+  throw new Error(`More than ${pageSize * maxPages} links to ${target}`)
+}
+
 /** Bluesky posts by URI, 25 at a time, from the public AppView. */
 export async function posts(uris: string[]): Promise<PostView[]> {
   const out: PostView[] = []

@@ -37,7 +37,7 @@ export const useSync = create<SyncState>()(
       setCode: (code, opts) => {
         // What came from the old code's server is this device's to give the new one: forget the echoes.
         applied.clear()
-        set({ code, passkey: !!code && !!opts?.passkey, cursor: 0, pushedAt: 0, lastSync: undefined, error: undefined })
+        set({ code, passkey: !!code && !!opts?.passkey, cursor: 0, pushedAt: 0, lastSync: undefined, error: undefined, notSynced: undefined })
       },
     }),
     { name: 'readout:sync', version: 1, partialize: ({ code, cursor, pushedAt, lastSync, passkey, notSynced }) => ({ code, cursor, pushedAt, lastSync, passkey, notSynced }) },
@@ -123,6 +123,7 @@ async function applyRecords(code: string, wire: SyncRecord[]) {
   // Plain records still arrive from before encryption; a sealed one this code can't open is skipped.
   const opened = await Promise.all(wire.map((r) => (isSealed(r) ? open(code, r) : r.updatedAt < SEALED_SINCE ? asOfItsDate(r) : undefined)))
   const records = opened.filter((r): r is SyncRecord => !!r)
+  const sealedRecords = new Set(opened.filter((r, i): r is SyncRecord => !!r && isSealed(wire[i])))
   for (const r of records) {
     applied.set(r.key, r.updatedAt)
     // A record only ever speaks for the item it's filed under.
@@ -136,6 +137,9 @@ async function applyRecords(code: string, wire: SyncRecord[]) {
       if (s) summaries.push(s)
     } else if (r.key === 'prefs' && !r.deleted && r.updatedAt > usePrefs.getState().syncedPrefsAt) {
       const prefs = cleanPrefs(r.data)
+      // Anyone who can write to the database can write a plain record; it may carry your lists but
+      // never switch on something that publishes them.
+      if (prefs && !sealedRecords.has(r)) delete prefs.blogrollPublic
       if (prefs) usePrefs.setState({ ...prefs, syncedPrefsAt: r.updatedAt })
     }
   }
@@ -181,9 +185,12 @@ export function syncNow(): Promise<void> {
       const tooLarge: string[] = []
       // Pushes in batches; every response also carries a page of other devices' changes.
       for (let i = 0; i === 0 || i < changes.length; i += 400) {
-        const sealed = await Promise.all(changes.slice(i, i + 400).map((r) => seal(code, r)))
+        const batch = changes.slice(i, i + 400)
+        const sealed = await Promise.all(batch.map((r) => seal(code, r)))
         const page = await post(code, { since: cursor, exact: !first, changes: sealed })
-        tooLarge.push(...(page.tooLarge ?? []))
+        // The server names what it refused by the sealed key it was given; ours is the one we sealed.
+        const ours = new Map(sealed.map((r, j) => [r.key, batch[j].key]))
+        tooLarge.push(...(page.tooLarge ?? []).flatMap((k) => ours.get(k) ?? []))
         first = false
         await applyRecords(code, page.records)
         cursor = page.cursor

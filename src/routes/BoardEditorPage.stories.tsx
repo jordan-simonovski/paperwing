@@ -36,7 +36,7 @@ export const NewBoard: Story = {
 
 /** Editing your board: the form starts from what it says now. */
 export const EditBoard: Story = {
-  parameters: { app: { atproto: signedIn, route: editing, fetch: { '/api/feed?src=board': { board, stories: [] } } } },
+  parameters: { app: { atproto: signedIn, route: editing, fetch: { '/api/feed?src=boardinfo': board } } },
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: 'Edit your board' })).toBeVisible()
     await expect(canvas.getByRole('textbox', { name: 'Name' })).toHaveValue('The Open Web')
@@ -50,5 +50,14 @@ export const EditBoardDidntLoad: Story = {
     await expect(await canvas.findByRole('button', { name: 'Try again' })).toBeVisible()
     await expect(canvas.queryByRole('textbox', { name: 'Name' })).toBeNull()
     await expect(canvas.queryByRole('button', { name: 'Start the board' })).toBeNull()
+  },
+}
+
+/** The board's moderation can't be read (so its listings won't load), but its owner can still edit it. */
+export const EditWhileModerationIsDown: Story = {
+  parameters: { app: { atproto: signedIn, route: editing, fetch: { '/api/feed?src=boardinfo': board } } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Edit your board' })).toBeVisible()
+    await expect(canvas.getByRole('textbox', { name: 'Name' })).toHaveValue('The Open Web')
   },
 }

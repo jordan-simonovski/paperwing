@@ -152,7 +152,9 @@ export async function GET(request: Request): Promise<Response> {
       headers: { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'public, max-age=600, s-maxage=600, stale-while-revalidate=3600', 'access-control-allow-origin': '*' },
     })
   } catch (err) {
-    const missing = err instanceof NotFound
+    // Gone upstream counts as missing too: an unknown handle, a deleted mix or board (the network
+    // answers 400 or 404, or the record isn't one).
+    const missing = err instanceof NotFound || (err instanceof Error && /\bUpstream 40[04]\b|^Not a |empty or malformed/.test(err.message))
     return new Response(missing ? err.message : 'This feed couldn’t be built just now. Try again shortly.', {
       status: missing ? 404 : 502,
       headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': missing ? 'public, s-maxage=300' : 'no-store' },

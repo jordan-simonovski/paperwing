@@ -39,17 +39,21 @@ export async function commentCount(key: string): Promise<number | undefined> {
   }
 }
 
-/** Where a thread's count comes from: a Mastodon server by name, otherwise the network. */
-const hostOf = (key: string) => {
+/**
+ * The server a reader chose for a thread (a Mastodon server: anyone's, and possibly slow on
+ * purpose), which gets a cap. The networks everyone shares (HN, Bluesky, Lobsters, the known Lemmy
+ * servers) aren't capped: they're fast, and a long watch list needs all the workers.
+ */
+const chosenServer = (key: string) => {
   const p = parseStoryKey(key)
-  return p?.kind === 'md' ? `md:${p.instance}` : key.slice(0, 2)
+  return p?.kind === 'md' ? p.instance : undefined
 }
 
 /**
  * Counts for many threads, a few at a time. A thread that can't be read is left out.
  *
  * A Mastodon thread lives on whatever server its reader picked, and a server can be slow on purpose.
- * So no server gets more than two requests at once, the networks everyone shares go first, and the
+ * So no such server gets more than two requests at once, the networks everyone shares go first, and the
  * whole thing stops at its time budget with what it has: an alert run has to finish within its
  * function's limit, however many threads are watched on slow servers.
  */
@@ -60,15 +64,18 @@ export async function commentCounts(keys: string[], { concurrency = 8, budgetMs 
   const busy = new Map<string, number>()
   const stopAt = Date.now() + budgetMs
   const next = () => {
-    const i = queue.findIndex((k) => (busy.get(hostOf(k)) ?? 0) < perHost)
+    const i = queue.findIndex((k) => {
+      const host = chosenServer(k)
+      return !host || (busy.get(host) ?? 0) < perHost
+    })
     return i < 0 ? undefined : queue.splice(i, 1)[0]
   }
   const worker = async () => {
     for (let key = next(); key && Date.now() < stopAt; key = next()) {
-      const host = hostOf(key)
-      busy.set(host, (busy.get(host) ?? 0) + 1)
+      const host = chosenServer(key)
+      if (host) busy.set(host, (busy.get(host) ?? 0) + 1)
       const n = await commentCount(key).catch(() => undefined)
-      busy.set(host, busy.get(host)! - 1)
+      if (host) busy.set(host, busy.get(host)! - 1)
       if (typeof n === 'number') out.set(key, n)
     }
   }
