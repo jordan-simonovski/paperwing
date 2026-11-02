@@ -1,5 +1,18 @@
 # What's new
 
+## 0.3.0
+
+_Released 2 November 2026_
+
+### Improved
+
+- **A wordmark of its own.** PaperWing's name is now set in a soft serif in ink, with Pip carrying the red, in the app, the opening animation and link previews.
+- **Start reading straight away.** New visitors land on a starter mix of news instead of a tour; a small bar offers to pick your own topics whenever you like, and goes away when you say not now.
+
+### Fixes
+
+- **Changing topics no longer jumps around.** Stories appear at their final size instead of resizing as they load, and headlines no longer fade in on every switch. You can turn that animation back on in Settings, Appearance.
+
 ## 0.2.0
 
 _Released 2 November 2026_
