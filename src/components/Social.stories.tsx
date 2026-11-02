@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent } from 'storybook/test'
 import { useComposer } from '../lib/compose'
 import { story } from '../test/fixtures'
-import { HnVoteButton, LemmyVoteButton, ReactButton, StoryActions } from './Social'
+import { StoryActions, VoteButton } from './Social'
 
 const subject = { uri: 'at://did:plc:abcdefghijklmnopqrstuvwx/app.bsky.feed.post/3kabc', cid: 'bafyreib' }
 const bsky = { did: 'did:plc:abcdefghijklmnopqrstuvwx', handle: 'reader.example' }
@@ -52,15 +52,15 @@ export const MastodonCanPost: Story = { parameters: { app: { mastodon: { instanc
 export const LikeAndVote: Story = {
   render: () => (
     <>
-      <ReactButton kind="like" subject={subject} />
-      <ReactButton kind="vote" subject={subject} />
-      <ReactButton kind="like" subject={subject} small />
+      <VoteButton target={{ network: 'bluesky', kind: 'like', subject, label: 'Like on Bluesky' }} />
+      <VoteButton target={{ network: 'frontpage', kind: 'vote', subject, label: 'Upvote on Frontpage' }} />
+      <VoteButton target={{ network: 'bluesky', kind: 'like', subject, label: 'Like on Bluesky' }} small />
     </>
   ),
 }
 
 export const AlreadyLiked: Story = {
-  render: () => <ReactButton kind="like" subject={subject} />,
+  render: () => <VoteButton target={{ network: 'bluesky', kind: 'like', subject, label: 'Like on Bluesky' }} />,
   parameters: { app: { reactions: { made: { [subject.uri]: 'at://did:plc:abcdefghijklmnopqrstuvwx/app.bsky.feed.like/1' } } } },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('button', { name: /Liked/ })).toHaveAttribute('aria-pressed', 'true')
@@ -70,8 +70,8 @@ export const AlreadyLiked: Story = {
 export const HackerNewsUpvote: Story = {
   render: () => (
     <>
-      <HnVoteButton id="41234567" />
-      <HnVoteButton id="41234568" />
+      <VoteButton target={{ network: 'hn', id: '41234567', label: 'Upvote on Hacker News' }} />
+      <VoteButton target={{ network: 'hn', id: '41234568', label: 'Upvote on Hacker News' }} />
     </>
   ),
   parameters: { app: { hn: { user: 'reader', votes: { '41234568': true } } } },
@@ -80,8 +80,8 @@ export const HackerNewsUpvote: Story = {
 export const LemmyUpvote: Story = {
   render: () => (
     <>
-      <LemmyVoteButton apId="https://lemmy.world/comment/1" />
-      <LemmyVoteButton apId="https://lemmy.world/comment/2" small />
+      <VoteButton target={{ network: 'lemmy', apId: 'https://lemmy.world/comment/1', kind: 'comment', label: 'Upvote on Lemmy' }} />
+      <VoteButton target={{ network: 'lemmy', apId: 'https://lemmy.world/comment/2', kind: 'comment', label: 'Upvote on Lemmy' }} small />
     </>
   ),
   parameters: { app: { lemmy: { user: 'reader', jwt: 'x', votes: { 'https://lemmy.world/comment/2': 1 } } } },

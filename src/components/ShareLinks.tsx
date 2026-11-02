@@ -1,13 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { ChevronRight, Copy, Link2, Loader2, MessageSquareQuote, Newspaper, Send, Share, Trash2 } from 'lucide-react'
+import { storyActions, useAccounts } from '../lib/accounts'
 import { useAtproto } from '../lib/atproto'
 import { shareOnPaperWing, unshare } from '../lib/shares'
 import { useComposer } from '../lib/compose'
 import { domainOf } from '../lib/format'
-import { useHn } from '../lib/hnAccount'
-import { useLemmyAccount } from '../lib/lemmyAccount'
-import { canPostToMastodon, useMastodon } from '../lib/mastodon'
 import type { Story } from '../lib/types'
 import { share, storyLink, toast } from '../lib/ui'
 import { Pip } from './Pip'
@@ -23,11 +21,9 @@ import { SourceIcon } from './SourceIcon'
 export function ShareLinks({ story, onClose }: { story: Story; onClose: () => void }) {
   const open = useComposer((c) => c.open)
   const qc = useQueryClient()
-  const signedIn = useAtproto((a) => !!a.did)
-  const hn = useHn((h) => !!h.user)
-  const md = useMastodon(canPostToMastodon)
-  const lemmy = useLemmyAccount((l) => !!l.jwt)
-  const canPost = (signedIn || hn || md || lemmy) && !!(story.url || story.discussionUrl)
+  const accounts = useAccounts()
+  const signedIn = !!accounts.bluesky
+  const canPost = storyActions(accounts, story).share
   const source = story.sourceLabel === 'PaperWing' ? 'Bluesky' : SOURCE_NAMES[story.source]
   const me = useAtproto((a) => a.did)
   const [noting, setNoting] = useState(false)

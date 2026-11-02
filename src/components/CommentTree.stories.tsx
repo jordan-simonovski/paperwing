@@ -1,8 +1,10 @@
+import { commentActions } from '../lib/accounts'
+import { useComposer } from '../lib/compose'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useRef } from 'react'
-import { expect, fn, userEvent } from 'storybook/test'
+import { expect, userEvent } from 'storybook/test'
 import type { Comment } from '../lib/types'
-import { comment, NOW, sampleComments } from '../test/fixtures'
+import { comment, NOW, sampleComments, story } from '../test/fixtures'
 import { CommentTree, Spine } from './CommentTree'
 
 /** The tree scrolls inside the reading pane; this stands in for it. */
@@ -81,11 +83,12 @@ export const SortNewestFirst: Story = {
 
 /** Signed in to Hacker News: reply and upvote on each comment. */
 export const SignedInToHackerNews: Story = {
-  args: { actions: { kind: 'hn', me: 'reader', reply: fn() } },
-  parameters: { app: { hn: { user: 'reader', votes: {} } } },
-  play: async ({ args, canvas }) => {
+  // The real rules for someone signed in to HN as "reader": reply to any comment, upvote others'.
+  args: { actions: commentActions({ hn: { user: 'reader' } }, story({ key: 'hn-41234567', source: 'hn' })) },
+  parameters: { app: { hn: { user: 'reader', cookie: 'x', votes: {} } } },
+  play: async ({ canvas }) => {
     await userEvent.click(canvas.getAllByRole('button', { name: 'Reply' })[0])
-    await expect(args.actions!.reply).toHaveBeenCalled()
+    await expect(useComposer.getState().target).toMatchObject({ kind: 'hn-reply', threadKey: 'hn-41234567', story: false })
   },
 }
 

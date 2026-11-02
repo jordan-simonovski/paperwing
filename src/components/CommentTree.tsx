@@ -5,7 +5,9 @@ import { sanitize } from '../lib/html'
 import { Covered } from './Covered'
 import { MediaGallery } from './Media'
 import { QuoteCard } from './QuoteCard'
-import { HnVoteButton, LemmyVoteButton, ReactButton, type CommentActions } from './Social'
+import type { CommentRules } from '../lib/accounts'
+import { useComposer } from '../lib/compose'
+import { VoteButton } from './Social'
 import { BATCH, pickVisible } from '../lib/threadBudget'
 import { usePrefs } from '../lib/store'
 import type { Comment } from '../lib/types'
@@ -25,7 +27,7 @@ interface TreeCtx {
   sourceName: string
   now: number
   /** Reply and like/vote, when signed in to a thread PaperWing can write to (Social.tsx). */
-  act?: CommentActions
+  act?: CommentRules
 }
 const Ctx = createContext<TreeCtx>({ shown: () => true, opened: new Set(), open: () => {}, command: { gen: 0, mode: 'expand' }, sourceName: '', now: Date.now() })
 
@@ -133,20 +135,7 @@ const CommentNode = memo(function CommentNode({ c, depth }: { c: Comment; depth:
                 <QuoteCard quote={c.quote} />
               </div>
             )}
-            {act && (c.ref || act.kind === 'hn' || act.kind === 'lemmy') && !c.deleted && (
-              <div className="cmt-acts">
-                {!c.id.startsWith('local-') && (
-                  <button className="cmt-act" onClick={() => act.reply(c)}>
-                    Reply
-                  </button>
-                )}
-                {act.kind === 'hn'
-                  ? !c.id.startsWith('local-') && c.author !== act.me && <HnVoteButton id={c.id} small />
-                  : act.kind === 'lemmy'
-                    ? !c.id.startsWith('local-') && c.url && c.author !== act.me && !c.author.startsWith(`${act.me}@`) && <LemmyVoteButton apId={c.url} small />
-                    : c.ref && <ReactButton kind={act.kind} subject={c.ref} small />}
-              </div>
-            )}
+            {act && (act.canReply(c) || act.canVote(c)) && <CommentActs c={c} act={act} />}
             {c.more ? (
               <a
                 className="mb-1 inline-block text-[0.8125rem] font-semibold text-ink-2 underline decoration-signal decoration-2 underline-offset-4 hover:text-ink"
@@ -178,7 +167,7 @@ interface Props {
   scrollRef: React.RefObject<HTMLDivElement | null>
   now: number
   /** Reply and like/vote buttons on each comment (Social.tsx). */
-  actions?: CommentActions
+  actions?: CommentRules
 }
 
 export function CommentTree({ comments, op, since, sourceName, scrollRef, now, actions }: Props) {
@@ -365,5 +354,22 @@ export function Spine({ comments, since, scrollRef }: { comments: Comment[]; sin
         />
       ))}
     </nav>
+  )
+}
+
+/** Reply and vote under a comment, where the reader can. */
+function CommentActs({ c, act }: { c: Comment; act: CommentRules }) {
+  const open = useComposer((s) => s.open)
+  const reply = act.reply(c)
+  const vote = act.vote(c)
+  return (
+    <div className="cmt-acts">
+      {reply && (
+        <button className="cmt-act" onClick={() => open(reply)}>
+          Reply
+        </button>
+      )}
+      {vote && <VoteButton target={vote} small />}
+    </div>
   )
 }

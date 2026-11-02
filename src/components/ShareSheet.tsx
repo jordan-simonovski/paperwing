@@ -1,14 +1,12 @@
 import { Check, ExternalLink, Loader2, Send, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { shareTargets, useAccounts } from '../lib/accounts'
 import { canWrite, useAtproto } from '../lib/atproto'
 import { blueskyText, mastodonText, SHARE_LIMITS, shareLink, shareStory, type ShareNetwork, type ShareResult } from '../lib/compose'
 import { domainOf } from '../lib/format'
 import { graphemes } from '../lib/facets'
-import { useHn } from '../lib/hnAccount'
-import { useLemmyAccount } from '../lib/lemmyAccount'
 import { usePrefs } from '../lib/store'
-import { canPostToMastodon, useMastodon } from '../lib/mastodon'
 import { SUBMISSION_NSID } from '../lib/paperwing'
 import { topicsForStory, TOPICS } from '../lib/topics'
 import type { Story } from '../lib/types'
@@ -26,16 +24,13 @@ function Count({ used, limit }: { used: number; limit: number }) {
 }
 
 export function ShareSheet({ story, onClose }: { story: Story; onClose: () => void }) {
-  const bsky = useAtproto((a) => !!a.did)
+  const accounts = useAccounts()
+  const bsky = !!accounts.bluesky
+  const lemmy = !!accounts.lemmy
   const canList = useAtproto((a) => canWrite(a.scope, SUBMISSION_NSID) !== false)
-  const hnUser = useHn((h) => h.user)
-  const md = useMastodon((m) => !!m.token)
-  const mdPost = useMastodon(canPostToMastodon)
-  const lemmy = useLemmyAccount((l) => !!l.jwt)
   const communities = usePrefs((p) => p.communities)
   const joinedBoards = usePrefs((p) => p.boards)
   const link = shareLink(story) ?? ''
-  const fromHn = story.source === 'hn'
 
   const [title, setTitle] = useState(story.title)
   const [take, setTake] = useState('')
@@ -53,13 +48,7 @@ export function ShareSheet({ story, onClose }: { story: Story; onClose: () => vo
   )
   const chosen = (Object.keys(to) as ShareNetwork[]).filter((n) => to[n])
   const tooLong = chosen.some((n) => lengths[n] > SHARE_LIMITS[n])
-  const available: { id: ShareNetwork; ok: boolean; why?: React.ReactNode }[] = [
-    { id: 'bluesky', ok: bsky, why: 'Sign in with Bluesky' },
-    // Re-submitting an HN story to HN only finds the same thread.
-    { id: 'hn', ok: !!hnUser && !fromHn, why: fromHn ? 'Already on Hacker News' : 'Sign in to Hacker News' },
-    { id: 'mastodon', ok: md && mdPost, why: md ? 'Allow posting under Settings' : 'Sign in to Mastodon' },
-    { id: 'lemmy', ok: lemmy && communities.length > 0, why: lemmy ? 'Join a community first' : 'Sign in to Lemmy' },
-  ]
+  const available = shareTargets(accounts, story, communities.length).map((t) => ({ ...t, id: t.network }))
 
   const submit = async () => {
     setBusy(true)

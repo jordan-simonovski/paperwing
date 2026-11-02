@@ -2,11 +2,10 @@ import { useQueries } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useAccounts } from './accounts'
 import { appview, canReadNotifications, useAtproto } from './atproto'
 import { bskyKeyOf } from './bskyPost'
-import { useHn } from './hnAccount'
-import { lemmyInbox, useLemmyAccount } from './lemmyAccount'
-import { useMastodon } from './mastodon'
+import { lemmyInbox } from './lemmyAccount'
 import { api, getJson } from './sources/http'
 import { auth, cleanHtml, keyFor, type Status } from './sources/mastodon'
 import type { Story } from './types'
@@ -389,14 +388,16 @@ const FIVE_MINUTES = 5 * 60_000
 /** Everyone you're signed in to, read and merged: polled every five minutes while the app is open. */
 export function useActivityFeed() {
   // Each a plain value: a selector that builds a new object every time re-renders forever.
-  const bskyDid = useAtproto((a) => a.did)
-  const bskyHandle = useAtproto((a) => a.handle ?? a.did)
+  // Where you're signed in, as the accounts module sees it; plus whether Bluesky may read your notifications.
+  const accounts = useAccounts()
   const bskyNotices = useAtproto((a) => canReadNotifications(a.scope) !== false)
-  const hnUser = useHn((h) => h.user)
-  const mdInstance = useMastodon((m) => (m.token && m.acct ? m.instance : undefined))
-  const mdAcct = useMastodon((m) => (m.token ? m.acct : undefined))
-  const lmUser = useLemmyAccount((l) => (l.jwt ? l.user : undefined))
-  const lmInstance = useLemmyAccount((l) => l.instance)
+  const bskyDid = accounts.bluesky?.did
+  const bskyHandle = accounts.bluesky?.handle ?? bskyDid
+  const hnUser = accounts.hn?.user
+  const mdInstance = accounts.mastodon?.instance
+  const mdAcct = accounts.mastodon?.acct
+  const lmUser = accounts.lemmy?.user
+  const lmInstance = accounts.lemmy?.instance
   const sources = useMemo(() => {
     const list: { network: Network; key: unknown[]; run: () => Promise<Activity> }[] = []
     if (bskyDid) {

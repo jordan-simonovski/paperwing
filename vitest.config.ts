@@ -23,6 +23,29 @@ export default mergeConfig(
           extends: true,
           // The app's local /api functions stay out: a story never reaches a server.
           plugins: [noServer(), storybookTest({ configDir: '.storybook' })],
+          // Every library the app's browser code imports, bundled before the first story runs: one
+          // found mid-run makes Vite reload, and whichever stories were loading then fail.
+          optimizeDeps: {
+            include: [
+              '@atproto/oauth-client-browser',
+              '@chenglou/pretext',
+              '@tanstack/query-async-storage-persister',
+              '@tanstack/react-query',
+              '@tanstack/react-query-persist-client',
+              'dompurify',
+              'idb-keyval',
+              'lucide-react',
+              'marked',
+              'react',
+              'react-dom',
+              'react-dom/client',
+              'react-router',
+              'uqr',
+              'zustand',
+              'zustand/middleware',
+              'zustand/react/shallow',
+            ],
+          },
           test: {
             name: 'stories',
             browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: 'chromium' }] },

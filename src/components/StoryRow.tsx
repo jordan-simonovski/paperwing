@@ -14,7 +14,7 @@ import { domainKey, type Ranked } from '../lib/rank'
 import { useImpression } from '../lib/impressions'
 import { topicsForStory } from '../lib/topics'
 import { LESSON, useActivity, usePrefs } from '../lib/store'
-import { usePlatformVote } from '../lib/platformVote'
+import { castVote, storyVote, useAccounts, useVoted } from '../lib/accounts'
 import { rowOutlets } from '../lib/coverage'
 import type { Story } from '../lib/types'
 import { toast } from '../lib/ui'
@@ -223,8 +223,10 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
 export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1 }) {
   const cast = useActivity((a) => a.vote)
   const unit = s.score !== undefined ? scoreUnit(s.source, s.score) : undefined
-  // Signed in where the story lives, the up arrow is a real vote there too (platformVote.ts).
-  const platform = usePlatformVote(s)
+  // Signed in where the story lives, the up arrow is a real vote there too (accounts.ts).
+  const target = storyVote(useAccounts(), s)
+  const voted = useVoted(target)
+  const platform = target && { on: voted, label: target.label, toggle: () => castVote(target, !voted) }
   const press = (dir: 1 | -1) => {
     const up = dir === 1 && vote !== 1
     cast(s, dir)
