@@ -6,11 +6,13 @@ import { graphemes } from '../lib/facets'
 import { toast } from '../lib/ui'
 import { Sheet } from './Sheet'
 import { ShareLinks } from './ShareLinks'
+import { PostLink } from './PostLink'
 import { ShareSheet } from './ShareSheet'
 
 const TITLES: Record<ComposeTarget['kind'], string> = {
   'bsky-reply': 'Reply on Bluesky',
   share: 'Share',
+  'post-link': 'Post a link',
   links: 'Share',
   'fp-comment': 'Comment on Frontpage',
   'hn-reply': 'Reply on Hacker News',
@@ -30,7 +32,8 @@ export function Composer() {
   }, [target])
 
   if (!target) return null
-  if (target.kind === 'share') return <ShareSheet story={target.story} onClose={close} />
+  if (target.kind === 'share') return <ShareSheet story={target.story} board={target.board} onClose={close} />
+  if (target.kind === 'post-link') return <PostLink url={target.url} title={target.title} board={target.board} onClose={close} />
   if (target.kind === 'links') return <ShareLinks story={target.story} onClose={close} />
   const limit = LIMITS[target.kind]
   const used = graphemes(text)

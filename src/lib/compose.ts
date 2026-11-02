@@ -21,15 +21,17 @@ export type ComposeTarget =
   | { kind: 'bsky-reply'; threadKey: string; root: StrongRef; parent: StrongRef; to: string }
   /** A comment on a Lemmy post or a reply to a comment, by their addresses, through your Lemmy account. */
   | { kind: 'lemmy-reply'; threadKey: string; postApId: string; parentApId?: string; parentId?: string; to?: string }
-  /** One story out to any of your networks at once (ShareSheet.tsx). */
-  | { kind: 'share'; story: Story }
+  /** One story out to any of your networks at once (ShareSheet.tsx); `board` picks the PaperWing board to list it on. */
+  | { kind: 'share'; story: Story; board?: string }
+  /** Any link at all, not only stories PaperWing found: the link and its title first, then on to sharing it (PostLink.tsx). */
+  | { kind: 'post-link'; url?: string; title?: string; board?: string }
   /** Which link to share (PaperWing's, the original, the discussion), or on to posting it. */
   | { kind: 'links'; story: Story }
   | { kind: 'fp-comment'; threadKey: string; post: StrongRef; parent?: StrongRef; to?: string }
   /** `parent` is the HN item replied to: the story itself, or a comment. */
   | { kind: 'hn-reply'; threadKey: string; parent: string; story: boolean; to?: string }
 
-export const LIMITS: Record<ComposeTarget['kind'], number> = { 'bsky-reply': 300, share: 300, links: 0, 'fp-comment': 10_000, 'hn-reply': 10_000, 'lemmy-reply': 10_000 }
+export const LIMITS: Record<ComposeTarget['kind'], number> = { 'bsky-reply': 300, share: 300, 'post-link': 0, links: 0, 'fp-comment': 10_000, 'hn-reply': 10_000, 'lemmy-reply': 10_000 }
 
 interface ComposerState {
   target?: ComposeTarget
@@ -41,6 +43,25 @@ export const useComposer = create<ComposerState>()((set) => ({
   open: (target) => set({ target }),
   close: () => set({ target: undefined }),
 }))
+
+/** Opens "Post a link": for anything worth reading that PaperWing hasn't found. */
+export const postLink = (from: { url?: string; title?: string; board?: string } = {}) => useComposer.getState().open({ kind: 'post-link', ...from })
+
+/**
+ * The link in what someone pasted or typed, as a full https URL: "example.com/post" works, and so
+ * does a shared snippet with a title before the link. Undefined when there's no web link in it.
+ */
+export function linkFrom(input: string): string | undefined {
+  const text = input.trim()
+  const found = text.match(/https?:\/\/\S+/i)?.[0] ?? (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(text) ? `https://${text}` : undefined)
+  if (!found) return undefined
+  try {
+    const url = new URL(found)
+    return (url.protocol === 'https:' || url.protocol === 'http:') && url.hostname.includes('.') ? url.toString() : undefined
+  } catch {
+    return undefined
+  }
+}
 
 /** Puts a new comment into the thread on screen, under its parent (or at the top). */
 function addToThread(qc: QueryClient, threadKey: string, parentUri: string | undefined, comment: Comment) {
@@ -118,7 +139,7 @@ export async function send(qc: QueryClient, target: ComposeTarget, text: string)
 
   const facets = await facetsFor(body)
   const record: Record<string, unknown> = { text: body, createdAt: now, langs: [navigator.language?.split('-')[0] || 'en'], ...(facets.length ? { facets } : {}) }
-  if (target.kind === 'share' || target.kind === 'links') throw new Error('Share from the share sheet')
+  if (target.kind === 'share' || target.kind === 'links' || target.kind === 'post-link') throw new Error('Share from the share sheet')
   record.reply = { root: target.root, parent: target.parent }
   const ref = await createRecord('app.bsky.feed.post', record)
   const web = `https://bsky.app/profile/${handle}/post/${ref.uri.split('/').pop()}`

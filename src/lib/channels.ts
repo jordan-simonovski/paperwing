@@ -275,11 +275,11 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       id,
       label: board ? `${board.label} on PaperWing` : 'PaperWing',
       eyebrow: board ? 'PaperWing board' : 'Source',
-      blurb: 'Links people submitted to PaperWing. Each is a Bluesky post: likes are its votes, replies its comments. Share a story to add one.',
+      blurb: 'Links people posted to PaperWing. Each is a Bluesky post: likes are its votes, replies its comments. Post any link, or share a story you’re reading.',
       hue: board?.hue,
       feeds: [{ kind: 'paperwing', sort: v, board: board?.id }],
       native: true,
-      quiet: 'Nothing here yet. Open a story, tap Share and list it on PaperWing to be the first.',
+      quiet: 'Nothing here yet. Post a link, or share a story you’re reading, to be the first.',
       variant: v,
       variants: [
         { id: 'hot', label: 'Hot' },

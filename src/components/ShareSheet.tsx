@@ -23,7 +23,7 @@ function Count({ used, limit }: { used: number; limit: number }) {
   return <span className={`num text-[0.75rem] ${used > limit ? 'font-semibold text-signal' : 'text-ink-3'}`}>{limit - used}</span>
 }
 
-export function ShareSheet({ story, onClose }: { story: Story; onClose: () => void }) {
+export function ShareSheet({ story, board: given, onClose }: { story: Story; board?: string; onClose: () => void }) {
   const accounts = useAccounts()
   const bsky = !!accounts.bluesky
   const lemmy = !!accounts.lemmy
@@ -34,7 +34,7 @@ export function ShareSheet({ story, onClose }: { story: Story; onClose: () => vo
 
   const [title, setTitle] = useState(story.title)
   const [take, setTake] = useState('')
-  const [board, setBoard] = useState(() => topicsForStory(story).find((t) => TOPICS.some((x) => x.id === t)) ?? '')
+  const [board, setBoard] = useState(() => given ?? topicsForStory(story).find((t) => TOPICS.some((x) => x.id === t)) ?? '')
   const [paperwing, setPaperwing] = useState(bsky)
   const [to, setTo] = useState<Record<ShareNetwork, boolean>>({ bluesky: bsky, hn: false, mastodon: false, lemmy: false })
   // The community to post in: one of yours, the one whose topic fits best first.

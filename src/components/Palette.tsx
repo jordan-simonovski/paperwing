@@ -1,7 +1,8 @@
-import { ArrowRight, Bookmark, CornerDownLeft, Hash, Moon, Newspaper, Plus, Search, Settings, Sparkles } from 'lucide-react'
+import { ArrowRight, Bookmark, CornerDownLeft, Hash, Link2, Moon, Newspaper, Plus, Search, Settings, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { allTopics, findTopic, SOURCE_CHANNELS } from '../lib/channels'
+import { linkFrom, postLink } from '../lib/compose'
 import { usePrefs } from '../lib/store'
 import { relatedTopics, searchTopics } from '../lib/topics'
 import { useUI } from '../lib/ui'
@@ -69,6 +70,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       { id: 'communities', group: 'Go to', label: 'Explore communities', icon: <Hash size={15} />, run: go('/explore/communities') },
       { id: 'saved', group: 'Go to', label: 'Saved', icon: <Bookmark size={15} />, run: go('/saved') },
       { id: 'settings', group: 'Go to', label: 'Settings', icon: <Settings size={15} />, run: go('/settings') },
+      { id: 'post', group: 'Actions', label: 'Post a link to PaperWing', icon: <Link2 size={15} />, run: () => postLink() },
       { id: 'theme', group: 'Actions', label: `Switch to ${dark ? 'light' : 'dark'} mode`, icon: <Moon size={15} />, run: () => set({ theme: dark ? 'light' : 'dark' }) },
     ]
 
@@ -81,6 +83,9 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       return [...out, ...nav]
     }
 
+    // A pasted link: post it.
+    const pasted = linkFrom(query)
+    if (pasted) out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <Link2 size={15} />, run: () => postLink({ url: pasted }) })
     const hits = searchTopics(query, topics).slice(0, 6)
     for (const h of hits)
       out.push({ id: `topic:${h.topic.id}`, group: 'Topics', label: h.topic.label, hint: h.via ? `matches “${h.via}”` : h.topic.blurb, icon: dot(h.topic.hue), run: go(`/t/${h.topic.id}`) })

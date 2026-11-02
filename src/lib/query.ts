@@ -37,6 +37,7 @@ export const keys = {
   discussions: (url: string | null | undefined) => ['discussions', url] as const,
   coverage: (key: string | undefined) => ['coverage', key] as const,
   notes: (url: string) => ['notes', url] as const,
+  card: (url: string) => ['card', url] as const,
   people: ['person'] as const,
   person: (actor: string) => ['person', actor] as const,
   boards: ['boards'] as const,
