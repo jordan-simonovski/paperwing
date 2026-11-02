@@ -2,7 +2,7 @@ import { keys } from '../lib/query'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ChevronDown, Radio } from 'lucide-react'
 import { useState } from 'react'
-import { timeAgo } from '../lib/format'
+import { ago } from '../lib/format'
 import type { OutageReport, ProviderReport } from '../lib/outageTypes'
 
 export function useOutages() {
@@ -56,7 +56,7 @@ export function OutageBanner() {
               {p.samples.map((s) => (
                 <li key={s.url}>
                   <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-ink-2 hover:text-ink">
-                    “{s.text}” <span className="text-ink-3">{timeAgo(s.at, now)} ago</span>
+                    “{s.text}” <span className="text-ink-3">{ago(s.at, now)}</span>
                   </a>
                 </li>
               ))}

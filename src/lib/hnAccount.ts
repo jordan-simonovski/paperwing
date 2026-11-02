@@ -23,6 +23,13 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
   return data
 }
 
+/** Submits a link to HN. Through call(), so an expired session signs you out here as a vote does. */
+export async function hnSubmit(title: string, url: string): Promise<{ url?: string; existing?: boolean }> {
+  const c = useHn.getState().cookie
+  if (!c) throw new Error('Sign in to Hacker News first')
+  return call<{ url?: string; existing?: boolean }>({ action: 'submit', cookie: c, title, url })
+}
+
 export async function hnSignIn(username: string, password: string) {
   const { user, cookie } = await call<{ user: string; cookie: string }>({ action: 'login', username, password })
   useHn.getState().set({ user, cookie, votes: {} })

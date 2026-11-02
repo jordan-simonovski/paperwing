@@ -12,10 +12,12 @@ vi.mock('./atproto', () => ({
   deleteRecord: async () => {},
 }))
 vi.mock('./mastodon', () => ({ postToMastodon: async (text: string) => `https://hachyderm.io/@me/1?${encodeURIComponent(text)}` }))
-vi.mock('./hnAccount', () => ({ useHn: { getState: () => ({ cookie: 'me&abcdef123456', user: 'me' }) }, hnComment: async () => {} }))
 vi.mock('./facets', () => ({ facetsFor: async () => [], graphemes: (s: string) => [...s].length }))
 
 const { shareStory } = await import('./compose')
+const { useHn } = await import('./hnAccount')
+// Signed in to HN; HN itself is behind the stubbed fetch below.
+useHn.setState({ cookie: 'me&abcdef123456', user: 'me' })
 const story = {
   key: 'ln-1',
   source: 'rss' as const,

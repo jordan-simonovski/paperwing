@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { findTopic } from '../lib/channels'
 import { usePrefs } from '../lib/store'
 import { tasteKeys } from './StoryRow'
-import { compact, timeAgo } from '../lib/format'
+import { ago, compact } from '../lib/format'
 import { indexedStories, indexStory, useDiscussions } from '../lib/hooks'
 import { useOutlets } from '../lib/coverage'
 import { canonicalUrl } from '../lib/rank'
@@ -71,7 +71,7 @@ function MiniRow({ s, onOpen, now }: { s: Story; onOpen: (key: string) => void; 
               {compact(s.score)} {scoreUnit(s.source, s.score)}
             </span>
           )}
-          <span>{timeAgo(s.createdAt, now)} ago</span>
+          <span>{ago(s.createdAt, now)}</span>
         </span>
       </span>
       {s.hasThread && (

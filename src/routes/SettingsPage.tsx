@@ -59,7 +59,7 @@ import { pushAvailable, pushInfo, usePush } from '../lib/push'
 import { STATUS_PAGES } from '../lib/statusPageList'
 import { SummarySettings } from '../components/SummarySettings'
 import { formatCode, isCode, newSyncCode, normalizeCode, syncAvailable, syncNow, useSync } from '../lib/sync'
-import { fullDate, plural, timeAgo } from '../lib/format'
+import { ago, fullDate, plural } from '../lib/format'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { isIOS, usePWA } from '../lib/pwa'
 import { useActivity, usePrefs } from '../lib/store'
@@ -150,7 +150,7 @@ function NotificationSettings() {
             : 'Replies, incidents and outages need Upstash QStash: add it to this project from the Vercel Marketplace (Upstash) and redeploy, and PaperWing schedules its own checks. Until then only the daily edition arrives.'
           : minutes < 30
             ? `Checked every few minutes; the last check was ${minutes < 1 ? 'just now' : `${minutes} min ago`}. The app icon counts what's new since you last opened PaperWing.`
-            : `The last check was ${timeAgo(alertsAt!, Date.now())} ago, so the schedule may have stopped (README: Alerts).`}
+            : `The last check was ${ago(alertsAt!)}, so the schedule may have stopped (README: Alerts).`}
       </p>
       <div className="flex flex-wrap items-center gap-4">
         <button className="btn" onClick={() => void sendTest()}>
@@ -315,15 +315,7 @@ function SyncSettings() {
     <>
       <div className="flex flex-wrap items-center gap-3">
         <p className="flex-1 text-[0.9375rem] text-ink-2">
-          {syncing ? (
-            'Syncing…'
-          ) : error ? (
-            <span className="font-semibold text-signal">Last sync failed: {error}</span>
-          ) : lastSync ? (
-            `In sync. Last synced ${Date.now() - lastSync < 60_000 ? 'just now' : `${timeAgo(lastSync, Date.now())} ago`}`
-          ) : (
-            'Not synced yet'
-          )}
+          {syncing ? 'Syncing…' : error ? <span className="font-semibold text-signal">Last sync failed: {error}</span> : lastSync ? `In sync. Last synced ${ago(lastSync)}` : 'Not synced yet'}
         </p>
         <button className="btn" onClick={() => void syncNow()} disabled={syncing}>
           <RefreshCw size={15} className={syncing ? 'spin' : undefined} /> Sync now

@@ -1,6 +1,6 @@
 import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { compact, fullDate, timeAgo } from '../lib/format'
+import { ago, compact, fullDate } from '../lib/format'
 import { sanitize } from '../lib/html'
 import { Covered } from './Covered'
 import { MediaGallery } from './Media'
@@ -106,7 +106,7 @@ const CommentNode = memo(function CommentNode({ c, depth }: { c: Comment; depth:
           <span className={`cmt-author${c.deleted ? ' text-ink-3' : ''}`}>{c.author}</span>
           {op && c.author === op && <span className="op">OP</span>}
           {isNew && <span className="cmt-new">New</span>}
-          <span title={fullDate(c.createdAt)}>{timeAgo(c.createdAt, now)} ago</span>
+          <span title={fullDate(c.createdAt)}>{ago(c.createdAt, now)}</span>
           {c.score !== undefined && (
             <span className="num">
               {compact(c.score)} {scoreWord(sourceName, c.score)}

@@ -1,5 +1,5 @@
 import { AT_MIX, cleanMix, MIX_NSID, type MixRecord, type MixSource } from '../../src/lib/mixSources.js'
-import { LEMMY_DEFAULT, LEMMY_INSTANCES } from '../../src/lib/lemmyKey.js'
+import { LEMMY_DEFAULT, LEMMY_INSTANCES, lemmyKey } from '../../src/lib/lemmyKey.js'
 import { TOPIC_BY_ID } from '../../src/lib/topics.js'
 import type { Story } from '../../src/lib/types.js'
 import { linking, posts, variants } from './atlinks.js'
@@ -36,13 +36,14 @@ export async function linkStories(sources: MixSource[]): Promise<Story[]> {
     if (s.kind === 'rss') jobs.push(() => rss(s.url, s.label))
     else if (s.kind === 'news') jobs.push(() => newsSearch(s.q))
     else if (s.kind === 'topic') {
-      // A topic brings its first three publishers, as it does in For you.
+      // A topic brings its first three publishers. (The app reads more for a topic: its HN search,
+      // Lemmy community and Bluesky feed. A mix's published feed keeps to its publishers.)
       for (const f of (TOPIC_BY_ID.get(s.id)?.feeds ?? []).filter((f) => f.kind === 'rss').slice(0, 3)) if (f.kind === 'rss') jobs.push(() => rss(f.url, f.label))
     } else if (s.kind === 'lemmy') {
       const via = s.via ?? LEMMY_DEFAULT
       if (!LEMMY_INSTANCES.has(via)) continue
       jobs.push(async () => {
-        const { posts: list } = await fetchJson<{ posts: { post: { url?: string; name: string; published: string } }[] }>(
+        const { posts: list } = await fetchJson<{ posts: { post: { id: number; ap_id?: string; url?: string; name: string; published: string } }[] }>(
           `https://${via}/api/v3/post/list?community_name=${encodeURIComponent(s.community)}&sort=TopDay&limit=15&type_=All`,
           { timeoutMs: 8000 },
         )
@@ -50,14 +51,15 @@ export async function linkStories(sources: MixSource[]): Promise<Story[]> {
           v.post.url && /^https?:\/\//.test(v.post.url)
             ? [
                 {
-                  key: v.post.url,
+                  // Keyed as the app keys Lemmy posts, so it opens with its discussion.
+                  key: lemmyKey(v.post.id, via),
                   source: 'lemmy',
                   sourceLabel: s.community,
                   title: v.post.name,
                   url: v.post.url,
-                  discussionUrl: null,
+                  discussionUrl: v.post.ap_id ?? `https://${via}/post/${v.post.id}`,
                   createdAt: Date.parse(v.post.published),
-                  hasThread: false,
+                  hasThread: true,
                 } as Story,
               ]
             : [],

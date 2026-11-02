@@ -11,6 +11,12 @@ export function timeAgo(ms: number, now = Date.now()): string {
   return `${Math.floor(d / 365)}y`
 }
 
+/** "5m ago", or "just now" under a minute (timeAgo's "now" doesn't take an "ago"). */
+export const ago = (ms: number, now = Date.now()) => {
+  const t = timeAgo(ms, now)
+  return t === 'now' ? 'just now' : `${t} ago`
+}
+
 // Building a formatter is the expensive part (toLocaleString builds one per call), and every row
 // asks for one, so keep a single instance.
 let dateFormat: Intl.DateTimeFormat | undefined

@@ -6,7 +6,7 @@ import { SUBMISSION_NSID, submissionRecord } from './paperwing'
 import { api } from './sources/http'
 import { postHtml } from './bskyPost'
 import { facetsFor, graphemes } from './facets'
-import { hnComment, useHn } from './hnAccount'
+import { hnComment, hnSubmit, useHn } from './hnAccount'
 import { lemmyComment, lemmyPost, useLemmyAccount } from './lemmyAccount'
 import type { QueryClient } from '@tanstack/react-query'
 import { keys } from './query'
@@ -247,11 +247,7 @@ async function shareToBluesky(i: ShareInput, link: string): Promise<ShareResult>
 }
 
 async function shareToHn(i: ShareInput, link: string): Promise<ShareResult> {
-  const cookie = useHn.getState().cookie
-  if (!cookie) throw new Error('Sign in to Hacker News first')
-  const res = await fetch('/api/hn', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'submit', cookie, title: i.title.trim(), url: link }) })
-  const data = (await res.json().catch(() => ({}))) as { url?: string; existing?: boolean; error?: string }
-  if (!res.ok) throw new Error(data.error ?? `Hacker News failed (${res.status})`)
+  const data = await hnSubmit(i.title.trim(), link)
   return { network: 'hn', ok: true, url: data.url, note: data.existing ? 'Already on Hacker News: here’s that thread' : undefined }
 }
 

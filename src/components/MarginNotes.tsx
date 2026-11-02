@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { useAtproto } from '../lib/atproto'
-import { timeAgo } from '../lib/format'
+import { ago } from '../lib/format'
 import { addNote, findQuote, removeNote, tidy, useMarginNotes } from '../lib/notes'
 import { profilePath } from '../lib/people'
 import { toast } from '../lib/ui'
@@ -85,7 +85,7 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
                   ) : (
                     'Someone'
                   )}
-                  <span>{timeAgo(Date.parse(n.createdAt), now)} ago</span>
+                  <span>{ago(Date.parse(n.createdAt), now)}</span>
                   {n.did === me && (
                     <button
                       className="ml-auto inline-flex items-center gap-1 hover:text-ink"

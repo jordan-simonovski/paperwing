@@ -4,7 +4,7 @@ import { profilePath } from '../lib/people'
 import { Archive, ArchiveRestore, ArrowDown, Bell, BellRing, ArrowLeft, ArrowUpRight, Bookmark, BookmarkCheck, Loader2, MessageSquare, Newspaper, Share2, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams, Link } from 'react-router'
-import { compact, domainOf, fullDate, timeAgo } from '../lib/format'
+import { ago, compact, domainOf, fullDate } from '../lib/format'
 import { indexStory, useArticle, useNow, useStory, useThread } from '../lib/hooks'
 import { sanitize } from '../lib/html'
 import { stateOf, useLibrary } from '../lib/library'
@@ -227,7 +227,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                   {compact(story.score)} {scoreUnit(story.source, story.score)}
                 </span>
               )}
-              <span title={fullDate(story.createdAt)}>{timeAgo(story.createdAt, now)} ago</span>
+              <span title={fullDate(story.createdAt)}>{ago(story.createdAt, now)}</span>
               <FollowSite story={story} />
             </div>
             <FriendsLine story={{ ...story, alsoOn }} className="mt-2.5" />

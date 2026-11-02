@@ -3,7 +3,7 @@ import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-quer
 import { AlertTriangle, Loader2, RotateCcw, Sparkles } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { compact, timeAgo } from '../lib/format'
+import { ago, compact } from '../lib/format'
 import { plainText } from '../lib/html'
 import { flowInto, usePretext } from '../lib/pretext'
 import { usePrefs } from '../lib/store'
@@ -248,8 +248,7 @@ export function SummaryCard({ story, places, onOpen }: { story: Story; places: S
       )}
       <p className="flex flex-wrap items-center gap-x-3 text-[0.8125rem] text-ink-3">
         <span>
-          Summarized by Claude {timeAgo(data.at) === 'now' ? 'just now' : `${timeAgo(data.at)} ago`} from {sent < data.total ? `the top ${sent} of ${data.total}` : sent} comments on {from.join(', ')}.
-          It can miss things; the comments are below.
+          Summarized by Claude {ago(data.at)} from {sent < data.total ? `the top ${sent} of ${data.total}` : sent} comments on {from.join(', ')}. It can miss things; the comments are below.
         </span>
         {worthUpdating(data, total) ? (
           <button className="inline-flex items-center gap-1 font-semibold text-signal hover:text-ink" onClick={make}>

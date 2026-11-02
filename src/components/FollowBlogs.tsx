@@ -2,7 +2,7 @@ import { AddToMix } from './AddToMix'
 import { Check, Loader2, Plus, Search } from 'lucide-react'
 import { useState } from 'react'
 import { findFeeds, follow, isFollowed, useFollowedHosts, useSiteFeeds, useSuggestedBlogs, type FoundFeed } from '../lib/follow'
-import { timeAgo } from '../lib/format'
+import { ago } from '../lib/format'
 import type { Story } from '../lib/types'
 
 /** In the reader: follow the blog a story comes from, when it has a feed you don't get yet. */
@@ -33,7 +33,7 @@ export function FeedRow({ feed, note }: { feed: FoundFeed; note?: string }) {
         <p className="truncate text-[0.9375rem] font-semibold">{feed.title}</p>
         <p className="truncate text-[0.8125rem] text-ink-3">
           {note ?? feed.site}
-          {feed.latest ? ` · last post ${timeAgo(feed.latest)} ago` : ''}
+          {feed.latest ? ` · last post ${ago(feed.latest)}` : ''}
         </p>
       </div>
       <AddToMix source={{ kind: 'rss', url: feed.url, label: feed.title }} label={feed.title} iconOnly className="icon-btn size-8 flex-none" />

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { Channel } from '../lib/channels'
-import { compact, timeAgo } from '../lib/format'
+import { ago, compact } from '../lib/format'
 import type { FeedStatus } from '../lib/hooks'
 import type { Ranked } from '../lib/rank'
 import { SourceStatusList } from './FeedHeader'
@@ -83,7 +83,7 @@ export function ChannelBrief({ channel, stories, statuses, onOpen, now }: { chan
                           {compact(s.score)} {scoreUnit(s.source, s.score)}
                         </span>
                       )}
-                      <span>{timeAgo(s.createdAt, now)} ago</span>
+                      <span>{ago(s.createdAt, now)}</span>
                     </span>
                   </button>
                 </li>
