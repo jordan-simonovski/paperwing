@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
-import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
+import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -10,6 +10,9 @@ function vercelApiDev(): Plugin {
   return {
     name: 'vercel-api-dev',
     configureServer(server: ViteDevServer) {
+      // The functions read process.env, as they do on Vercel: fill it from .env files (.env.local
+      // and friends) for local development, without overriding anything already set.
+      for (const [k, v] of Object.entries(loadEnv(server.config.mode, process.cwd(), ''))) process.env[k] ??= v
       server.middlewares.use(async (req, res, next) => {
         // Same rewrites as vercel.json: the Bluesky feed generator's well-known and xrpc paths.
         if (req.url?.startsWith('/.well-known/did.json')) req.url = '/api/atproto?route=did'

@@ -1,0 +1,88 @@
+# Contributing to PaperWing
+
+Thanks for wanting to help. PaperWing is a reader for the open web: Hacker News, Lobsters, Lemmy, Bluesky, Mastodon and the sites you follow, ranked together, with what it learns about you kept on your own devices. Bug reports, ideas, fixes and new sources are all welcome.
+
+## Ways to help
+
+- **Report a bug.** [Open a bug report](https://github.com/jordan-simonovski/paperwing/issues/new?template=bug_report.yml). In the app, Settings, About, Report a bug fills in your build and device for you.
+- **Suggest an idea.** [Open a feature request](https://github.com/jordan-simonovski/paperwing/issues/new?template=feature_request.yml). Say what you were trying to do, not just the feature you'd want.
+- **Fix something.** Issues labelled `good first issue` are a gentle start. For anything bigger than a small fix, open an issue first so we can agree on the approach before you spend the time.
+- **Security problems** go privately, never in a public issue: see [SECURITY.md](SECURITY.md).
+
+## Running it locally
+
+You need Node.js 22 or newer.
+
+```sh
+npm install
+npm run dev     # the app on http://localhost:5173, with the /api functions mounted as middleware
+```
+
+That's enough for almost everything: feeds, threads, reading, saving, Explore. No accounts or keys are needed.
+
+Some features need a service behind them. Copy `.env.example` to `.env.local` and fill in only what you're working on:
+
+- **Sync, push, rate limits, caches:** an Upstash Redis database (`KV_REST_API_URL`, `KV_REST_API_TOKEN`), or `SYNC_MEMORY=1` for an in-memory stand-in while developing.
+- **Discussion summaries:** paste your own Anthropic key in Settings, Summaries. Nothing on the server is needed.
+- **Bluesky sign-in:** works on `localhost`; the OAuth client is described per address by `api/atproto.ts`.
+
+Never commit `.env.local`, keys, tokens or app passwords.
+
+## Before you open a pull request
+
+Run the same checks CI runs:
+
+```sh
+npm run build   # type-checks (tsc -b) and builds
+npm run lint
+npm test
+```
+
+All three must pass. Formatting is Prettier with no semicolons, single quotes and a 200-character line:
+
+```sh
+npx prettier --no-semi --single-quote --print-width 200 --write <files>
+```
+
+Then:
+
+- Keep each pull request to one change, and say what it changes and why. Screenshots help for anything you can see, ideally on a phone too.
+- Add or update tests for logic you change (`*.test.ts` next to the code, run with Vitest).
+- Check the app at phone width as well as desktop: most people read PaperWing on a phone.
+
+## How the code is laid out
+
+| Path | What's there |
+| --- | --- |
+| `src/` | The app: React 19, React Router, TanStack Query, Zustand, Tailwind v4 |
+| `src/lib/sources/` | One module per source (HN, Lemmy, Bluesky, Mastodon…), fetched from the browser where the source allows it |
+| `src/lib/rank.ts` | How For you is ordered: engagement, age, source mixing and your taste |
+| `src/lib/topics.ts`, `src/lib/packs.ts` | Topics and the feeds behind each one |
+| `api/` | Vercel functions, one file per endpoint |
+| `api/_lib/` | Server code shared by the endpoints: fetching, feeds, sync, push, atproto |
+| `sw/` | The service worker template (offline reading, push) |
+| `scripts/` | Icon rendering, Bluesky feed publishing, mobile checks |
+
+The README explains each feature in more depth.
+
+## Things to keep in mind
+
+- **No accounts, no tracking.** What PaperWing learns about you stays on your devices. Don't add analytics, third-party scripts or anything that sends reading behaviour to a server. If a feature needs server storage, it should be encrypted on the device first, the way sync is.
+- **Fetching URLs on the server.** Any URL that comes from a request must go through `safeFetch` or `assertPublicUrl` in `api/_lib/http.ts`, which block private networks and redirect tricks.
+- **Showing HTML from elsewhere.** Always pass it through `sanitize()` in `src/lib/html.ts`. Links from posts go through `webUrl()` so only `http(s)` links are clickable.
+- **Costly endpoints** (anything that calls a paid API, writes to the database or fans out to many requests) need a rate limit keyed with `clientKey()`.
+- **Zustand selectors return plain values.** A selector that builds a new object or array on every call re-renders forever. Select primitives, or use `useShallow`.
+- **Copy.** Plain, friendly sentences that say what happens. The privacy and terms pages describe what the code actually does: if you change what's stored or sent, update them in the same pull request.
+
+## Adding a source or a topic
+
+- A **topic** is an entry in `src/lib/topics.ts` (or a pack in `src/lib/packs.ts`): a label, the words that match it, and the feeds behind it.
+- A **source** needs a module in `src/lib/sources/`, a `FeedRef` kind in `src/lib/topics.ts`, and cases in `feedId`, `feedLabel` and `fetchFeed` in `src/lib/sources/index.ts`. If the source doesn't allow browsers to call it directly, its fetch goes in `api/_lib/` behind `api/feed.ts`. Add a reference engagement level in `src/lib/rank.ts` so its stories rank fairly against the others.
+
+## Code of conduct
+
+Be kind and assume good faith. Harassment, personal attacks and discrimination aren't welcome in issues, pull requests or anywhere else in the project, and maintainers may remove comments or block people who don't respect that.
+
+## License
+
+PaperWing is licensed under the [Apache License 2.0](LICENSE). By contributing, you agree that your contributions are licensed under the same terms.

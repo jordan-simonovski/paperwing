@@ -1,13 +1,17 @@
 import {
   Bell,
   Bookmark,
+  Bug,
   Check,
   ChevronLeft,
   ChevronRight,
+  Code2,
   Copy,
   Download,
   FileText,
+  GitPullRequest,
   KeyRound,
+  Lightbulb,
   Loader2,
   Lock,
   MessageSquare,
@@ -891,6 +895,17 @@ const BuildInfo = () => (
 /** PaperWing's own Bluesky account: news of the app, and where to say hello. */
 const BLUESKY = 'https://bsky.app/profile/paperwing.io'
 const FEEDBACK = `https://bsky.app/intent/compose?text=${encodeURIComponent('@paperwing.io ')}`
+const REPO = 'https://github.com/jordan-simonovski/paperwing'
+/** A new bug report with the build and device filled in, so nobody has to go looking for them. */
+const bugReportUrl = () => {
+  const installed = window.matchMedia('(display-mode: standalone)').matches
+  const params = new URLSearchParams({
+    template: 'bug_report.yml',
+    build: `${__BUILD__.commit} (${__BUILD__.at.slice(0, 10)})`,
+    device: `${installed ? 'Installed app' : 'Browser'}, ${navigator.userAgent}`,
+  })
+  return `${REPO}/issues/new?${params}`
+}
 
 function FollowLink({ className = '' }: { className?: string }) {
   return (
@@ -902,25 +917,42 @@ function FollowLink({ className = '' }: { className?: string }) {
 
 function About() {
   return (
-    <div className="flex items-start gap-4">
-      <Pip variant="head" className="size-14 flex-none" />
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+      <Pip variant="head" className="size-12 flex-none sm:size-14" />
       <div className="min-w-0 flex-1 space-y-2">
         <p className="text-[0.9375rem] leading-relaxed text-ink-2">
           PaperWing reads the open web for you: news, communities and conversations, organised by topic. It keeps what it learns about you on your devices, and posts only where you ask it to.
         </p>
         <div className="flex flex-wrap gap-2">
-          <a className="btn inline-flex" href={BLUESKY} target="_blank" rel="noopener noreferrer">
-            <SourceIcon source="bluesky" size={15} /> Follow @paperwing.io
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={BLUESKY} target="_blank" rel="noopener noreferrer">
+            <SourceIcon source="bluesky" size={14} /> Follow @paperwing.io
           </a>
-          {/* Feedback lands as a public mention; a bug report can carry the build line below. */}
-          <a className="btn inline-flex" href={FEEDBACK} target="_blank" rel="noopener noreferrer">
-            <MessageSquare size={15} /> Send feedback
+          {/* Feedback lands as a public mention on Bluesky; bugs and ideas as GitHub issues. */}
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={FEEDBACK} target="_blank" rel="noopener noreferrer">
+            <MessageSquare size={14} /> Send feedback
           </a>
-          <Link className="btn inline-flex" to="/privacy">
-            <Shield size={15} /> Privacy
+        </div>
+        <p className="pt-2 text-[0.8125rem] font-semibold text-ink-3">Open source, on GitHub</p>
+        <div className="flex flex-wrap gap-2">
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={bugReportUrl()} target="_blank" rel="noopener noreferrer">
+            <Bug size={14} /> Report a bug
+          </a>
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={`${REPO}/issues/new?template=feature_request.yml`} target="_blank" rel="noopener noreferrer">
+            <Lightbulb size={14} /> Suggest an idea
+          </a>
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={`${REPO}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noopener noreferrer">
+            <GitPullRequest size={14} /> Contribute
+          </a>
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={REPO} target="_blank" rel="noopener noreferrer">
+            <Code2 size={14} /> Source code
+          </a>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Link className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" to="/privacy">
+            <Shield size={14} /> Privacy
           </Link>
-          <Link className="btn inline-flex" to="/terms">
-            <FileText size={15} /> Terms
+          <Link className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" to="/terms">
+            <FileText size={14} /> Terms
           </Link>
         </div>
         <BuildInfo />

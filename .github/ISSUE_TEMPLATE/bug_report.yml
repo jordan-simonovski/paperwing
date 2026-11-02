@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in PaperWing is broken or doesn't behave as it should.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time. In the app, Settings, About, Report a bug fills in the build and device for you.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead. Screenshots help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      description: The steps, as exactly as you can. A link to the story or feed helps.
+      placeholder: |
+        1. Open For you
+        2. Tap the third story
+        3. …
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: Shown at the bottom of Settings, About.
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: iPhone 16, installed app (iOS 26) / Chrome on Windows
+  - type: checkboxes
+    id: private
+    attributes:
+      label: Before you post
+      options:
+        - label: This isn't a security problem (those go to SECURITY.md, privately), and I've left out sync codes, passwords and keys.
+          required: true

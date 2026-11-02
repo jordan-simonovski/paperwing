@@ -311,6 +311,8 @@ The link preview image (`public/og.png`, used by the page's Open Graph tags) and
 
 ## Develop
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide: setup, checks, how the code is laid out, and what to keep in mind.
+
 ```sh
 npm install
 npm run dev        # Vite plus the /api functions mounted as middleware
@@ -411,7 +413,7 @@ There are no accounts, so the things worth protecting are the secrets kept on ea
 Accepted trade-offs:
 - The sync function sees the code in transit, so encryption protects against the database, not against the deployment itself, which you run.
 - The VAPID private key is kept in the database when it isn't set as an environment variable.
-- Public endpoints have no per-IP rate limits. Add Vercel Firewall rules if the deployment gets traffic it shouldn't.
+- Costly endpoints (summaries on the deployment's key, sync writes, push sign-ups, HN sign-in, spice grading) are rate-limited per caller, by a hash of the address with IPv6 grouped by /64. Read-only endpoints rely on edge caching instead; add Vercel Firewall rules if the deployment gets traffic it shouldn't.
 
 ## Why no Reddit
 
@@ -427,4 +429,4 @@ Reddit closed self-service API keys in November 2025; new apps need manual appro
 
 PaperWing is open source under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE).
 
-Contributions are welcome: open an issue or a pull request. The names and logos of Hacker News, Lobsters, Lemmy, Bluesky, Mastodon and other services shown in the app belong to their owners and are used only to identify where a story comes from.
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), [report a bug](https://github.com/jordan-simonovski/paperwing/issues/new?template=bug_report.yml) or [suggest an idea](https://github.com/jordan-simonovski/paperwing/issues/new?template=feature_request.yml). Security problems go privately: see [SECURITY.md](SECURITY.md). The names and logos of Hacker News, Lobsters, Lemmy, Bluesky, Mastodon and other services shown in the app belong to their owners and are used only to identify where a story comes from.
