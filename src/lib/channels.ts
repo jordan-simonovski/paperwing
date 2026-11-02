@@ -1,4 +1,5 @@
 import type { FollowedPerson } from './people'
+import { channelId, parseChannelId } from './channelId'
 import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
 import { isTechTopic, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
 import { mixFeedRefs } from './mixes'
@@ -146,17 +147,10 @@ interface Ctx {
 }
 
 /** A Bluesky feed's or list's channel id, and back. */
-export const bskyFeedChannel = (uri: string) => {
-  let bin = ''
-  for (const b of new TextEncoder().encode(uri)) bin += String.fromCharCode(b)
-  return 'bf-' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
+export const bskyFeedChannel = (uri: string) => channelId({ kind: 'bskyFeed', uri })
 export const bskyFeedUri = (id: string) => {
-  try {
-    return new TextDecoder().decode(Uint8Array.from(atob(id.slice(3).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)))
-  } catch {
-    return undefined
-  }
+  const a = parseChannelId(id)
+  return a?.kind === 'bskyFeed' ? a.uri : undefined
 }
 
 /** The Lemmy channel: the communities with the most going on, across the instances programming.dev follows. */
@@ -196,6 +190,9 @@ export function sourceChannels(followed: string[]): SourceChannel[] {
 }
 
 export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx): Channel | undefined {
+  // Ids come from URLs and prefs: a malformed one is no channel at all (channelId.ts).
+  const a = parseChannelId(id)
+  if (!a) return undefined
   if (id === 'for-you') {
     // Following nothing yet (a newcomer who skipped the tour): a starter mix, so there's news to read
     // straight away. It gives way to your own topics as soon as you follow one.
@@ -278,16 +275,16 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       ],
     }
   }
-  if (id.startsWith('bf-')) {
-    const uri = bskyFeedUri(id)
+  if (a.kind === 'bskyFeed') {
+    const uri = a.uri
     const feed = ctx.bskyFeeds?.find((f) => f.uri === uri)
-    if (!uri || !feed) return undefined
+    if (!feed) return undefined
     const list = uri.includes('/app.bsky.graph.list/')
     return { id, label: feed.name, eyebrow: list ? 'Bluesky list' : 'Bluesky feed', feeds: [{ kind: 'bskyFeed', uri, name: feed.name }], native: !list }
   }
-  if (id === 'paperwing' || id.startsWith('paperwing:')) {
-    const board = id.startsWith('paperwing:') ? TOPIC_BY_ID.get(id.slice(10)) : undefined
-    if (id.startsWith('paperwing:') && !board) return undefined
+  if (a.kind === 'paperwing') {
+    const board = a.board ? TOPIC_BY_ID.get(a.board) : undefined
+    if (a.board && !board) return undefined
     const v = variant === 'new' || variant === 'top' ? variant : 'hot'
     return {
       id,
@@ -356,19 +353,17 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       ],
     }
   }
-  if (id.startsWith('cb:')) {
-    const m = /^cb:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(id)
-    if (!m) return undefined
-    const uri = `at://${m[1]}/io.paperwing.board/${m[2]}`
+  if (a.kind === 'board') {
+    const uri = `at://${a.did}/io.paperwing.board/${a.rkey}`
     const joined = ctx.boards?.find((b) => b.uri === uri)
     const v = variant === 'new' || variant === 'top' ? variant : 'hot'
     return {
       id,
       label: joined?.name ?? 'Community board',
       eyebrow: 'Community board',
-      feeds: [{ kind: 'board', did: m[1], rkey: m[2], sort: v, name: joined?.name }],
+      feeds: [{ kind: 'board', did: a.did, rkey: a.rkey, sort: v, name: joined?.name }],
       native: true,
-      board: { did: m[1], rkey: m[2], uri },
+      board: { did: a.did, rkey: a.rkey, uri },
       quiet: 'Nothing here yet. Open a story, tap Share, list it on PaperWing and pick this board.',
       variant: v,
       variants: [
@@ -378,8 +373,8 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       ],
     }
   }
-  if (id.startsWith('u:')) {
-    const actor = id.slice(2)
+  if (a.kind === 'person') {
+    const actor = a.actor
     const known = ctx.people?.find((p) => p.did === actor || p.handle === actor)
     return {
       id,
@@ -391,11 +386,9 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       quiet: 'Nothing listed on PaperWing yet.',
     }
   }
-  if (id.startsWith('mix:')) {
-    const rest = id.slice(4)
-    const at = rest.lastIndexOf(':')
-    const own = at < 0 ? ctx.mixes?.find((m) => m.id === rest) : undefined
-    const followed = at > 0 ? ctx.followedMixes?.find((m) => m.uri.split('/')[2] === rest.slice(0, at) && m.uri.split('/')[4] === rest.slice(at + 1)) : undefined
+  if (a.kind === 'mix' || a.kind === 'followedMix') {
+    const own = a.kind === 'mix' ? ctx.mixes?.find((m) => m.id === a.id) : undefined
+    const followed = a.kind === 'followedMix' ? ctx.followedMixes?.find((m) => m.uri.split('/')[2] === a.did && m.uri.split('/')[4] === a.rkey) : undefined
     const mix = own ?? followed
     if (!mix) return undefined
     const topicIds = mix.sources.flatMap((s) => (s.kind === 'topic' ? [s.id] : []))
@@ -417,10 +410,9 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
         : { title: 'Nothing in this mix yet', body: 'Add topics, publishers, communities or feeds to it.', action: { label: 'Edit the mix', to: `/mixes/${own?.id ?? ''}` } },
     }
   }
-  if (id.startsWith('c:')) {
+  if (a.kind === 'community') {
     // One Lemmy community, as its own channel: like a subreddit.
-    const name = id.slice(2)
-    if (!/^[a-z0-9_]+@[a-z0-9.-]+$/i.test(name)) return undefined
+    const name = a.name
     const joined = ctx.communities?.find((c) => c.name === name)
     const v = (['Hot', 'New', 'TopDay', 'TopWeek'] as const).find((x) => x.toLowerCase() === variant) ?? 'Hot'
     return {
@@ -535,8 +527,8 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       feeds,
     }
   }
-  if (id.startsWith('feed:')) {
-    const url = id.slice(5)
+  if (a.kind === 'feed') {
+    const url = a.url
     const custom = ctx.customFeeds.find((f) => f.url === url)
     return { id, label: custom?.label ?? url, eyebrow: 'Feed', feeds: [{ kind: 'rss', url, label: custom?.label ?? new URL(url).hostname }], native: true }
   }
@@ -561,31 +553,42 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
  * and boards, topics, published mixes and people. Personal channels (For you, your own sources) have
  * none: they're built from your choices on your device.
  */
-export function rssPath(channelId: string): string | undefined {
-  if (channelId === 'paperwing') return '/rss/front'
-  if (channelId.startsWith('paperwing:')) return `/rss/board/${channelId.slice(10)}`
-  if (TOPIC_BY_ID.has(channelId)) return `/rss/topic/${channelId}`
-  if (channelId.startsWith('u:')) return `/rss/u/${encodeURIComponent(channelId.slice(2))}`
-  const board = /^cb:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(channelId)
-  if (board) return `/rss/c/${board[1]}/${board[2]}`
-  const mix = /^mix:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(channelId)
-  if (mix) return `/rss/mix/${mix[1]}/${mix[2]}`
-  return undefined
+export function rssPath(id: string): string | undefined {
+  const a = parseChannelId(id)
+  switch (a?.kind) {
+    case 'paperwing':
+      return a.board ? `/rss/board/${a.board}` : '/rss/front'
+    case 'named':
+      return TOPIC_BY_ID.has(a.name) ? `/rss/topic/${a.name}` : undefined
+    case 'person':
+      return `/rss/u/${encodeURIComponent(a.actor)}`
+    case 'board':
+      return `/rss/c/${a.did}/${a.rkey}`
+    case 'followedMix':
+      return `/rss/mix/${a.did}/${a.rkey}`
+    default:
+      return undefined
+  }
 }
 
 /** What a channel would be as a mix source, for Add to mix: a topic, interest, community, Bluesky feed or blog. */
 export function mixSourceFor(channel: Channel, interests: Interest[] = []): { source: MixSource; label: string } | undefined {
-  const id = channel.id
-  if (TOPIC_BY_ID.has(id)) return { source: { kind: 'topic', id }, label: channel.label }
-  if (id.startsWith('q:')) {
-    const interest = interests.find((i) => i.id === id)
-    return interest ? { source: { kind: 'news', q: interest.label }, label: interest.label } : undefined
+  const a = parseChannelId(channel.id)
+  const label = channel.label
+  switch (a?.kind) {
+    case 'named':
+      return TOPIC_BY_ID.has(a.name) ? { source: { kind: 'topic', id: a.name }, label } : undefined
+    case 'interest': {
+      const interest = interests.find((i) => i.id === a.id)
+      return interest ? { source: { kind: 'news', q: interest.label }, label: interest.label } : undefined
+    }
+    case 'community':
+      return { source: { kind: 'lemmy', community: a.name }, label }
+    case 'bskyFeed':
+      return { source: { kind: 'bskyFeed', uri: a.uri, name: label }, label }
+    case 'feed':
+      return { source: { kind: 'rss', url: a.url, label }, label }
+    default:
+      return undefined
   }
-  if (id.startsWith('c:')) return { source: { kind: 'lemmy', community: id.slice(2) }, label: channel.label }
-  if (id.startsWith('bf-')) {
-    const uri = bskyFeedUri(id)
-    return uri ? { source: { kind: 'bskyFeed', uri, name: channel.label }, label: channel.label } : undefined
-  }
-  if (id.startsWith('feed:')) return { source: { kind: 'rss', url: id.slice(5), label: channel.label }, label: channel.label }
-  return undefined
 }

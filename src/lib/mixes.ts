@@ -1,4 +1,5 @@
 import { deleteRecord, putRecord, useAtproto } from './atproto'
+import { channelId } from './channelId'
 import { cleanMix, FEEDGEN_DID, feedRkey, MIX_NSID, type MixRecord, type MixSource } from './mixSources'
 import { api } from './sources/http'
 import { usePrefs, type FollowedMix, type Mix } from './store'
@@ -124,7 +125,7 @@ export function unfollowMix(uri: string) {
 }
 
 /** A mix's channel id: `mix:<id>` for yours, `mix:<did>:<rkey>` for one you follow. */
-export const mixChannel = (m: Mix | FollowedMix) => ('id' in m ? `mix:${m.id}` : `mix:${m.uri.split('/')[2]}:${m.uri.split('/')[4]}`)
+export const mixChannel = (m: Mix | FollowedMix) => channelId('id' in m ? { kind: 'mix', id: m.id } : { kind: 'followedMix', did: m.uri.split('/')[2], rkey: m.uri.split('/')[4] })
 
 /** Followed mixes change when their owner edits them: re-read any older than half a day, quietly. */
 export async function refreshFollowedMixes(maxAge = 12 * 3600_000) {

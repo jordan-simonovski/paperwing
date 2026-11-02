@@ -19,3 +19,15 @@ describe('source channels', () => {
     for (const c of SOURCE_CHANNELS) expect(resolveChannel(c.id, undefined, base), c.id).toBeDefined()
   })
 })
+
+describe('channel ids', () => {
+  it('every topic and source channel has an id the codec reads', async () => {
+    const { TOPICS } = await import('./topics')
+    const { parseChannelId } = await import('./channelId')
+    for (const id of [...TOPICS.map((t) => t.id), ...SOURCE_CHANNELS.map((c) => c.id), 'for-you', 'front'])
+      expect(parseChannelId(id), id).toEqual(id === 'paperwing' ? { kind: 'paperwing' } : { kind: 'named', name: id })
+  })
+  it('a malformed id is no channel at all', () => {
+    for (const bad of ['c:../../etc', 'cb:nope', 'feed:javascript:alert(1)', 'paperwing:no-such-board']) expect(resolveChannel(bad, undefined, base), bad).toBeUndefined()
+  })
+})

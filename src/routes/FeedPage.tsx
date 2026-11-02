@@ -1,4 +1,5 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { channelId as toChannelId } from '../lib/channelId'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { ChannelBrief } from '../components/ChannelBrief'
 import { FeedHeader } from '../components/FeedHeader'
@@ -23,7 +24,7 @@ const OUTAGE_CHANNELS = new Set(['sre', 'observability', 'cloud-native', 'for-yo
 export function FeedPage() {
   const { channel: channelParam, actor, did: boardDid, rkey: boardRkey, itemKey } = useParams()
   // A profile (/u/<handle>) is a channel too: what that person lists on PaperWing. So is a community board (/c/<owner>/<id>).
-  const channelId = actor ? `u:${actor.replace(/^@/, '').toLowerCase()}` : boardDid && boardRkey ? `cb:${boardDid}:${boardRkey}` : (channelParam ?? 'for-you')
+  const channelId = actor ? toChannelId({ kind: 'person', actor }) : boardDid && boardRkey ? toChannelId({ kind: 'board', did: boardDid, rkey: boardRkey }) : (channelParam ?? 'for-you')
   const [params, setParams] = useSearchParams()
   const hideRead = usePrefs((p) => p.hideRead)
   const feedOrder = usePrefs((p) => p.feedOrder)
