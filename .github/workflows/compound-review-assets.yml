@@ -1,0 +1,27 @@
+name: Compound review assets
+
+on:
+  pull_request:
+    paths:
+      - .agents/skills/ce-code-review/**
+      - .claude/skills/ce-code-review/**
+      - .compound-engineering/**
+      - scripts/compound-review/**
+      - docs/engineering/compound-code-review.md
+      - .github/workflows/compound-review-assets.yml
+      - AGENTS.md
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify pinned assets and native-only policy
+        run: python3 scripts/compound-review/verify.py
+      - name: Exercise fail-closed integrity checks
+        run: python3 -m unittest discover -s scripts/compound-review -p 'test_*.py'

@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/EveryInc/compound-engineering-plugin",
+  "commit": "2e41b4490a37f53db0beb6d4904618da9af2f559",
+  "version": "3.31.0",
+  "retrieved_at": "2026-10-19",
+  "licence": "MIT",
+  "scope": "Complete skills/ce-code-review subtree plus LICENSE and plugin.json; no global plugin installation.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "git_blob_sha1": "959dd283c510cfac6fd912555f99b14613ee9018",
+      "size": 1062,
+      "sha256": "61d89de7646effdaba2d0a4ab7bd0eba60b4094b83efe5bc73c7940e43e93fc6"
+    },
+    {
+      "path": "plugin.json",
+      "git_blob_sha1": "f4fa230b2eb237b76c7e31fba9aceb0a64683284",
+      "size": 571,
+      "sha256": "3a50b6242d399e27516d21851db1fc5b5e7e520cc138e0cc398eee704e975bc0"
+    },
+    {
+      "path": "skills/ce-code-review/SKILL.md",
+      "git_blob_sha1": "551c20508cfb219ebf9986787291053b2dfa1550",
+      "size": 7818,
+      "sha256": "4dbdc4485af006035e1a8622735e58eb4298be69b404b1241e748b0057a7e9ac"
+    },
+    {
+      "path": "skills/ce-code-review/references/action-class-rubric.md",
+      "git_blob_sha1": "aeecb38ef702ab7a66a966e7c1fa411376ea744d",
+      "size": 5175,
+      "sha256": "51dbaf193faa8dbf7adbeacb1828c4d698ac2f66bd59345a92b0ae670019bbf3"
+    },
+    {
+      "path": "skills/ce-code-review/references/cross-model-recovery.md",
+      "git_blob_sha1": "e38adbaf525cf11f375ad848c57239ccc82e1cc3",
+      "size": 10404,
+      "sha256": "07438b3099a7ca60ee3d155eae87da890bc932addf53cdb1a6b9609c4f38cfc9"
+    },
+    {
+      "path": "skills/ce-code-review/references/cross-model-review.md",
+      "git_blob_sha1": "b27b8d05fcea8c23ed27f54132ed67e8878955f0",
+      "size": 31443,
+      "sha256": "468ca67efd2f617f698c80a83985f80818a73f53951d16a4aae9fffc7df8cae4"
+    },
+    {
+      "path": "skills/ce-code-review/references/depth-paths.md",
+      "git_blob_sha1": "7932ba16086264a38035a18ae5c4bf33ca5eb744",
+      "size": 7053,
+      "sha256": "a6b0da6c484fb040a599668ca81540ff9c8ee208846eb64a853f59ca7d0e48db"
+    },
+    {
+      "path": "skills/ce-code-review/references/diff-scope.md",
+      "git_blob_sha1": "e7fb2233cea5d03f9ed5f023a78610b2634cdd56",
+      "size": 4954,
+      "sha256": "ac6a003cac90183b1a50070233337e9ea74c2fe23a2ca18ac9e3e282cef66bd8"
+    },
+    {
+      "path": "skills/ce-code-review/references/dispatch-reviewers.md",
+      "git_blob_sha1": "2b722ab8b1f9fc8c2e03a98b8ca17af547c5d833",
+      "size": 25594,
+      "sha256": "d2cd0232fba4fac6a1da1b99f6c084ada3c0261460bdc2611873c2182e2f834b"
+    },
+    {
+      "path": "skills/ce-code-review/references/findings-schema.json",
+      "git_blob_sha1": "1a67b36f6f1e61a6b10edf00d2993077745cc551",
+      "size": 8192,
+      "sha256": "3aeaf1dc673fc204e95e6c318686349edc500ca7b18b78e742bc5b0f4b3c06fb"
+    },
+    {
+      "path": "skills/ce-code-review/references/finish-input.md",
+      "git_blob_sha1": "e31ba889c3c19c1821168774d8dfce7629174050",
+      "size": 18500,
+      "sha256": "55a19b6b94a9e8c8e6b2b9d3f658acb2c53a38a4ff90c94ee53325d70fae54b7"
+    },
+    {
+      "path": "skills/ce-code-review/references/finish-review.md",
+      "git_blob_sha1": "1297929d3bdc3520ddfca84219f5571b1d300382",
+      "size": 44144,
+      "sha256": "37174b6fd80c138b9316a92253f45281fe8a12acc86089113ab478f9e72d3971"
+    },
+    {
+      "path": "skills/ce-code-review/references/intent-and-plan.md",
+      "git_blob_sha1": "08ac22703afde49cbc28f60dd5a08de26137539e",
+      "size": 7971,
+      "sha256": "51959e4bb7cb746a8b322af124f98eaebb6ed4ed095fcea6545178aa67d38432"
+    },
+    {
+      "path": "skills/ce-code-review/references/modes-and-output.md",
+      "git_blob_sha1": "bc9059ef85935d03d34500013340575e20dd64c0",
+      "size": 16493,
+      "sha256": "26928b5d1d31be53c9be00885b335b574bf8d9531aa65afb1c86a84979e31d16"
+    },
+    {
+      "path": "skills/ce-code-review/references/persona-catalog.md",
+      "git_blob_sha1": "4ae152b97cb7ef10439d31706b61037561ed6f02",
+      "size": 7912,
+      "sha256": "0e03cd0ff9ae1b561b1f598af3e8d6a79c7c2c7528ce2c7fe10ae1a8cc31323e"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/adversarial-reviewer.md",
+      "git_blob_sha1": "c5673ed40c5a94270fa96f6ddd82f0204f232465",
+      "size": 10533,
+      "sha256": "7f7b234a9c73807d94d4d75e536d18da971779815e18957226799bd05d42f118"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/agent-native-reviewer.md",
+      "git_blob_sha1": "f4aeb03460a87e05872304a078b7e8723d9f29c5",
+      "size": 9499,
+      "sha256": "ee659e48572f958959db4c9e6a2d824524c76dbec4a092910b2f531bc68f2b73"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/api-contract-reviewer.md",
+      "git_blob_sha1": "a836081c39bf49e8cff5dbd2322a93e42d7dfee3",
+      "size": 4302,
+      "sha256": "1fbae87e8823c1205b6e70b1c8fc872319b553d3024022b1043f8b906146a40b"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/correctness-reviewer.md",
+      "git_blob_sha1": "dc80945791b9f2aa67b68fd0f2e8846a96ced86e",
+      "size": 5834,
+      "sha256": "797ca2e9c89259ffa9da9ba431d503878d435a45b4af4137f6951675bfd88dea"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/data-migration-reviewer.md",
+      "git_blob_sha1": "ef24165e0dd65292a4531737bdaa9381889f51ae",
+      "size": 5187,
+      "sha256": "15ea857bc64c287a16b1b07c074a3bef5d69a19c667b40efba30cfb0268950bd"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/deployment-verification-agent.md",
+      "git_blob_sha1": "2efc784e35fd6fd2a703b884a9d1812fad7a644e",
+      "size": 5052,
+      "sha256": "cae04a513e0bb5314865722e03a4fe2308170ac08c969bfe7b2056ec3f4645c1"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/julik-frontend-races-reviewer.md",
+      "git_blob_sha1": "47ffd752396259d4bc9f9b2dae722694753cf924",
+      "size": 3807,
+      "sha256": "78cc394227a1623a5cb130fb1099a7c7b80ed5eedb1c9eb71269ceb5bff130c5"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/learnings-researcher.md",
+      "git_blob_sha1": "785fe73d885dd928b1b58e30865ccb8e542894fd",
+      "size": 18767,
+      "sha256": "525b9a3fc51a9ca34f1a365056046d06fb81d8e395dbeddc4f6b03ce4bb88ebe"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/maintainability-reviewer.md",
+      "git_blob_sha1": "4da55e487aebb54e651ec01d0c11fb7b558e8dec",
+      "size": 8795,
+      "sha256": "7fe256bf4f590b21f0f7bb7d87103960f5bc2c0bfa3710e75da662050c1bc386"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/performance-reviewer.md",
+      "git_blob_sha1": "a1d533524031a5f7a9dfeaf63daac2f0da99b0d7",
+      "size": 3554,
+      "sha256": "014136a7c3f58494752396e7716a20d75adf8fdea47fa015a43bbbcd17909125"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/previous-comments-reviewer.md",
+      "git_blob_sha1": "68445e472366062453fc35e9e91e3910baa43905",
+      "size": 3540,
+      "sha256": "b5e81fbac13448c0960b6b58da268f19fdcaa8b111d3a2b269009f08e24a967d"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/project-standards-reviewer.md",
+      "git_blob_sha1": "c2b621df94416b3111627c30d90dd58358e2fcb8",
+      "size": 7703,
+      "sha256": "32962368b70224946743e13edd6c575a3fac69784bdfb4e52989e02014c5c7f6"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/reliability-reviewer.md",
+      "git_blob_sha1": "471d25f5c06d2271311cf8e9616e36753d1655fa",
+      "size": 5091,
+      "sha256": "74fe5360cba40c52e5c9bf104a1f6ed4ef985ff573ea5ab2d472d289fb333e47"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/security-reviewer.md",
+      "git_blob_sha1": "fd590690dac71a8aa8845ada2a0c6a2c24d7fb21",
+      "size": 5436,
+      "sha256": "564b1a1b44bc3f1a36c131ddcf09be8e45aea16844ddfd3e6af09914387a0c72"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/swift-ios-reviewer.md",
+      "git_blob_sha1": "0ff3f1d7ab202467c02cb38b76d05153c4ed22e0",
+      "size": 10902,
+      "sha256": "f4c69a5fd5648eea140ae5a6507a8271014e4be58a39bd7ef1d1b2a71e5e3d9a"
+    },
+    {
+      "path": "skills/ce-code-review/references/personas/testing-reviewer.md",
+      "git_blob_sha1": "a49efb6b8eafa968c4a78f1709432c5b42825ffb",
+      "size": 7119,
+      "sha256": "45cf3e3ba5c93c4ac18f67c17b825ea6cbf30ea41b3ccc442ed46ae3702d8a38"
+    },
+    {
+      "path": "skills/ce-code-review/references/review-output-template.md",
+      "git_blob_sha1": "048a2487f14bdd223fb89553d02cd1f0c4bc13d3",
+      "size": 14233,
+      "sha256": "57bdb690ec792e932ea2cfd8e65f53d857fc9b275664fbdb27608c8068a33dde"
+    },
+    {
+      "path": "skills/ce-code-review/references/scope.md",
+      "git_blob_sha1": "6565879c6d41aa6364e36ba017407e147dbc60e2",
+      "size": 17599,
+      "sha256": "7475471d50b1a7bfeee2d1a7b693b0c4f7b9eb7a0b6798693e2d15b772e89ede"
+    },
+    {
+      "path": "skills/ce-code-review/references/select-and-route.md",
+      "git_blob_sha1": "71eb9d37c594c36aaef6d51a5d94191d29cdb3ae",
+      "size": 15685,
+      "sha256": "5a916ac96294e516b53c9c0971951f6c7eb578f39b88f2d05f3a0d92d7cae547"
+    },
+    {
+      "path": "skills/ce-code-review/references/subagent-template.md",
+      "git_blob_sha1": "2cb6d8e70d465c51b8c5f655b6e7dc558592aa09",
+      "size": 25124,
+      "sha256": "d75c14057cc3f26fb2035d06b827368a144f2df9ee0561d7014f5202ce92c5cc"
+    },
+    {
+      "path": "skills/ce-code-review/references/validator-batch-template.md",
+      "git_blob_sha1": "1670030acbbe1c5a8c828b601f1f6f1f4da9f962",
+      "size": 7146,
+      "sha256": "330a0b319e491924a2da38f273f5da155f65730d80d1b8e84aaf8952b00ab1e3"
+    },
+    {
+      "path": "skills/ce-code-review/scripts/cross-model-adversarial-review.sh",
+      "git_blob_sha1": "a388852580b79169fe02bb9d7ec53b559620ac55",
+      "size": 61045,
+      "sha256": "692b4d7d54e7627474ca287844103abf3253070671311417d5cc3469aa0cb301"
+    },
+    {
+      "path": "skills/ce-code-review/scripts/findings-mechanics.py",
+      "git_blob_sha1": "8066bb4b40a79bbc30a76d67a712b77bb315f52a",
+      "size": 10013,
+      "sha256": "9b06561d056241bb4abfe56cf60f6d7a4ebc50ab634ea1aaf924ff2039181894"
+    },
+    {
+      "path": "skills/ce-code-review/scripts/packs-resolve.py",
+      "git_blob_sha1": "33cee83a796b5fcd77617e4597cf639885fe279e",
+      "size": 31561,
+      "sha256": "39c36946cd1a59ca564e60e4e049934831eb4bfb5cfce9de32ab6b4b522ef228"
+    },
+    {
+      "path": "skills/ce-code-review/scripts/peer-job-runner.py",
+      "git_blob_sha1": "8a4db7b96802c9c75f2e10bc01bd688b5e54320b",
+      "size": 104164,
+      "sha256": "aac862a60af97eb4b9da6c90a1c688d27618ccb830ea5b1ee816b2ae653bfb0a"
+    },
+    {
+      "path": "skills/ce-code-review/scripts/review-scope.py",
+      "git_blob_sha1": "a2e2cca9e6741303da6d669dc91cc456f74060c7",
+      "size": 14275,
+      "sha256": "c535ec83983253fa3b13e046d9868edd206fca38582a3df82e71421eae2937b8"
+    },
+    {
+      "path": "skills/ce-code-review/scripts/run-log.py",
+      "git_blob_sha1": "180efbffe9193320228877171d921f082a6d4985",
+      "size": 10251,
+      "sha256": "8bf03cb4e3d78848034c92f259533dd2af724ab5bbd31f688a259f1d0e6f8e92"
+    }
+  ]
+}

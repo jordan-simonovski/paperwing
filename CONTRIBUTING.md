@@ -68,6 +68,8 @@ Then:
 | `.storybook/` | Storybook config and the harness every story renders in |
 | `src/test/` | Fixtures shared by tests and stories |
 | `.claude/skills/` | Design references for coding agents (deep modules, seams, TDD) |
+| `AGENTS.md` | The checklist coding agents follow, including the pre-PR review |
+| `.compound-engineering/` | The pinned Compound Engineering review, checked by `scripts/compound-review/` |
 
 The README explains each feature in more depth.
 
