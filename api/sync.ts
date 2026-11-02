@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { clientKey, fail, json, linkKey } from './_lib/http.js'
-import { kv, kvConfigured } from './_lib/kv.js'
+import { clientKey, fail, json, linkKey, readJson, today } from './_lib/http.js'
+import { kv, kvConfigured, overLimit } from './_lib/kv.js'
 import { pageTitle } from './_lib/og.js'
 import { seal } from '../src/lib/syncCrypto.js'
 
@@ -30,11 +30,7 @@ const INBOX_PER_DAY = 200
 
 /** Counts a write against the caller's daily allowance; false once it's spent (or can't be counted). */
 async function allowWrite(request: Request, kb: number): Promise<boolean> {
-  const day = new Date().toISOString().slice(0, 10)
-  const used = await kv()
-    .bump(`rd:sync-write:${clientKey(request)}:${day}`, 86_400, Math.max(1, Math.ceil(kb)))
-    .catch(() => Infinity)
-  return used <= WRITE_KB_PER_DAY
+  return !(await overLimit(`rd:sync-write:${clientKey(request)}:${today()}`, 86_400, WRITE_KB_PER_DAY, Math.max(1, Math.ceil(kb))))
 }
 
 const space = (code: string) => `rd:${createHash('sha256').update(code).digest('hex').slice(0, 40)}`
@@ -52,12 +48,8 @@ export async function GET(request: Request): Promise<Response> {
  */
 async function inbox(request: Request): Promise<Response> {
   const q = new URL(request.url).searchParams
-  let body: { code?: string; url?: string; title?: string } = {}
-  try {
-    body = (await request.json()) as typeof body
-  } catch {
-    /* the url and title can come as query parameters instead */
-  }
+  // The url and title can come as query parameters instead of a body.
+  const body = (await readJson<{ code?: string; url?: string; title?: string }>(request)) ?? {}
   // Not from the query string: addresses end up in request logs.
   const code = String(body.code ?? request.headers.get('x-sync-code') ?? '')
     .toLowerCase()
@@ -66,8 +58,7 @@ async function inbox(request: Request): Promise<Response> {
   const url = String(body.url ?? q.get('url') ?? '').match(/https?:\/\/\S+/)?.[0]
   if (!CODE.test(code)) return fail('Bad sync code. Copy it again from Settings, Sync', 400)
   if (!url) return fail('No link to save', 400)
-  const day = new Date().toISOString().slice(0, 10)
-  if ((await kv().bump(`rd:sync-inbox:${clientKey(request)}:${day}`, 86_400).catch(() => Infinity)) > INBOX_PER_DAY) return fail('Too many saves from here today', 429)
+  if (await overLimit(`rd:sync-inbox:${clientKey(request)}:${today()}`, 86_400, INBOX_PER_DAY)) return fail('Too many saves from here today', 429)
   let parsed: URL
   try {
     parsed = new URL(url)
@@ -83,7 +74,13 @@ async function inbox(request: Request): Promise<Response> {
   const plain: SyncRecord = {
     key: `s:${key}`,
     updatedAt: now,
-    data: { story: { key, source: 'rss', sourceLabel: host, title: title.slice(0, 300), url, discussionUrl: null, createdAt: now, hasThread: false }, savedAt: now, state: 'queue', seen: [], updatedAt: now },
+    data: {
+      story: { key, source: 'rss', sourceLabel: host, title: title.slice(0, 300), url, discussionUrl: null, createdAt: now, hasThread: false },
+      savedAt: now,
+      state: 'queue',
+      seen: [],
+      updatedAt: now,
+    },
   }
   const record = await seal(code, plain)
   const store = kv()
@@ -100,12 +97,8 @@ export async function POST(request: Request): Promise<Response> {
   const code = request.headers.get('x-sync-code') ?? ''
   if (!CODE.test(code)) return fail('Bad sync code', 400)
   // `exact` is set on follow-up pages, which must not re-read the overlap or they'd never advance.
-  let body: { since?: number; exact?: boolean; changes?: SyncRecord[] }
-  try {
-    body = (await request.json()) as typeof body
-  } catch {
-    return fail('Body must be JSON')
-  }
+  const body = await readJson<{ since?: number; exact?: boolean; changes?: SyncRecord[] }>(request)
+  if (!body) return fail('Body must be JSON')
   if (body.changes !== undefined && !Array.isArray(body.changes)) return fail('changes must be a list')
   const changes = (body.changes ?? []).filter((c) => typeof c?.key === 'string' && c.key.length < 600 && Number.isFinite(c.updatedAt))
   if (changes.length > MAX_CHANGES) return fail(`At most ${MAX_CHANGES} changes per request`)

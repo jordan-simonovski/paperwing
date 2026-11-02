@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { COOKIE, comment, HnError, ITEM, logout, signIn, submit, vote } from './_lib/hn.js'
-import { clientKey, fail, json } from './_lib/http.js'
+import { clientKey, fail, json, readJson } from './_lib/http.js'
 import { kv, kvConfigured } from './_lib/kv.js'
 
 // Hacker News sign-in, votes and comments (api/_lib/hn.ts). POST only, JSON in and out, nothing
@@ -11,12 +11,8 @@ const LOGINS_PER_WINDOW = 8
 const LOGINS_PER_USER = 5
 
 export async function POST(request: Request): Promise<Response> {
-  let body: Record<string, unknown>
-  try {
-    body = (await request.json()) as Record<string, unknown>
-  } catch {
-    return fail('JSON body required')
-  }
+  const body = await readJson<Record<string, unknown>>(request)
+  if (!body || typeof body !== 'object') return fail('JSON body required')
   const str = (k: string) => (typeof body[k] === 'string' ? (body[k] as string) : '')
   try {
     switch (body.action) {

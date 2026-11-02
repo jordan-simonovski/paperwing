@@ -18,6 +18,8 @@
     "logos": "node scripts/logos.mjs",
     "typecheck": "tsc -b",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "check": "npm run lint && npm run typecheck && npm test",
     "test": "vitest run --project unit",
     "test:stories": "vitest run --project stories",
@@ -74,6 +76,7 @@
     "eslint-plugin-storybook": "^10.6.5",
     "globals": "^17.13.0",
     "playwright": "^1.63.0",
+    "prettier": "3.3.3",
     "simple-icons": "^16.36.0",
     "storybook": "^10.6.5",
     "tailwindcss": "^4.3.3",
@@ -86,5 +89,10 @@
     "@vercel/cli-config": {
       "zod": "$zod"
     }
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true,
+    "printWidth": 200
   }
 }

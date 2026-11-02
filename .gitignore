@@ -6,3 +6,4 @@ dist
 *.tsbuildinfo
 storybook-static
 __pycache__/
+.claude/worktrees/

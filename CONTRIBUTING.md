@@ -40,10 +40,11 @@ npm test               # unit tests, in Node
 npm run test:stories   # every Storybook story, rendered in Chromium (npx playwright install chromium once)
 ```
 
-All four must pass. Formatting is Prettier with no semicolons, single quotes and a 200-character line:
+All four must pass. Formatting is Prettier (pinned in `package.json`, with its settings there: no semicolons, single
+quotes, a 200-character line). Format what you touched:
 
 ```sh
-npx prettier --no-semi --single-quote --print-width 200 --write <files>
+npx prettier --write <files>
 ```
 
 Then:
@@ -94,6 +95,20 @@ export const SignedIn: Story = {
 
 Build data with the helpers in `src/test/fixtures.ts` (`story()`, `ranked()`, `NOW`), use real public links, and keep images local (`/icon-512.png` or a data URI) so stories never touch the network. If a component can't be shown without reaching into the app, that's usually a sign it wants its data passed in as props.
 
+## API tests
+
+Each function in `api/` takes a `Request` and returns a `Response`, so it's tested in-process, end to end, with every
+upstream faked by `api/test/harness.ts` (`api/feed.test.ts` is the example to copy):
+
+```ts
+const net = fakeUpstreams() // no real network: anything not intercepted fails the test
+net.get('https://lobste.rs').intercept({ path: '/hottest.json' }).reply(200, [story])
+const res = await call(GET, '/api/feed?src=lobsters')
+```
+
+`memoryStore()` gives a file the in-process KV store, reset before each test. Test what a caller sees: the status,
+the body and the headers that matter (caching, sandboxing), not the internals.
+
 ## Releases
 
 Every change people can notice comes with a changeset in `.changeset/`, written for readers and
@@ -108,14 +123,14 @@ What's new, and is the only production deploy: Vercel skips production builds fo
 - **No accounts, no tracking.** What PaperWing learns about you stays on your devices. Don't add analytics, third-party scripts or anything that sends reading behaviour to a server. If a feature needs server storage, it should be encrypted on the device first, the way sync is.
 - **Fetching URLs on the server.** Any URL that comes from a request must go through `safeFetch` or `assertPublicUrl` in `api/_lib/http.ts`, which block private networks and redirect tricks.
 - **Showing HTML from elsewhere.** Always pass it through `sanitize()` in `src/lib/html.ts`. Links from posts go through `webUrl()` so only `http(s)` links are clickable.
-- **Costly endpoints** (anything that calls a paid API, writes to the database or fans out to many requests) need a rate limit keyed with `clientKey()`.
+- **Costly endpoints** (anything that calls a paid API, writes to the database or fans out to many requests) need a rate limit keyed with `clientKey()`: `overLimit()` in `api/_lib/kv.ts`, which fails closed. Answers worth sharing between callers go through `cachedInKv()`.
 - **Zustand selectors return plain values.** A selector that builds a new object or array on every call re-renders forever. Select primitives, or use `useShallow`.
 - **Copy.** Plain, friendly sentences that say what happens. The privacy and terms pages describe what the code actually does: if you change what's stored or sent, update them in the same pull request.
 
 ## Adding a source or a topic
 
 - A **topic** is an entry in `src/lib/topics.ts` (or a pack in `src/lib/packs.ts`): a label, the words that match it, and the feeds behind it.
-- A **source** needs a module in `src/lib/sources/`, a `FeedRef` kind in `src/lib/topics.ts`, and cases in `feedId`, `feedLabel` and `fetchFeed` in `src/lib/sources/index.ts`. If the source doesn't allow browsers to call it directly, its fetch goes in `api/_lib/` behind `api/feed.ts`. Add a reference engagement level in `src/lib/rank.ts` so its stories rank fairly against the others.
+- A **source** needs a module in `src/lib/sources/`, a `FeedRef` kind in `src/lib/topics.ts`, and cases in `feedId`, `feedLabel` and `fetchFeed` in `src/lib/sources/index.ts`. If the source doesn't allow browsers to call it directly, its fetch goes in `api/_lib/` and gets an entry in `SOURCES` in `api/feed.ts` (what it needs from the query string, and how long its answer may be cached). Add a reference engagement level in `src/lib/rank.ts` so its stories rank fairly against the others.
 
 ## Code of conduct
 

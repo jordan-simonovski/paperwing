@@ -726,6 +726,25 @@
     .sheet-left {
       display: none;
     }
+    /* A sheet up from the bottom is a phone's dialog. With room to spare, it's a dialog in the middle
+       (sharing, notes, composing, adding to a mix) rather than a drawer as wide as the window. */
+    .sheet-bottom .sheet-panel {
+      inset: 50% auto auto 50%;
+      width: min(34rem, calc(100vw - 4rem));
+      max-height: 85dvh;
+      padding: 1.25rem 1.5rem 1.5rem;
+      border-radius: var(--r-panel);
+      box-shadow: var(--float);
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 1rem));
+      transition:
+        transform var(--dur-short) var(--ease),
+        opacity var(--dur-short) var(--ease);
+    }
+    .sheet-bottom.open .sheet-panel {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     .sheet-panel,
@@ -2072,6 +2091,12 @@
     .note-offer {
       bottom: calc(env(safe-area-inset-bottom) + 5rem);
     }
+  }
+  /* With a mouse: just above the selected passage (top and left set inline). */
+  .note-offer.at-selection {
+    bottom: auto;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
   }
 
   /* Someone opened a shared story before setting PaperWing up: a pill inviting them in. */

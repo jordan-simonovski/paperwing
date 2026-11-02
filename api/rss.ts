@@ -6,6 +6,7 @@ import { linkStories, readMix } from './_lib/mixfeed.js'
 import { paperwingFront } from './_lib/paperwing.js'
 import { boardFront } from './_lib/boards.js'
 import { actorOf, person } from './_lib/people.js'
+import { escapeHtml as esc, siteOf } from './_lib/text.js'
 
 // RSS out: PaperWing's own pages as feeds any reader can follow, so nothing here only works inside
 // PaperWing. /rss/front (the front page), /rss/board/<topic>, /rss/topic/<topic>, /rss/mix/<did>/<rkey>
@@ -21,14 +22,7 @@ interface Feed {
 }
 
 const ORIGIN = `https://${HOME}`
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const host = (u: string) => {
-  try {
-    return new URL(u).hostname.replace(/^www\./, '')
-  } catch {
-    return ''
-  }
-}
+const host = (u: string) => siteOf(u)
 
 /** A topic: its publishers and its best recent Hacker News stories. */
 async function topicFeed(id: string): Promise<Feed> {
@@ -38,7 +32,9 @@ async function topicFeed(id: string): Promise<Feed> {
     linkStories([{ kind: 'topic', id }]).catch(() => [] as Story[]),
     topic.hnQuery
       ? fetchJson<{ hits: { objectID: string; title: string; url?: string; points: number; num_comments: number; created_at_i: number; author: string }[] }>(
-          `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(topic.hnQuery)}&tags=story&numericFilters=points>40,created_at_i>${Math.floor(Date.now() / 1000) - 3 * 86_400}&hitsPerPage=20`,
+          `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(topic.hnQuery)}&tags=story&numericFilters=points>40,created_at_i>${
+            Math.floor(Date.now() / 1000) - 3 * 86_400
+          }&hitsPerPage=20`,
           { timeoutMs: 6000 },
         )
           .then((r) =>

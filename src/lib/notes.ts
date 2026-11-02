@@ -104,3 +104,17 @@ export function findQuote(container: Node, quote: string): Range | undefined {
   range.setEnd(nodes[spot.end[0]], spot.end[1])
   return range
 }
+
+/**
+ * Where "Note this passage" floats when there's a mouse: just above the selection and centred on it,
+ * or just below when the passage is at the top of the window, and never past either edge. (On a
+ * touchscreen the system's own selection menu sits there, so the offer stays at the bottom.)
+ */
+export function offerSpot(rect: { top: number; bottom: number; left: number; right: number }, viewport: { width: number; height: number }): { top: number; left: number } {
+  const HEIGHT = 40
+  const GAP = 8
+  const HALF_WIDTH = 110
+  const top = rect.top - HEIGHT - GAP >= GAP ? rect.top - HEIGHT - GAP : Math.min(rect.bottom + GAP, viewport.height - HEIGHT - GAP)
+  const left = Math.min(Math.max((rect.left + rect.right) / 2, HALF_WIDTH), viewport.width - HALF_WIDTH)
+  return { top, left }
+}

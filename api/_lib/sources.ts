@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser'
 import type { Comment, Story, Thread } from '../../src/lib/types.js'
 import { assertPublicUrl, fetchJson, fetchText, linkKey, stripHtml } from './http.js'
+import { escapeHtml } from './text.js'
 
 const excerpt = (html: string | undefined, max = 320) => {
   if (!html) return undefined
@@ -8,7 +9,6 @@ const excerpt = (html: string | undefined, max = 320) => {
   if (!plain) return undefined
   return plain.length > max ? plain.slice(0, max).replace(/\s+\S*$/, '') + '…' : plain
 }
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const para = (s: string | undefined) => (s ? `<p>${escapeHtml(s)}</p>` : undefined)
 
 /* ---------------------------------------------------------------- Lobsters */

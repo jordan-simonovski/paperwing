@@ -60,7 +60,6 @@ vi.mock('./paperwing.js', () => ({
   submissions: vi.fn(async () => [`at://${ANN}/io.paperwing.submission/1`, `at://${ANN}/io.paperwing.submission/2`, `at://${ANN}/io.paperwing.submission/3`, `at://${BOB}/io.paperwing.submission/1`]),
 }))
 vi.mock('./http.js', () => ({ fetchJson: vi.fn(async () => ({ items: [{ subject: { did: BOB } }] })) }))
-vi.mock('./kv.js', () => ({ kvConfigured: () => false, kv: () => ({}) }))
 
 const { boardFront } = await import('./boards.js')
 

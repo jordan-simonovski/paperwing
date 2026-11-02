@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { useAtproto } from '../lib/atproto'
 import { ago } from '../lib/format'
-import { addNote, findQuote, removeNote, tidy, useMarginNotes } from '../lib/notes'
+import { addNote, findQuote, offerSpot, removeNote, tidy, useMarginNotes } from '../lib/notes'
 import { profilePath } from '../lib/people'
 import { toast } from '../lib/ui'
 import { Sheet } from './Sheet'
@@ -13,13 +13,15 @@ import { Sheet } from './Sheet'
 /**
  * Margin notes in the reader view: passages other readers noted are highlighted in the article (with
  * the CSS Highlight API, so React's DOM is never touched), listed under it, and selecting a passage
- * offers to note it yourself.
+ * offers to note it yourself. With a mouse the offer floats beside the selection; on a touchscreen it
+ * waits at the bottom, clear of the system's selection menu. Signed out, the offer still shows and
+ * says how to sign in, so the feature can be found by trying it.
  */
 export function MarginNotes({ url, container, html }: { url: string; container: React.RefObject<HTMLDivElement | null>; html: string }) {
   const { data: notes = [] } = useMarginNotes(url)
   const me = useAtproto((a) => a.did)
   const qc = useQueryClient()
-  const [picked, setPicked] = useState<string>()
+  const [picked, setPicked] = useState<{ text: string; spot?: { top: number; left: number } }>()
   const [writing, setWriting] = useState<string>()
   const now = Date.now()
 
@@ -37,25 +39,29 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
   // just before the button's own tap lands, so the offer lingers a moment.
   const hide = useRef<number>(undefined)
   useEffect(() => {
-    if (!me) return
     const onChange = () => {
       const sel = document.getSelection()
       const el = container.current
       const text = sel && !sel.isCollapsed ? tidy(sel.toString()) : ''
       if (el && sel?.anchorNode && el.contains(sel.anchorNode) && text.length >= 3 && text.length <= 600) {
         window.clearTimeout(hide.current)
-        setPicked(text)
+        const mouse = window.matchMedia('(pointer: fine)').matches
+        const rect = mouse && sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : undefined
+        setPicked({ text, spot: rect && rect.height ? offerSpot(rect, { width: window.innerWidth, height: window.innerHeight }) : undefined })
       } else {
         window.clearTimeout(hide.current)
         hide.current = window.setTimeout(() => setPicked(undefined), 600)
       }
     }
     document.addEventListener('selectionchange', onChange)
+    // The article scrolls inside the pane: the offer follows its passage.
+    document.addEventListener('scroll', onChange, { capture: true, passive: true })
     return () => {
       document.removeEventListener('selectionchange', onChange)
+      document.removeEventListener('scroll', onChange, { capture: true })
       window.clearTimeout(hide.current)
     }
-  }, [me, container])
+  }, [container])
 
   const jump = (quote: string) => {
     const el = container.current
@@ -65,6 +71,11 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
 
   return (
     <>
+      {notes.length === 0 && (
+        <p className="mt-12 flex items-center gap-2 border-t border-line pt-5 text-[0.8125rem] text-ink-3">
+          <Highlighter size={14} className="shrink-0" /> Select any passage to leave a margin note that other PaperWing readers see.
+        </p>
+      )}
       {notes.length > 0 && (
         <section className="mt-12 border-t border-line pt-6">
           <h3 className="flex items-center gap-2 text-[1rem] font-bold">
@@ -109,10 +120,11 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
         !writing &&
         createPortal(
           <button
-            className="note-offer"
+            className={picked.spot ? 'note-offer at-selection' : 'note-offer'}
+            style={picked.spot}
             onPointerDown={(e) => e.preventDefault()}
             onClick={() => {
-              setWriting(picked)
+              setWriting(picked.text)
               document.getSelection()?.removeAllRanges()
             }}
           >
@@ -120,12 +132,12 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
           </button>,
           document.body,
         )}
-      {writing && createPortal(<NoteSheet url={url} quote={writing} onClose={() => setWriting(undefined)} />, document.body)}
+      {writing && createPortal(<NoteSheet url={url} quote={writing} signedIn={!!me} onClose={() => setWriting(undefined)} />, document.body)}
     </>
   )
 }
 
-function NoteSheet({ url, quote, onClose }: { url: string; quote: string; onClose: () => void }) {
+function NoteSheet({ url, quote, signedIn, onClose }: { url: string; quote: string; signedIn: boolean; onClose: () => void }) {
   const qc = useQueryClient()
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
@@ -141,6 +153,30 @@ function NoteSheet({ url, quote, onClose }: { url: string; quote: string; onClos
       setBusy(false)
     }
   }
+  if (!signedIn)
+    return (
+      <Sheet open onClose={onClose} side="bottom" label="Margin note">
+        <div className="space-y-3 p-4">
+          <h2 className="flex items-center gap-2 text-[1.0625rem] font-bold">
+            <Highlighter size={17} /> Margin notes
+          </h2>
+          <p className="border-l-2 border-signal pl-3 text-[0.875rem] italic leading-snug text-ink-3">
+            <span className="line-clamp-4">“{quote}”</span>
+          </p>
+          <p className="text-[0.9375rem] leading-relaxed text-ink-2">
+            Notes are public: anyone reading this article on PaperWing sees yours beside it, with your handle. They’re kept in your own Bluesky account, so sign in with Bluesky to leave one.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn" onClick={onClose}>
+              Not now
+            </button>
+            <Link to="/settings/sources" className="btn btn-primary" onClick={onClose}>
+              Sign in with Bluesky
+            </Link>
+          </div>
+        </div>
+      </Sheet>
+    )
   return (
     <Sheet open onClose={onClose} side="bottom" label="Margin note">
       <form

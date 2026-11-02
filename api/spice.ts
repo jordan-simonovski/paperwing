@@ -1,7 +1,7 @@
 import { waitUntil } from '@vercel/functions'
 import { spiceMin, type SpiceGrade, type SpiceResponse } from '../src/lib/spiceTypes.js'
-import { clientKey, fail, json } from './_lib/http.js'
-import { kv, kvConfigured } from './_lib/kv.js'
+import { clientKey, fail, json, today } from './_lib/http.js'
+import { kv, kvConfigured, overLimit } from './_lib/kv.js'
 import { askJev, buildState, fetchDiscussion, JEV_MODEL, levelOf, needsGrade, quiet, gradeFrom, validKey } from './_lib/spice.js'
 
 // GET /api/spice?keys=hn-123~240,lb-abc~55: the spice grades known for those stories (each key
@@ -34,7 +34,7 @@ export async function GET(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams
   // ?status: whether grading works, how much of today's budget is spent, and the last failure.
   if (params.has('status')) {
-    const day = new Date().toISOString().slice(0, 10)
+    const day = today()
     const store = kvConfigured() ? kv() : undefined
     const [used, lastError] = store ? await store.mget([`rd:spice-budget:${day}`, 'rd:spice-error']).catch(() => [null, null]) : [null, null]
     // When the last failure was, not what it said: an upstream's error text isn't ours to publish.
@@ -65,7 +65,7 @@ export async function GET(request: Request): Promise<Response> {
   })
 
   const pending: string[] = []
-  const day = new Date().toISOString().slice(0, 10)
+  const day = today()
   // A source that rate-limited us gets a rest before we fetch from it again.
   const prefixes = [...new Set(asked.map((a) => a.key.slice(0, 2)))]
   const cooling = await store.mget(prefixes.map((p) => `rd:spice-cool:${p}`)).catch(() => [])
@@ -73,13 +73,13 @@ export async function GET(request: Request): Promise<Response> {
   for (const a of asked) {
     if (pending.length >= PER_REQUEST || resting.has(a.key.slice(0, 2)) || !needsGrade(a.key, a.comments, grades[a.key])) continue
     // One grader per story at a time, however many readers ask.
-    if ((await store.bump(`rd:spice-lock:${a.key}`, 300).catch(() => 2)) !== 1) {
+    if (await overLimit(`rd:spice-lock:${a.key}`, 300, 1)) {
       pending.push(a.key)
       continue
     }
     // Each reader starts only a few gradings a day, so no one caller can spend everyone's budget.
-    if ((await store.bump(`rd:spice-caller:${clientKey(request)}:${day}`, 86_400).catch(() => CALLER_LIMIT + 1)) > CALLER_LIMIT) break
-    if ((await store.bump(`rd:spice-budget:${day}`, 86_400).catch(() => DAILY_LIMIT + 1)) > DAILY_LIMIT) break
+    if (await overLimit(`rd:spice-caller:${clientKey(request)}:${day}`, 86_400, CALLER_LIMIT)) break
+    if (await overLimit(`rd:spice-budget:${day}`, 86_400, DAILY_LIMIT)) break
     pending.push(a.key)
     waitUntil(
       grade(a.key, apiKey).catch(async (err) => {

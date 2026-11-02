@@ -20,15 +20,17 @@ export interface Kv {
   bump(key: string, seconds: number, by?: number): Promise<number>
 }
 
-const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
-const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+// Read on each call rather than at load, so tests (and local runs) can set them at any time.
+const upstashUrl = () => process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
+const upstashToken = () => process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+const upstashConfigured = () => !!(upstashUrl() && upstashToken())
 
-export const kvConfigured = () => !!(url && token) || process.env.SYNC_MEMORY === '1'
+export const kvConfigured = () => upstashConfigured() || process.env.SYNC_MEMORY === '1'
 
 async function pipeline(commands: (string | number)[][]): Promise<unknown[]> {
-  const res = await fetch(`${url}/pipeline`, {
+  const res = await fetch(`${upstashUrl()}/pipeline`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    headers: { authorization: `Bearer ${upstashToken()}`, 'content-type': 'application/json' },
     body: JSON.stringify(commands),
     signal: AbortSignal.timeout(8000),
   })
@@ -146,4 +148,41 @@ const memory: Kv = {
   },
 }
 
-export const kv = (): Kv => (url && token ? upstash : memory)
+export const kv = (): Kv => (upstashConfigured() ? upstash : memory)
+
+/** For tests: empties the in-process store. */
+export function resetMemoryKv(): void {
+  mem.hashes.clear()
+  mem.zsets.clear()
+  mem.strings.clear()
+}
+
+/**
+ * `build()`, kept in KV for `seconds` so the next caller in that window gets the same answer
+ * without asking upstream again. Without a store it just builds; a store that fails is skipped.
+ */
+export async function cachedInKv<T>(key: string, seconds: number, build: () => Promise<T>): Promise<T> {
+  if (kvConfigured()) {
+    const hit = await kv()
+      .get(key)
+      .catch(() => null)
+    if (hit) return JSON.parse(hit) as T
+  }
+  const value = await build()
+  if (kvConfigured())
+    await kv()
+      .set(key, JSON.stringify(value), seconds)
+      .catch(() => {})
+  return value
+}
+
+/**
+ * Counts `by` (1 unless given) against an allowance of `limit` per `seconds`, and says whether
+ * this use went over it. A store that can't answer counts as over: allowances fail closed.
+ */
+export async function overLimit(key: string, seconds: number, limit: number, by = 1): Promise<boolean> {
+  const used = await kv()
+    .bump(key, seconds, by)
+    .catch(() => Infinity)
+  return used > limit
+}

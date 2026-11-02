@@ -3,8 +3,8 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import type { DiscussionSummary, SummaryRequest } from '../src/lib/summaryTypes.js'
-import { clientKey, fail, json } from './_lib/http.js'
-import { kv, kvConfigured } from './_lib/kv.js'
+import { clientKey, fail, json, readJson, today } from './_lib/http.js'
+import { kv, kvConfigured, overLimit } from './_lib/kv.js'
 
 // Summaries of a story's discussion (HN, Lobsters, Bluesky), not of the article: what people
 // argue about, where they disagree, which comments are worth reading. Runs on the deployment's
@@ -21,9 +21,17 @@ const CACHE_SECONDS = 3 * 86_400
 const Summary = z.object({
   gist: z.string().describe('Two or three sentences: what the discussion is about and how people are reacting overall.'),
   themes: z
-    .array(z.object({ title: z.string().describe('A few words.'), summary: z.string().describe('One to three sentences.'), comments: z.array(z.string()).describe('Refs of the comments that make this point.') }))
+    .array(
+      z.object({
+        title: z.string().describe('A few words.'),
+        summary: z.string().describe('One to three sentences.'),
+        comments: z.array(z.string()).describe('Refs of the comments that make this point.'),
+      }),
+    )
     .describe('The main lines of discussion, most discussed first. Three to six.'),
-  disagreements: z.array(z.object({ question: z.string(), sides: z.array(z.object({ view: z.string(), comments: z.array(z.string()) })) })).describe('Real points of contention, with each side. Empty if people broadly agree.'),
+  disagreements: z
+    .array(z.object({ question: z.string(), sides: z.array(z.object({ view: z.string(), comments: z.array(z.string()) })) }))
+    .describe('Real points of contention, with each side. Empty if people broadly agree.'),
   standouts: z
     .array(z.object({ comment: z.string().describe('One ref.'), why: z.string().describe('Why it is worth reading, in one sentence.') }))
     .describe('Up to four comments worth reading in full: firsthand experience, corrections, real expertise.'),
@@ -38,7 +46,10 @@ function render(req: SummaryRequest): string {
   const parts = [`Story: ${req.title}${req.url ? `\nLink: ${req.url}` : ''}`]
   for (const t of req.threads) {
     const shown = t.comments.length < t.total ? ` (the ${t.comments.length} most-upvoted of ${t.total} comments)` : ''
-    parts.push(`\n## ${t.source}: ${t.title}${shown}\n` + t.comments.map((c) => `${'  '.repeat(Math.min(c.depth, 6))}[${c.ref}] ${c.author}${c.score !== undefined ? ` (${c.score})` : ''}: ${c.text}`).join('\n'))
+    parts.push(
+      `\n## ${t.source}: ${t.title}${shown}\n` +
+        t.comments.map((c) => `${'  '.repeat(Math.min(c.depth, 6))}[${c.ref}] ${c.author}${c.score !== undefined ? ` (${c.score})` : ''}: ${c.text}`).join('\n'),
+    )
   }
   return parts.join('\n')
 }
@@ -53,13 +64,9 @@ export async function POST(request: Request): Promise<Response> {
   const apiKey = ownKey || process.env.ANTHROPIC_API_KEY
   if (!apiKey) return fail('Summaries need an Anthropic API key: add ANTHROPIC_API_KEY to the deployment, or your own key in Settings', 501)
 
-  let body: SummaryRequest
-  try {
-    body = (await request.json()) as SummaryRequest
-  } catch {
-    return fail('Body must be JSON')
-  }
-  if (!body?.title || !Array.isArray(body.threads) || !body.threads.some((t) => t.comments?.length)) return fail('Nothing to summarize')
+  const body = await readJson<SummaryRequest>(request)
+  if (!body) return fail('Body must be JSON')
+  if (!body.title || !Array.isArray(body.threads) || !body.threads.some((t) => t.comments?.length)) return fail('Nothing to summarize')
   const prompt = render(body)
   if (prompt.length > MAX_INPUT_CHARS) return fail('Discussion too long to send in one request', 413)
 
@@ -71,10 +78,9 @@ export async function POST(request: Request): Promise<Response> {
   // The deployment's own key only with a working counter: no counter, no free summaries.
   if (!ownKey) {
     if (!store) return fail('Add your own Anthropic key in Settings to get summaries', 401)
-    const day = new Date().toISOString().slice(0, 10)
-    const [mine, everyone] = await Promise.all([store.bump(`rd:summary-quota:${clientKey(request)}:${day}`, 86_400), store.bump(`rd:summary-quota:*:${day}`, 86_400)]).catch(() => [Infinity, Infinity])
-    if (mine > DAILY_LIMIT || everyone > GLOBAL_DAILY_LIMIT)
-      return fail(`Daily summary limit reached on this deployment. Add your own Anthropic key in Settings to keep going.`, 429)
+    const day = today()
+    const [mine, everyone] = await Promise.all([overLimit(`rd:summary-quota:${clientKey(request)}:${day}`, 86_400, DAILY_LIMIT), overLimit(`rd:summary-quota:*:${day}`, 86_400, GLOBAL_DAILY_LIMIT)])
+    if (mine || everyone) return fail(`Daily summary limit reached on this deployment. Add your own Anthropic key in Settings to keep going.`, 429)
   }
 
   const client = new Anthropic({ apiKey })

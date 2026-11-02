@@ -4,7 +4,7 @@ import { posts } from './atlinks.js'
 import { postTime, toStory, type PostView } from './bsky.js'
 import { getRecord, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
-import { kv, kvConfigured } from './kv.js'
+import { cachedInKv } from './kv.js'
 
 // PaperWing's front page. A submission is an ordinary Bluesky post (the link card, the title,
 // your take) plus a small io.paperwing.submission record in your own repo pointing at it and
@@ -70,26 +70,16 @@ async function submittedPosts(board?: string): Promise<{ post: PostView; board?:
 
 /** The front page (or a board's) as stories, cached for a minute: a new submission shows up soon. */
 export async function paperwingFront(sort: PaperwingSort, board?: string): Promise<Story[]> {
-  const key = `rd:pw:${board ?? '*'}:${sort}`
-  if (kvConfigured()) {
-    const hit = await kv()
-      .get(key)
-      .catch(() => null)
-    if (hit) return JSON.parse(hit) as Story[]
-  }
-  const list = await submittedPosts(board)
-  const boards = new Map(list.map((x) => [x.post.uri, x.board]))
-  const stories = rank(
-    list.map((x) => x.post),
-    sort,
-  )
-    .slice(0, 80)
-    .map((p) => ({ ...toStory(p), sourceLabel: 'PaperWing', ...(boards.get(p.uri) ? { tags: [boards.get(p.uri)!] } : {}) }))
-  if (kvConfigured())
-    await kv()
-      .set(key, JSON.stringify(stories), 60)
-      .catch(() => {})
-  return stories
+  return cachedInKv(`rd:pw:${board ?? '*'}:${sort}`, 60, async () => {
+    const list = await submittedPosts(board)
+    const boards = new Map(list.map((x) => [x.post.uri, x.board]))
+    return rank(
+      list.map((x) => x.post),
+      sort,
+    )
+      .slice(0, 80)
+      .map((p) => ({ ...toStory(p), sourceLabel: 'PaperWing', ...(boards.get(p.uri) ? { tags: [boards.get(p.uri)!] } : {}) }))
+  })
 }
 
 /** The same ranking as post URIs, for PaperWing's Bluesky feeds. */

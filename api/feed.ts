@@ -13,139 +13,129 @@ import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
 
 // One function for every server-fetched source keeps us well under Vercel Hobby's function limit.
+// Each source is one entry in SOURCES: what it needs from the query string, and how long its answer
+// may be cached at the edge. GET finds the entry, runs it and answers.
+
+/** The caller asked wrongly (a missing parameter): a 400 with this message, not an upstream failure. */
+class BadRequest extends Error {}
+
+/** A query parameter the source can't do without. */
+function need(p: URLSearchParams, name: string, what = `${name} required`): string {
+  const value = p.get(name)
+  if (!value) throw new BadRequest(what)
+  return value
+}
+const sortOf = (v: string | null) => (v === 'new' || v === 'top' ? v : 'hot')
+const list = (v: string | null) => (v ?? '').split(',').filter(Boolean)
+
+const LONG_CACHE = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000'
+/**
+ * Bytes from elsewhere served from our own origin (an icon, a card picture): never runnable as a
+ * page, since someone could put a script in an SVG and link people straight to it.
+ */
+const inert = (body: BodyInit, type: string, cache: string, csp = "default-src 'none'; sandbox") =>
+  new Response(body, { headers: { 'content-type': type, 'cache-control': cache, 'x-content-type-options': 'nosniff', 'content-security-policy': csp } })
+/** No answer is an answer, not an error: 204 keeps misses out of the error rate. */
+const nothing = (cache: string, headers: Record<string, string> = {}) => new Response(null, { status: 204, headers: { 'cache-control': cache, ...headers } })
+
+interface Source {
+  /** Seconds a JSON answer may be cached at the edge. Sources that build their own Response set their own. */
+  ttl: number
+  run(p: URLSearchParams, request: Request): Promise<unknown>
+}
+
+export const SOURCES: Record<string, Source> = {
+  lobsters: { ttl: 300, run: (p) => lobsters(p.get('path') ?? 'hottest') },
+  rss: { ttl: 900, run: (p) => rss(need(p, 'url'), p.get('label') ?? undefined) },
+  // A link card's words, for sharing a story to Bluesky: a day at the edge.
+  card: { ttl: 86_400, run: (p) => pageCard(need(p, 'url')).catch(() => ({})) },
+  // The card's picture as bytes, so the app can upload it to the reader's own repo. Only small pictures.
+  cardimage: {
+    ttl: 0,
+    run: (p) =>
+      cardImage(p.get('url') ?? '').then(
+        ({ body, type }) => inert(body, type, 'public, max-age=86400'),
+        () => nothing('public, max-age=3600'),
+      ),
+  },
+  // PaperWing's front page or one board: a minute at the edge (and in KV).
+  paperwing: {
+    ttl: 60,
+    run: (p) => {
+      const board = p.get('board') ?? undefined
+      return paperwingFront(sortOf(p.get('sort')), board && /^[a-z0-9-]{1,40}$/.test(board) ? board : undefined)
+    },
+  },
+  // A member's Frontpage posts, comments and the replies to them.
+  fpactivity: { ttl: 60, run: (p) => frontpageActivity(need(p, 'did')) },
+  // A community board and its listings (also cached in KV).
+  board: { ttl: 60, run: (p) => boardFront(p.get('did') ?? '', p.get('rkey') ?? '', sortOf(p.get('sort'))) },
+  // Every community board, for Explore.
+  boards: { ttl: 300, run: () => allBoards() },
+  // Margin notes on an article, from anyone.
+  notes: { ttl: 120, run: (p) => marginNotes(need(p, 'url')) },
+  // Someone's PaperWing profile: their listings and mixes, from their own repo.
+  person: {
+    ttl: 120,
+    run: (p) => {
+      const actor = actorOf(p.get('actor') ?? '')
+      if (!actor) throw new BadRequest('actor (a handle or DID) required')
+      return person(actor)
+    },
+  },
+  // Someone's published mix, for its share link and for following it.
+  mix: { ttl: 300, run: (p) => readMix(need(p, 'uri')) },
+  // Headlines for a search, from any publisher.
+  news: { ttl: 900, run: (p) => newsSearch(need(p, 'q')) },
+  // A site's feeds, from any link to it. Sites rarely change their feeds.
+  discover: { ttl: 86_400, run: (p) => discoverFeeds(need(p, 'url')) },
+  // Who on Bluesky and Frontpage is discussing a link.
+  atlinks: { ttl: 600, run: (p) => openNetworkDiscussions(need(p, 'url')) },
+  frontpage: { ttl: 300, run: (p) => frontpageFeed(sortOf(p.get('feed'))) },
+  arxiv: { ttl: 1800, run: (p) => arxiv(p.get('q') ?? 'cat:cs.AI') },
+  hf: { ttl: 1800, run: () => hfPapers() },
+  // A site's own favicon, for sources Simple Icons has no logo for. Cached a week; misses for a day.
+  // An SVG icon may carry styles, so those are allowed; scripts never are.
+  icon: {
+    ttl: 0,
+    run: (p) =>
+      favicon((p.get('d') ?? '').toLowerCase()).then(
+        (icon) => inert(icon.body, icon.type, LONG_CACHE, "default-src 'none'; style-src 'unsafe-inline'; sandbox"),
+        // The image still fails, so the row falls back to its letter.
+        () => nothing('public, s-maxage=86400'),
+      ),
+  },
+  // A link's preview image, as a redirect so the image itself loads straight from the publisher.
+  // Only for an <img>: anything else would make this an open redirect off our domain.
+  og: {
+    ttl: 0,
+    run: async (p, request) => {
+      if (request.headers.get('sec-fetch-dest') !== 'image') return nothing('no-store', { vary: 'sec-fetch-dest' })
+      return ogImage(p.get('url') ?? '').then(
+        (image) => new Response(null, { status: 302, headers: { location: image, 'cache-control': LONG_CACHE, vary: 'sec-fetch-dest' } }),
+        // Most pages without a preview image are just that.
+        () => nothing('public, max-age=86400, s-maxage=86400'),
+      )
+    },
+  },
+  releases: { ttl: 3600, run: (p) => releases(list(p.get('repos'))) },
+  github: { ttl: 3600, run: (p) => github(p.get('q') ?? 'stars:>50', Number(p.get('days') ?? 7)) },
+  // Incidents move fast; two minutes at the edge keeps every status page at one request per region.
+  status: { ttl: 120, run: (p) => statusIncidents(list(p.get('providers')), p.get('active') === '1', list(p.get('hosts'))) },
+  // Settings asks before following a page; the answer changes rarely.
+  statuscheck: { ttl: 3600, run: (p) => checkStatusPage(p.get('host') ?? '') },
+}
+
 export async function GET(request: Request): Promise<Response> {
   const p = new URL(request.url).searchParams
-  const src = p.get('src')
+  const src = p.get('src') ?? ''
+  if (!Object.hasOwn(SOURCES, src)) return fail('unknown src')
+  const source = SOURCES[src]
   try {
-    switch (src) {
-      case 'lobsters':
-        return json(await lobsters(p.get('path') ?? 'hottest'), 300)
-      case 'rss': {
-        const url = p.get('url')
-        return url ? json(await rss(url, p.get('label') ?? undefined), 900) : fail('url required')
-      }
-      case 'card': {
-        // A link card's words, for sharing a story to Bluesky: a day at the edge.
-        const url = p.get('url')
-        return url ? json(await pageCard(url).catch(() => ({})), 86_400) : fail('url required')
-      }
-      case 'cardimage': {
-        // The card's picture as bytes, so the app can upload it to the reader's own repo. Served
-        // with the image's own type, sandboxed like icons, and only small pictures.
-        try {
-          const { body, type } = await cardImage(p.get('url') ?? '')
-          return new Response(body, {
-            headers: { 'content-type': type, 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; sandbox" },
-          })
-        } catch {
-          return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=3600' } })
-        }
-      }
-      case 'paperwing': {
-        // PaperWing's front page or one board: a minute at the edge (and in KV).
-        const sort = p.get('sort')
-        const board = p.get('board') ?? undefined
-        return json(await paperwingFront(sort === 'new' || sort === 'top' ? sort : 'hot', board && /^[a-z0-9-]{1,40}$/.test(board) ? board : undefined), 60)
-      }
-      case 'fpactivity': {
-        // A member's Frontpage posts, comments and the replies to them: a minute at the edge.
-        const did = p.get('did')
-        return did ? json(await frontpageActivity(did), 60) : fail('did required')
-      }
-      case 'board': {
-        // A community board and its listings: a minute at the edge (and in KV).
-        const did = p.get('did') ?? ''
-        const rkey = p.get('rkey') ?? ''
-        const sort = p.get('sort')
-        return json(await boardFront(did, rkey, sort === 'new' || sort === 'top' ? sort : 'hot'), 60)
-      }
-      case 'boards':
-        // Every community board, for Explore: five minutes at the edge.
-        return json(await allBoards(), 300)
-      case 'notes': {
-        // Margin notes on an article, from anyone: two minutes at the edge.
-        const url = p.get('url')
-        return url ? json(await marginNotes(url), 120) : fail('url required')
-      }
-      case 'person': {
-        // Someone's PaperWing profile: their listings and mixes, from their own repo. Two minutes at the edge.
-        const actor = actorOf(p.get('actor') ?? '')
-        return actor ? json(await person(actor), 120) : fail('actor (a handle or DID) required')
-      }
-      case 'mix': {
-        // Someone's published mix, for its share link and for following it: five minutes at the edge.
-        const uri = p.get('uri')
-        return uri ? json(await readMix(uri), 300) : fail('uri required')
-      }
-      case 'news': {
-        // Headlines for a search, from any publisher: fifteen minutes at the edge.
-        const q = p.get('q')
-        return q ? json(await newsSearch(q), 900) : fail('q required')
-      }
-      case 'discover': {
-        // A site's feeds, from any link to it. Sites rarely change their feeds; a day at the edge.
-        const url = p.get('url')
-        return url ? json(await discoverFeeds(url), 86_400) : fail('url required')
-      }
-      case 'atlinks': {
-        // Who on Bluesky and Frontpage is discussing a link.
-        const url = p.get('url')
-        return url ? json(await openNetworkDiscussions(url), 600) : fail('url required')
-      }
-      case 'frontpage': {
-        const feed = p.get('feed')
-        return json(await frontpageFeed(feed === 'new' || feed === 'top' ? feed : 'hot'), 300)
-      }
-      case 'arxiv':
-        return json(await arxiv(p.get('q') ?? 'cat:cs.AI'), 1800)
-      case 'hf':
-        return json(await hfPapers(), 1800)
-      case 'icon': {
-        // A site's own favicon, for sources Simple Icons has no logo for. Cached a week; misses for a day.
-        try {
-          const icon = await favicon((p.get('d') ?? '').toLowerCase())
-          // Served from our own origin, so an SVG icon must never run as a page: someone could put a
-          // script in theirs and link people straight to it. The sandbox makes it inert.
-          return new Response(icon.body, {
-            headers: {
-              'content-type': icon.type,
-              'cache-control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000',
-              'x-content-type-options': 'nosniff',
-              'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
-            },
-          })
-        } catch {
-          // No icon is an answer, not an error: 204 keeps misses out of the error rate, and the
-          // image still fails, so the row falls back to its letter.
-          return new Response(null, { status: 204, headers: { 'cache-control': 'public, s-maxage=86400' } })
-        }
-      }
-      case 'og': {
-        // A link's preview image, as a redirect so the image itself loads straight from the publisher.
-        // Only for an <img>: anything else would make this an open redirect off our domain.
-        if (request.headers.get('sec-fetch-dest') !== 'image') return new Response(null, { status: 204, headers: { 'cache-control': 'no-store', vary: 'sec-fetch-dest' } })
-        try {
-          const image = await ogImage(p.get('url') ?? '')
-          return new Response(null, { status: 302, headers: { location: image, 'cache-control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000', vary: 'sec-fetch-dest' } })
-        } catch {
-          // Most pages without a preview image are just that; 204 says so without counting as an error.
-          return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400, s-maxage=86400' } })
-        }
-      }
-      case 'releases':
-        return json(await releases((p.get('repos') ?? '').split(',').filter(Boolean)), 3600)
-      case 'github':
-        return json(await github(p.get('q') ?? 'stars:>50', Number(p.get('days') ?? 7)), 3600)
-      case 'status':
-        // Incidents move fast; two minutes at the edge keeps every status page at one request per region.
-        return json(await statusIncidents((p.get('providers') ?? '').split(',').filter(Boolean), p.get('active') === '1', (p.get('hosts') ?? '').split(',').filter(Boolean)), 120)
-      case 'statuscheck':
-        // Settings asks before following a page; the answer changes rarely.
-        return json(await checkStatusPage(p.get('host') ?? ''), 3600)
-      default:
-        return fail('unknown src')
-    }
+    const out = await source.run(p, request)
+    return out instanceof Response ? out : json(out, source.ttl)
   } catch (err) {
+    if (err instanceof BadRequest) return fail(err.message)
     return fail(err instanceof Error ? err.message : 'fetch failed', 502)
   }
 }

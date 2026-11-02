@@ -1,6 +1,7 @@
 import { parseStoryKey, storyKey } from '../../src/lib/storyKey.js'
 import type { Comment, Story, Thread } from '../../src/lib/types.js'
 import { fetchJson, stripHtml } from './http.js'
+import { textHtml } from './text.js'
 
 // Frontpage (frontpage.fyi): a link aggregator on atproto, like Hacker News, where posts, comments
 // and votes are records in each member's own repo. Frontpage publishes its ranked feeds as
@@ -164,20 +165,10 @@ interface CommentRecord {
   createdAt: string
 }
 
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 /** A comment's text as paragraphs, links made clickable. */
 function commentHtml(c: CommentRecord): string {
   const text = c.blocks ? c.blocks.map((b) => b.content?.text ?? '').join('\n\n') : (c.content ?? '')
-  return text
-    .split(/\n{2,}/)
-    .filter((p) => p.trim())
-    .map(
-      (p) =>
-        `<p>${escapeHtml(p.trim())
-          .replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)\]]/g, (u) => `<a href="${u}">${u}</a>`)
-          .replace(/\n/g, '<br>')}</p>`,
-    )
-    .join('')
+  return textHtml(text)
 }
 
 /** Every record of `collection` whose `path` points at `uri`, a page at a time. */

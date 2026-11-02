@@ -7,6 +7,7 @@ import { assertPublicUrl, fetchJson } from './http.js'
 
 export { STATUS_PAGES, type StatusPage } from '../../src/lib/statusPageList.js'
 import { STATUS_PAGES, type StatusPage } from '../../src/lib/statusPageList.js'
+import { escapeHtml, textHtml } from './text.js'
 
 interface Update {
   id: string
@@ -36,20 +37,6 @@ const WEEK = 7 * 24 * 3_600_000
 
 const ongoing = (i: Incident) => i.status !== 'resolved' && i.status !== 'postmortem'
 const label = (status: string) => status.charAt(0).toUpperCase() + status.slice(1)
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-/** Update bodies are plain text: paragraphs, line breaks and bare links. */
-const textHtml = (s: string) =>
-  s
-    .trim()
-    .split(/\n{2,}/)
-    .map(
-      (p) =>
-        `<p>${escapeHtml(p)
-          .replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)\]]/g, (u) => `<a href="${u}">${u}</a>`)
-          .replace(/\n/g, '<br>')}</p>`,
-    )
-    // A newline between paragraphs keeps excerpts, which read the text alone, from running words together.
-    .join('\n')
 
 export function duration(ms: number): string {
   const m = Math.max(1, Math.round(ms / 60_000))
@@ -87,7 +74,9 @@ export function incidentStory(page: StatusPage, i: Incident): Story {
 
 /** The updates, oldest first: how the incident unfolded. */
 export function incidentThread(page: StatusPage, i: Incident): Thread {
-  const comments: Comment[] = [...i.incident_updates].reverse().map((u) => ({ id: u.id, author: label(u.status), html: textHtml(u.body), createdAt: Date.parse(u.display_at || u.created_at), children: [] }))
+  const comments: Comment[] = [...i.incident_updates]
+    .reverse()
+    .map((u) => ({ id: u.id, author: label(u.status), html: textHtml(u.body), createdAt: Date.parse(u.display_at || u.created_at), children: [] }))
   return { story: incidentStory(page, i), comments }
 }
 

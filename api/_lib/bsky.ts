@@ -3,6 +3,7 @@ import { BSKY_FEED_BY_RKEY, BSKY_FEEDS, isOffTopic, searchQueries, strongHits, s
 import { isGifLink, postMedia, quotedPost, sharedLink, type Shareable } from '../../src/lib/bskyPost.js'
 import type { Story } from '../../src/lib/types.js'
 import { UA } from './http.js'
+import { escapeHtml } from './text.js'
 
 /* ------------------------------------------------------------------ types */
 
@@ -218,7 +219,6 @@ export async function buildFeed(rkey: string): Promise<PostView[]> {
 
 /* ------------------------------------------------------------- as stories */
 
-const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 export const bskyKey = (uri: string) => storyKey({ kind: 'bs', uri })
 
 export function postUrl(p: Pick<PostView, 'uri' | 'author'>): string {

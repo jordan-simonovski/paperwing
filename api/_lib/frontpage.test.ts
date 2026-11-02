@@ -84,7 +84,7 @@ describe('Frontpage', () => {
     const t = await frontpageThread(frontpageKey(POST))
     expect(t.comments).toHaveLength(1)
     expect(t.comments[0]).toMatchObject({ author: B, score: 3, ref: { uri: C1, cid: 'cid1' } })
-    expect(t.comments[0].html).toBe('<p>First!</p><p>See <a href="https://x.dev/a">https://x.dev/a</a>.</p>')
+    expect(t.comments[0].html).toBe('<p>First!</p>\n<p>See <a href="https://x.dev/a">https://x.dev/a</a>.</p>')
     expect(t.comments[0].children[0]).toMatchObject({ author: 'alice.example', html: '<p>A &lt;reply&gt;</p>' })
   })
 

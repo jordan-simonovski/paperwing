@@ -39,6 +39,18 @@ export function fail(message: string, status = 400): Response {
   return json({ error: message }, 0, status)
 }
 
+/** A request's JSON body, or undefined when there isn't one or it doesn't parse. */
+export async function readJson<T>(request: Request): Promise<T | undefined> {
+  try {
+    return (await request.json()) as T
+  } catch {
+    return undefined
+  }
+}
+
+/** Today in UTC (2026-11-02): the key daily allowances count under. */
+export const today = (now = Date.now()) => new Date(now).toISOString().slice(0, 10)
+
 /**
  * Anything but ordinary public unicast is off limits: loopback, private, link-local (cloud
  * metadata), CGNAT, multicast, and IPv6 forms that wrap an IPv4 address (::ffff:7f00:1 is
@@ -65,7 +77,7 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Only http(s) URLs are allowed')
   const host = url.hostname.replace(/^\[|\]$/g, '')
   if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) throw new Error('Host not allowed')
-  const addresses = isIP(host) ? [host] : (await lookup(host, { all: true })).map((r) => r.address)
+  const addresses = isIP(host) ? [host] : await upstream.lookup(host)
   if (addresses.some(isPrivateAddress)) throw new Error('Host not allowed')
   return url
 }
@@ -86,9 +98,24 @@ const publicOnly = new Agent({
     },
   } as Agent.Options['connect'],
 })
-// Local development in a sandbox that only reaches the internet through a proxy: the proxy does
-// the lookup there, so the pin can't apply. Never set on Vercel.
-const dispatcher: Dispatcher = process.env.NODE_USE_ENV_PROXY ? new EnvHttpProxyAgent() : publicOnly
+
+/**
+ * Where upstream requests go: the connector above, and DNS for the up-front check. Local
+ * development in a sandbox that only reaches the internet through a proxy uses the proxy instead
+ * (it does the lookup, so the pin can't apply); never set on Vercel. Tests swap both with
+ * setUpstream, so a handler can run against fake upstreams without touching the network.
+ */
+const upstream: { dispatcher: Dispatcher; lookup: (host: string) => Promise<string[]> } = {
+  dispatcher: process.env.NODE_USE_ENV_PROXY ? new EnvHttpProxyAgent() : publicOnly,
+  lookup: async (host) => (await lookup(host, { all: true })).map((r) => r.address),
+}
+
+/** For tests: sends upstream requests through `next` instead. Returns a function that puts things back. */
+export function setUpstream(next: Partial<typeof upstream>): () => void {
+  const before = { ...upstream }
+  Object.assign(upstream, next)
+  return () => void Object.assign(upstream, before)
+}
 
 export interface SafeFetchInit {
   headers?: Record<string, string>
@@ -107,7 +134,7 @@ export async function safeFetch(raw: string, init: SafeFetchInit = {}): Promise<
   const signal = AbortSignal.timeout(timeoutMs)
   let url = (await assertPublicUrl(raw)).toString()
   for (let hop = 0; hop <= 5; hop++) {
-    const res = await undiciFetch(url, { headers: { 'user-agent': UA, accept: '*/*', ...init.headers }, redirect: 'manual', signal, dispatcher })
+    const res = await undiciFetch(url, { headers: { 'user-agent': UA, accept: '*/*', ...init.headers }, redirect: 'manual', signal, dispatcher: upstream.dispatcher })
     const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null
     if (!location) return { res, finalUrl: url }
     void res.body?.cancel().catch(() => {})

@@ -6,7 +6,7 @@ import { linking, posts, variants } from './atlinks.js'
 import { postTime, type PostView } from './bsky.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
-import { kv, kvConfigured } from './kv.js'
+import { cachedInKv } from './kv.js'
 import { newsSearch, rss } from './sources.js'
 
 // Mixes on the server: reading one from its owner's repo (for a share link), and serving one as a
@@ -120,17 +120,5 @@ async function buildMixFeed(did: string, rkey: string): Promise<string[]> {
 
 /** A mix's feed, from the cache when it's under ten minutes old. */
 export async function mixFeed(did: string, rkey: string): Promise<string[]> {
-  const key = `rd:mixfeed:${did}:${rkey}`
-  if (kvConfigured()) {
-    const hit = await kv()
-      .get(key)
-      .catch(() => null)
-    if (hit) return JSON.parse(hit) as string[]
-  }
-  const uris = await buildMixFeed(did, rkey)
-  if (kvConfigured())
-    await kv()
-      .set(key, JSON.stringify(uris), 600)
-      .catch(() => {})
-  return uris
+  return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey))
 }

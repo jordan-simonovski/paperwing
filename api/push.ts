@@ -1,8 +1,8 @@
 import { createECDH, createHash, timingSafeEqual } from 'node:crypto'
 import webpush from 'web-push'
 import { emptyState, incidentSource, planAlerts, pushPayload, type AlertPrefs, type Notice, type SubRecord, type World } from './_lib/alerts.js'
-import { clientKey, fail, json } from './_lib/http.js'
-import { kv, kvConfigured } from './_lib/kv.js'
+import { clientKey, fail, json, readJson } from './_lib/http.js'
+import { kv, kvConfigured, overLimit } from './_lib/kv.js'
 import { outageReport } from './_lib/outageScan.js'
 import { ensureSchedules, publicOrigin, qstashConfigured, scheduleSignature, verifyQStash } from './_lib/qstash.js'
 import { STATUS_PAGES, statusIncidents } from './_lib/statuspages.js'
@@ -231,7 +231,7 @@ async function sendTest(endpoint: string, origin: string): Promise<Response> {
   const [raw] = await store.hmget(SUBS, [field])
   const sub = raw ? parse(raw) : undefined
   if (!sub) return fail("This device isn't registered for notifications. Turn them off and on again.", 404)
-  if ((await store.bump(`rd:push:test:${field}`, 60)) > 3) return fail('That was a lot of tests. Try again in a minute.', 429)
+  if (await overLimit(`rd:push:test:${field}`, 60, 3)) return fail('That was a lot of tests. Try again in a minute.', 429)
   const { publicKey, privateKey } = await vapidKeys()
   webpush.setVapidDetails(SUBJECT, publicKey, privateKey)
   const notice: Notice = { title: 'PaperWing notifications work', body: 'This device will get the alerts you choose in Settings.', url: '/settings/notifications', tag: 'test' }
@@ -265,12 +265,8 @@ const validPrefs = (a: unknown): AlertPrefs | undefined => {
 
 export async function POST(request: Request): Promise<Response> {
   if (!configured()) return fail('Push is not set up', 501)
-  let body: { subscription?: SubRecord; alerts?: unknown; remove?: string; seen?: string; test?: string }
-  try {
-    body = (await request.json()) as typeof body
-  } catch {
-    return fail('Body must be JSON')
-  }
+  const body = await readJson<{ subscription?: SubRecord; alerts?: unknown; remove?: string; seen?: string; test?: string }>(request)
+  if (!body) return fail('Body must be JSON')
   const store = kv()
   if (body.remove) {
     await store.hdel(SUBS, [id(body.remove)])
@@ -291,7 +287,7 @@ export async function POST(request: Request): Promise<Response> {
   const [raw] = await store.hmget(SUBS, [field])
   // New devices are few per person: a handful an hour from one address, so nobody can fill the list.
   if (!raw) {
-    if ((await store.bump(`rd:push:new:${clientKey(request)}`, 3600).catch(() => 7)) > 6) return fail('Too many new devices from here. Try again later.', 429)
+    if (await overLimit(`rd:push:new:${clientKey(request)}`, 3600, 6)) return fail('Too many new devices from here. Try again later.', 429)
   }
   if (!raw && Object.keys(await store.hgetall(SUBS)).length >= MAX_SUBS) return fail('Too many devices are registered here', 429)
   const held = raw ? parse(raw) : undefined

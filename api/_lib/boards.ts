@@ -5,7 +5,7 @@ import { linking, posts } from './atlinks.js'
 import { type PostView, toStory } from './bsky.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
-import { kv, kvConfigured } from './kv.js'
+import { cachedInKv } from './kv.js'
 import { blocked, rank, submissions, unlisted } from './paperwing.js'
 
 // Community boards: a board is a record in its owner's Bluesky account (social.ts). Its listings are
@@ -64,38 +64,28 @@ async function hiddenOn(board: BoardView): Promise<Set<string>> {
 
 /** A community board and its listings, ranked like the front page, with its moderation applied. Cached a minute. */
 export async function boardFront(did: string, rkey: string, sort: PaperwingSort): Promise<{ board: BoardView; stories: Story[] }> {
-  const key = `rd:board:${did}:${rkey}:${sort}`
-  if (kvConfigured()) {
-    const hit = await kv()
-      .get(key)
-      .catch(() => null)
-    if (hit) return JSON.parse(hit) as { board: BoardView; stories: Story[] }
-  }
-  const board = await readBoard(did, rkey)
-  const [uris, hidden, kept] = await Promise.all([
-    submissions(communityUrl(did, rkey), '.boardUrl', 200),
-    hiddenOn(board),
-    board.blockList ? listMembers(board.blockList).catch(() => new Set<string>()) : Promise.resolve(new Set<string>()),
-  ])
-  const records = await pool(uris, 10, (u) => getRecord<unknown>(u).catch(() => undefined))
-  const off = blocked()
-  const subs = records.flatMap((r, i) => {
-    const s = r ? cleanSubmission(r.value) : undefined
-    const author = uris[i].split('/')[2]
-    if (!s || s.community !== board.uri || s.post.uri.split('/')[2] !== author) return []
-    if (hidden.has(s.post.uri) || kept.has(author) || off.has(author) || off.has(s.post.uri)) return []
-    return [s]
+  return cachedInKv(`rd:board:${did}:${rkey}:${sort}`, 60, async () => {
+    const board = await readBoard(did, rkey)
+    const [uris, hidden, kept] = await Promise.all([
+      submissions(communityUrl(did, rkey), '.boardUrl', 200),
+      hiddenOn(board),
+      board.blockList ? listMembers(board.blockList).catch(() => new Set<string>()) : Promise.resolve(new Set<string>()),
+    ])
+    const records = await pool(uris, 10, (u) => getRecord<unknown>(u).catch(() => undefined))
+    const off = blocked()
+    const subs = records.flatMap((r, i) => {
+      const s = r ? cleanSubmission(r.value) : undefined
+      const author = uris[i].split('/')[2]
+      if (!s || s.community !== board.uri || s.post.uri.split('/')[2] !== author) return []
+      if (hidden.has(s.post.uri) || kept.has(author) || off.has(author) || off.has(s.post.uri)) return []
+      return [s]
+    })
+    const found: PostView[] = (await posts([...new Set(subs.map((s) => s.post.uri))])).filter((p) => !unlisted(p))
+    const stories = rank(found, sort)
+      .slice(0, 80)
+      .map((p) => ({ ...toStory(p), sourceLabel: board.name }))
+    return { board, stories }
   })
-  const found: PostView[] = (await posts([...new Set(subs.map((s) => s.post.uri))])).filter((p) => !unlisted(p))
-  const stories = rank(found, sort)
-    .slice(0, 80)
-    .map((p) => ({ ...toStory(p), sourceLabel: board.name }))
-  const out = { board, stories }
-  if (kvConfigured())
-    await kv()
-      .set(key, JSON.stringify(out), 60)
-      .catch(() => {})
-  return out
 }
 
 /** Every community board, newest first (boards carry PaperWing's address, so Constellation lists them). */

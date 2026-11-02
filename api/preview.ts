@@ -7,6 +7,7 @@ import { fetchJson } from './_lib/http.js'
 import { ogImage, pageCard } from './_lib/og.js'
 import { actorOf, person } from './_lib/people.js'
 import { lobstersThread } from './_lib/sources.js'
+import { escapeHtml as esc, siteOf } from './_lib/text.js'
 
 // A story link's preview card. When someone pastes a PaperWing story link into Bluesky, Mastodon,
 // iMessage or Slack, the site that draws the card fetches the link without running any script, so
@@ -22,7 +23,6 @@ interface Card {
   small?: boolean
 }
 
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const plain = (html = '') =>
   html
     .replace(/<[^<>]*>/g, ' ')
@@ -37,13 +37,7 @@ async function linkCard(url: string): Promise<Partial<Card>> {
   return { title: card.title, description: card.description, image }
 }
 
-const host = (url: string) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
-  }
-}
+const host = (url: string) => siteOf(url, url)
 
 /** Builds the card from what the story is: a link, an HN item, a Bluesky post or a Lobsters story. */
 async function cardFor(key: string): Promise<Card | undefined> {
