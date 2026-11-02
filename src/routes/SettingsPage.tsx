@@ -311,7 +311,7 @@ function SyncSettings() {
               value={joining}
               onChange={(e) => setJoining(e.target.value)}
               placeholder="Or paste a code from another device"
-              className="h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 font-mono text-[0.875rem] placeholder:font-sans placeholder:text-ink-3 focus:outline-none"
+              className="h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 font-mono text-[0.875rem] placeholder:font-sans placeholder:text-ink-3"
               aria-label="Sync code"
             />
             <button className="btn" type="submit">

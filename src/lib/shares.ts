@@ -8,11 +8,6 @@ import type { Story } from './types'
 // your own Bluesky account (social.ts). They show on your profile, in your profile's RSS feed, and in
 // For you for anyone who follows you on PaperWing. Not a Bluesky post: nothing lands in timelines.
 
-export const canShareHere = () => {
-  const { did, scope } = useAtproto.getState()
-  return !!did && canWrite(scope, SHARE_NSID) !== false
-}
-
 export async function shareOnPaperWing(qc: QueryClient, story: Pick<Story, 'url' | 'title'>, note: string): Promise<string> {
   if (!story.url) throw new Error('Only stories with a link can be shared')
   if (!useAtproto.getState().did) throw new Error('Sign in with Bluesky to share (Settings, Sources)')

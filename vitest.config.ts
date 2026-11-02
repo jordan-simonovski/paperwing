@@ -48,7 +48,9 @@ export default mergeConfig(
           },
           test: {
             name: 'stories',
-            browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: 'chromium' }] },
+            // Reduced motion: the app's own rule settles sheets and fades at once, so the accessibility
+            // check sees what a reader sees, not a frame halfway through an animation.
+            browser: { enabled: true, headless: true, provider: playwright({ contextOptions: { reducedMotion: 'reduce' } }), instances: [{ browser: 'chromium' }] },
           },
         },
       ],

@@ -84,13 +84,7 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
         <h2 className="text-[1.0625rem] font-bold">Share</h2>
         <div className="rounded-xl bg-sunk px-3.5 py-2.5">
           <p className="truncate text-[0.8125rem] text-ink-3">{domainOf(link) ?? link}</p>
-          <input
-            className="mt-0.5 w-full bg-transparent text-[0.9375rem] font-semibold focus:outline-none"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            aria-label="Title"
-            maxLength={300}
-          />
+          <input className="mt-0.5 w-full bg-transparent text-[0.9375rem] font-semibold" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Title" maxLength={300} />
         </div>
 
         {results ? (

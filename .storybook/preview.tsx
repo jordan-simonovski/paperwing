@@ -18,9 +18,9 @@ const preview: Preview = {
   parameters: {
     layout: 'fullscreen',
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/i } },
-    // Accessibility checks run with every story and are reported in its test. 'todo' until the
-    // existing findings are fixed, then 'error' so new ones fail.
-    a11y: { test: 'todo' },
+    // Accessibility checks run with every story and fail its test. A story with a known finding
+    // sets parameters.a11y.test = 'todo' itself, with a comment saying what's left to fix.
+    a11y: { test: 'error' },
   },
   tags: ['autodocs'],
 }

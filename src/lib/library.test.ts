@@ -4,7 +4,7 @@ vi.mock('idb-keyval', () => import('../test/memoryIdb'))
 vi.mock('./sources', () => ({ fetchArticle: vi.fn(), fetchThread: vi.fn(), findDiscussions: vi.fn() }))
 import { clear, createStore } from 'idb-keyval'
 import { story } from '../test/fixtures'
-import { useLibrary, type SavedItem } from './library'
+import { keepNewest, useLibrary, type SavedItem } from './library'
 import { fetchArticle, fetchThread, findDiscussions } from './sources'
 import { FetchError } from './sources/http'
 import type { Article, Story } from './types'
@@ -184,5 +184,19 @@ describe('changes from other devices', () => {
 
     expect(lib().items[s.key]).toMatchObject({ updatedAt: removedAt + 1000, hollow: true })
     expect((await lib().tombstones())[s.key]).toBeUndefined()
+  })
+})
+
+describe('the offline image cache', () => {
+  // Chrome counts each cross-origin image as megabytes against the quota; a full quota can evict
+  // the whole site's storage, saved library included. So the cache has a ceiling.
+  it('keeps only the newest images', async () => {
+    const urls = Array.from({ length: 5 }, (_, i) => `https://example.com/${i}.png`)
+    const kept = new Set(urls)
+    const cache = { keys: async () => [...kept].map((u) => new Request(u)), delete: async (r: Request) => kept.delete(r.url) }
+    await keepNewest(cache, 3)
+    expect([...kept]).toEqual(urls.slice(2))
+    await keepNewest(cache, 10)
+    expect(kept.size).toBe(3)
   })
 })

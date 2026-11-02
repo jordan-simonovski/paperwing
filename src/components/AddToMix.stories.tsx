@@ -23,7 +23,7 @@ export const AlreadyInAMix: Story = { args: { source: { kind: 'topic', id: 'scie
 
 export const AddsToAMix: Story = {
   play: async ({ canvas, canvasElement }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Add Anil Dash to a mix' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add to mix: Anil Dash' }))
     // The sheet renders at the top of the page, outside the story's root.
     const sheet = within(canvasElement.ownerDocument.body).getByRole('dialog', { name: 'Add to mix' })
     await userEvent.click(within(sheet).getByRole('button', { name: /Morning briefing/ }))

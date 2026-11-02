@@ -1,0 +1,48 @@
+#!/bin/sh
+# The gate before anything leaves this checkout (the `ship` skill runs this and more):
+# a changeset for user-facing changes, then lint, formatting, types, the build, the bundle
+# budget and the unit tests. Stories, end-to-end journeys and Lighthouse need a browser and run in CI.
+set -e
+
+zero=0000000000000000000000000000000000000000
+base_branch=origin/main
+pushed=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue # deleting a branch
+  case "$remote_ref" in
+  refs/heads/changeset-release/*) continue ;; # the Release pull request's branch
+  refs/heads/*) ;;
+  *) continue ;; # tags and other refs carry no new code to check
+  esac
+  pushed="$pushed $local_sha"
+  base=$(git merge-base "$local_sha" "$base_branch" 2>/dev/null || echo "")
+  [ -z "$base" ] && continue
+  sh scripts/changelog/require.sh "$base" "$local_sha" || { echo "pre-push: $remote_ref needs a changeset." >&2; exit 1; }
+done
+
+[ -z "$pushed" ] && exit 0
+
+# The checks below run on the checkout, so it has to be exactly what's being pushed.
+head=$(git rev-parse HEAD)
+for sha in $pushed; do
+  if [ "$sha" != "$head" ]; then
+    echo "pre-push: the checks run on the checked-out commit, but you're pushing another one. Check it out and push from there." >&2
+    exit 1
+  fi
+done
+if ! git diff --quiet HEAD; then
+  echo "pre-push: uncommitted changes would be checked instead of what you're pushing. Commit or stash them first." >&2
+  exit 1
+fi
+# ponytail: the roots the build, lint and tests read; widen it when a new one appears.
+if [ -n "$(git ls-files --others --exclude-standard -- src api sw e2e scripts public .changeset .storybook index.html)" ]; then
+  echo "pre-push: untracked files would be checked but not pushed. Add them, or stash them with git stash -u." >&2
+  exit 1
+fi
+
+npm run --silent check:changesets
+npm run --silent lint
+npm run --silent format:check
+npm run --silent build
+npm run --silent check:budget
+npm test --silent

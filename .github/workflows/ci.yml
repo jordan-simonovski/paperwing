@@ -13,12 +13,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the changeset check compares with the pull request's base
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      # App changes need a changeset, or they never reach "What's new" or production (.changeset/README.md).
+      - if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: sh scripts/changelog/require.sh "$(git merge-base "$BASE_SHA" HEAD)" HEAD
       - run: npm ci
       - run: npm run build
+      # What a first visit downloads, gzipped, against a budget (scripts/bundle-budget.mjs).
+      - run: npm run check:budget
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
@@ -34,4 +43,24 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 14
+
+  # Lighthouse on the built app: accessibility, best practices and layout shift fail the build;
+  # performance and SEO warn (lighthouserc.json). Reports are kept as an artifact.
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:lighthouse
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse
+          path: .lighthouseci/
           retention-days: 14

@@ -31,7 +31,7 @@ function Tune({ story }: { story: Story }) {
   const label = (k: string) => (k.startsWith('t:') ? (findTopic(k.slice(2), interests)?.label ?? k.slice(2)) : k.slice(2))
   return (
     <section>
-      <h3 className="label mb-2">Tune your feeds</h3>
+      <h2 className="label mb-2">Tune your feeds</h2>
       <div className="space-y-1.5">
         {keys.map((k) => {
           const v = affinity[k] ?? 0
@@ -139,7 +139,7 @@ export function RelatedView({ story, onOpen, now, alsoOn, coverage = [] }: { sto
     <div className="mx-auto max-w-[44rem] space-y-9 py-7">
       {allCoverage.length > 0 && (
         <section id="coverage">
-          <h3 className="label mb-1">How it’s being covered</h3>
+          <h2 className="label mb-1">How it’s being covered</h2>
           <p className="mb-2 text-[0.8125rem] text-ink-3">
             {outlets === 1 ? 'One other outlet' : `${outlets} other outlets`}, side by side. Found by searching the news for this headline’s names and places.
           </p>
@@ -162,13 +162,13 @@ export function RelatedView({ story, onOpen, now, alsoOn, coverage = [] }: { sto
       <Tune story={story} />
       {story.url && (
         <section>
-          <h3 className="label mb-2">Discussed elsewhere</h3>
+          <h2 className="label mb-2">Discussed elsewhere</h2>
           <Elsewhere story={story} onOpen={onOpen} now={now} alsoOn={alsoOn} />
         </section>
       )}
       {(topics.length > 0 || near.length > 0) && (
         <section>
-          <h3 className="label mb-3">Topics</h3>
+          <h2 className="label mb-3">Topics</h2>
           <div className="flex flex-wrap gap-1.5">
             {topics.map((t) => (
               <TopicChip key={t} id={t} />
@@ -185,7 +185,7 @@ export function RelatedView({ story, onOpen, now, alsoOn, coverage = [] }: { sto
         </section>
       )}
       <section>
-        <h3 className="label mb-2">Similar stories you've loaded</h3>
+        <h2 className="label mb-2">Similar stories you've loaded</h2>
         {similar.length ? (
           similar.map((s) => <MiniRow key={s.key} s={s} onOpen={onOpen} now={now} />)
         ) : (

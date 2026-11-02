@@ -1,5 +1,4 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query'
-import { channelId } from './channelId'
 import { createContext, useContext } from 'react'
 import { createRecord, putRecord, useAtproto } from './atproto'
 import { tid } from './mixes'
@@ -33,10 +32,6 @@ export interface JoinedBoard {
 export const boardParts = (uri: string) => {
   const m = AT_COMMUNITY.exec(uri)
   return m ? { did: m[1], rkey: m[2] } : undefined
-}
-export const boardChannel = (uri: string) => {
-  const p = boardParts(uri)
-  return p ? channelId({ kind: 'board', ...p }) : undefined
 }
 export const boardPath = (uri: string) => {
   const p = boardParts(uri)

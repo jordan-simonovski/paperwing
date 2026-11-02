@@ -63,7 +63,8 @@
   --pip-blush: #f3c8b9;
   --pip-shine: #ffffff;
   /* Your votes: up in the signal colour, down in a cool blue. */
-  --up: var(--signal);
+  /* A shade darker than --signal: an upvoted count sits on the grey vote pill and must clear 4.5:1 there. */
+  --up: oklch(0.53 0.215 27);
   --down: oklch(0.52 0.17 262);
   /* Topic identity: a hue per topic, set as --h on the element. */
   --field-l: 0.885;
@@ -383,8 +384,8 @@
   .input::placeholder {
     color: var(--ink-3);
   }
+  /* Keeps the :focus-visible ring: the border change alone is too faint to see (WCAG 2.4.7). */
   .input:focus {
-    outline: none;
     border-color: var(--line-strong);
   }
   kbd,

@@ -43,12 +43,12 @@ export async function linkStories(sources: MixSource[]): Promise<Story[]> {
       const via = s.via ?? LEMMY_DEFAULT
       if (!LEMMY_INSTANCES.has(via)) continue
       jobs.push(async () => {
-        const { posts: list } = await fetchJson<{ posts: { post: { id: number; ap_id?: string; url?: string; name: string; published: string } }[] }>(
-          `https://${via}/api/v3/post/list?community_name=${encodeURIComponent(s.community)}&sort=TopDay&limit=15&type_=All`,
-          { timeoutMs: 8000 },
-        )
+        const { posts: list } = await fetchJson<{
+          posts: { post: { id: number; ap_id?: string; url?: string; name: string; published: string; nsfw?: boolean; removed?: boolean; deleted?: boolean } }[]
+        }>(`https://${via}/api/v3/post/list?community_name=${encodeURIComponent(s.community)}&sort=TopDay&limit=15&type_=All`, { timeoutMs: 8000 })
         return list.flatMap((v) =>
-          v.post.url && /^https?:\/\//.test(v.post.url)
+          // What the app hides (src/lib/sources/lemmy.ts, usable) stays out of a published feed too.
+          v.post.url && /^https?:\/\//.test(v.post.url) && !v.post.nsfw && !v.post.removed && !v.post.deleted
             ? [
                 {
                   // Keyed as the app keys Lemmy posts, so it opens with its discussion.

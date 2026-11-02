@@ -147,12 +147,8 @@ interface Ctx {
   statusHosts?: string[]
 }
 
-/** A Bluesky feed's or list's channel id, and back. */
+/** A Bluesky feed's or list's channel id. */
 export const bskyFeedChannel = (uri: string) => channelId({ kind: 'bskyFeed', uri })
-export const bskyFeedUri = (id: string) => {
-  const a = parseChannelId(id)
-  return a?.kind === 'bskyFeed' ? a.uri : undefined
-}
 
 /** The Lemmy channel: the communities with the most going on, across the instances programming.dev follows. */
 const LEMMY_TECH = ['technology@lemmy.world', 'programming@programming.dev', 'selfhosted@lemmy.world', 'opensource@lemmy.ml', 'localllama@sh.itjust.works', 'linux@lemmy.ml']

@@ -1,4 +1,4 @@
-import { assertPublicUrl, readLimited, safeFetch } from './http.js'
+import { assertPublicUrl, decodeEntities, readLimited, safeFetch } from './http.js'
 import { tagsIn, titleIn } from './text.js'
 
 // The preview image a page declares for link cards, in order of preference.
@@ -54,14 +54,8 @@ export async function ogImage(raw: string): Promise<string> {
   throw new Error('No preview image')
 }
 
-const decodeEntities = (s: string) =>
-  s
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+// Titles are often double-encoded (&amp;#8217;), so twice.
+const decode = (s: string) => decodeEntities(decodeEntities(s))
 
 /** A page's title for a link saved without one: its og:title, else its <title>. */
 export async function pageTitle(raw: string): Promise<string | undefined> {
@@ -70,10 +64,10 @@ export async function pageTitle(raw: string): Promise<string | undefined> {
   for (const tag of tagsIn(html, 'meta')) {
     const key = (attr(tag, 'property') ?? attr(tag, 'name'))?.toLowerCase()
     const content = attr(tag, 'content')
-    if ((key === 'og:title' || key === 'twitter:title') && content) return decodeEntities(content).trim()
+    if ((key === 'og:title' || key === 'twitter:title') && content) return decode(content).trim()
   }
   const title = titleIn(html)
-  return title ? decodeEntities(title).replace(/\s+/g, ' ').trim() || undefined : undefined
+  return title ? decode(title).replace(/\s+/g, ' ').trim() || undefined : undefined
 }
 
 const metaOf = (html: string) => {

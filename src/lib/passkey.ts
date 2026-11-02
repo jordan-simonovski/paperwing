@@ -8,7 +8,8 @@ import { codeFromBytes, syncAvailable } from './sync'
 // in the same synced space. Nothing about the passkey goes to the server: there's no account, and
 // the code is all sync ever needed.
 
-const PRF_INPUT = new TextEncoder().encode('readout sync v1')
+// Changing this, or the HKDF salt and info below, moves every passkey user to a new, empty sync space.
+export const PRF_INPUT = new TextEncoder().encode('readout sync v1')
 
 export type PasskeySupport = 'yes' | 'no' | 'unknown'
 
@@ -20,7 +21,7 @@ export async function passkeySupport(): Promise<PasskeySupport> {
   return 'unknown'
 }
 
-async function codeFromPrf(secret: BufferSource): Promise<string> {
+export async function codeFromPrf(secret: BufferSource): Promise<string> {
   const base = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits'])
   const bits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: new TextEncoder().encode('readout-sync'), info: new TextEncoder().encode('sync code v1') }, base, 26 * 8)
   return codeFromBytes(new Uint8Array(bits))

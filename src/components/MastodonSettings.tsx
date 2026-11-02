@@ -8,7 +8,7 @@ import { toast } from '../lib/ui'
 /** Drops cached Mastodon feeds, so the next view reads from the right server with the right account. */
 export const refreshMastodon = (qc: QueryClient) => qc.removeQueries({ queryKey: keys.feeds, predicate: (q) => String(q.queryKey[1]).startsWith('md:') })
 
-const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none'
+const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3'
 
 export function MastodonSettings() {
   const { instance, acct, pending, signOut, setInstance, cancelSignIn } = useMastodon()
