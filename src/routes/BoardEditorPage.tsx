@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { CouldntReach } from '../components/FeedState'
 import { useAtproto } from '../lib/atproto'
 import { boardPath, createBlockList, resolveHandles, saveBoard, toggleJoin, useBoard } from '../lib/boards'
 import { TOPICS } from '../lib/topics'
@@ -16,7 +17,8 @@ export function BoardEditorPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const did = useAtproto((a) => a.did)
-  const { data: existing } = useBoard(rkey ? (did ?? undefined) : undefined, rkey)
+  const loaded = useBoard(rkey ? (did ?? undefined) : undefined, rkey)
+  const existing = loaded.data
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [rules, setRules] = useState('')
@@ -50,6 +52,15 @@ export function BoardEditorPage() {
             Sign in with Bluesky
           </Link>
         </div>
+      </div>
+    )
+
+  // Editing waits for the board to load: a blank form saved here would replace it with a new, empty
+  // board under the same address, dropping its moderators and its list of accounts kept out.
+  if (rkey && !existing)
+    return (
+      <div className="wide-col grid place-items-center p-10 text-center">
+        {loaded.isError ? <CouldntReach what="your board" onRetry={() => void loaded.refetch()} /> : <Loader2 size={22} className="spin text-ink-3" aria-label="Loading your board" />}
       </div>
     )
 
