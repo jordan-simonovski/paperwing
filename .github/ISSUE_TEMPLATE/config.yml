@@ -1,7 +1,7 @@
 blank_issues_enabled: true
 contact_links:
   - name: Report a security problem
-    url: https://github.com/jordan-simonovski/paperwing/security/advisories/new
+    url: https://github.com/paperwingio/paperwing/security/advisories/new
     about: Privately, please. See SECURITY.md.
   - name: Questions and chat
     url: https://bsky.app/profile/paperwing.io

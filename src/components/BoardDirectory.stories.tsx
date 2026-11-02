@@ -38,7 +38,7 @@ export const MostActive: Story = {
   play: async ({ canvasElement, canvas }) => {
     await canvas.findByText('Home Cooking')
     await expect(names(canvasElement)).toEqual(['Announcements', 'Home Cooking', 'Sourdough', 'Quiet corner'])
-    await expect(canvas.getByText(/14 links this week/)).toBeVisible()
+    await expect(canvas.getByText(/14 people posting this week/)).toBeVisible()
     await expect(canvas.getAllByLabelText('Official PaperWing board')).toHaveLength(1)
   },
 }

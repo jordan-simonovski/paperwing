@@ -4,7 +4,7 @@ import { BOARD_NSID, canPost, cleanBoard, type Board } from '../../src/lib/socia
 import type { Story } from '../../src/lib/types.js'
 import { posts } from './atlinks.js'
 import { type PostView, toStory } from './bsky.js'
-import { moderationOf } from './boardModeration.js'
+import { boardShows, moderationOf } from './boardModeration.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { cachedInKv } from './kv.js'
 import { blocked, linksTo, official, rank, submissions, unlisted } from './paperwing.js'
@@ -53,15 +53,14 @@ export async function readBoard(did: string, rkey: string): Promise<BoardView> {
 export async function boardFront(did: string, rkey: string, sort: PaperwingSort): Promise<{ board: BoardView; stories: Story[] }> {
   return cachedInKv(`rd:board:${did}:${rkey}:${sort}`, 60, async () => {
     const board = await readBoard(did, rkey)
-    const [uris, { hidden, kept }] = await Promise.all([submissions(communityUrl(did, rkey), '.boardUrl', 200), moderationOf(board.uri, board)])
+    const [uris, mod] = await Promise.all([submissions(communityUrl(did, rkey), '.boardUrl', 200), moderationOf(board.uri, board)])
     const records = await pool(uris, 10, (u) => getRecord<unknown>(u).catch(() => undefined))
     const off = blocked()
     const subs = records.flatMap((r, i) => {
       const s = r ? cleanSubmission(r.value) : undefined
       const author = uris[i].split('/')[2]
       if (!s || s.community !== board.uri || s.post.uri.split('/')[2] !== author) return []
-      if (!canPost(board, board.owner, author, board.official)) return []
-      if (hidden.has(s.post.uri) || kept.has(author) || off.has(author) || off.has(s.post.uri)) return []
+      if (!boardShows(board, board.owner, board.official, mod, s.post.uri, author) || off.has(author) || off.has(s.post.uri)) return []
       return [s]
     })
     const found: PostView[] = (await posts([...new Set(subs.map((s) => s.post.uri))])).filter((p) => !unlisted(p))
@@ -74,21 +73,30 @@ export async function boardFront(did: string, rkey: string, sort: PaperwingSort)
 
 /**
  * Every community board (boards carry PaperWing's address, so Constellation lists them), each with
- * how many links it got this week. A listing's record key says when it was made, so counting needs
- * no record reads. Up to 500 boards.
+ * how many people posted to it this week. A listing's record key says when it was made, so counting
+ * needs no record reads; counting people rather than records means one account can't make a board
+ * look busy, and on a board where only moderators post only they count. Up to 500 boards.
  */
 export async function allBoards(): Promise<BoardView[]> {
-  const uris = await linksTo(PAPERWING_SITE, BOARD_NSID, '.site', 500).catch(() => [])
-  const weekAgo = Date.now() - 7 * 86_400_000
+  const off = blocked()
+  const uris = (await linksTo(PAPERWING_SITE, BOARD_NSID, '.site', 500).catch(() => [])).filter((u) => !off.has(u) && !off.has(u.split('/')[2]))
+  const now = Date.now()
+  const weekAgo = now - 7 * 86_400_000
   const found = await pool(uris, 10, async (u) => {
     const [, , did, , rkey] = u.split('/')
-    const [board, listed] = await Promise.all([readBoard(did, rkey), linksTo(communityUrl(did, rkey), SUBMISSION_NSID, '.boardUrl', 100).catch(() => [])])
-    // A key dated in the future isn't this week's.
-    const active = listed.filter((l) => {
-      const at = tidTime(l.split('/')[4])
-      return at !== undefined && at > weekAgo && at <= Date.now() + 60_000
-    }).length
-    return { ...board, active }
+    const [board, listed] = await Promise.all([readBoard(did, rkey), linksTo(communityUrl(did, rkey), SUBMISSION_NSID, '.boardUrl', 100).catch(() => undefined)])
+    // Not knowing this week's count isn't the same as a quiet week: leave it out.
+    if (!listed) return board
+    const people = new Set(
+      listed.flatMap((l) => {
+        const [, , author, , key] = l.split('/')
+        const at = tidTime(key)
+        // A key dated in the future isn't this week's.
+        const recent = at !== undefined && at > weekAgo && at <= now + 60_000
+        return recent && !off.has(author) && canPost(board, board.owner, author, board.official) ? [author] : []
+      }),
+    )
+    return { ...board, active: people.size }
   })
   return found.filter((b) => !!b).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
 }

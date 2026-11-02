@@ -70,9 +70,15 @@ vi.mock('./atlinks.js', () => ({
 // Links to an address, by Constellation: every board (as many pages as there are), and each
 // board's listings, whose record keys say when they were made.
 const linkTargets: Record<string, string[]> = {}
+/** Addresses Constellation isn't answering for just now. */
+const failing: Record<string, true> = {}
 vi.mock('./paperwing.js', () => ({
   official: (did: string) => did === 'did:plc:eprq6bm2okrgk6zsoka2wpux',
-  linksTo: vi.fn(async (target: string) => linkTargets[target] ?? []),
+  // Honours its limit, like Constellation's pager: a smaller one would miss boards.
+  linksTo: vi.fn(async (target: string, _c?: string, _p?: string, max = 300) => {
+    if (target in failing) throw new Error('Constellation timed out')
+    return (linkTargets[target] ?? []).slice(0, max)
+  }),
   blocked: () => new Set<string>(),
   unlisted: () => false,
   rank: (list: PostView[]) => list,
@@ -148,7 +154,7 @@ describe('community boards', () => {
     vi.mocked(fetchJson).mockImplementation(async () => ({ items: [{ subject: { did: BOB } }] }))
   })
 
-  it('lists every board, official ones marked, with how many links each got this week', async () => {
+  it('lists every board, official ones marked, with how many people posted to each this week', async () => {
     const NEWS_OWNER = 'did:plc:eprq6bm2okrgk6zsoka2wpux'
     const news = `at://${NEWS_OWNER}/io.paperwing.board/3announcement`
     records[news] = { name: 'Announcements', moderators: [], site: 'https://paperwing.io', createdAt: '2026-11-01T00:00:00Z' }
@@ -157,11 +163,20 @@ describe('community boards', () => {
     linkTargets['https://paperwing.io'] = [BOARD, news, ...extra]
     const day = 86_400_000
     const at = (msAgo: number) => `at://${ANN}/io.paperwing.submission/${tid((Date.now() - msAgo) * 1000)}`
-    linkTargets[`https://paperwing.io/c/${OWNER}/bbbbbbbbbbbbb`] = [at(1 * day), at(2 * day), at(9 * day)]
+    const by = (did: string, msAgo: number) => `at://${did}/io.paperwing.submission/${tid((Date.now() - msAgo) * 1000)}`
+    // Two listings from one person count once; a nine-day-old one, a key dated next week and a key
+    // that isn't a date don't count at all.
+    linkTargets[`https://paperwing.io/c/${OWNER}/bbbbbbbbbbbbb`] = [at(1 * day), at(2 * day), by(BOB, day), at(9 * day), by(MOD, -7 * day), `at://${STRANGER}/io.paperwing.submission/notatimestamp`]
+    // On the official board only its moderators count: anyone else's listings never show there.
+    linkTargets[`https://paperwing.io/c/${NEWS_OWNER}/3announcement`] = [by(STRANGER, day), by(BOB, day)]
     const boards = await allBoards()
     expect(boards).toHaveLength(122)
     expect(boards.find((b) => b.uri === BOARD)).toMatchObject({ active: 2, official: false })
     expect(boards.find((b) => b.uri === news)).toMatchObject({ active: 0, official: true })
+    // When a board's listings can't be counted, it says nothing rather than "quiet".
+    failing[`https://paperwing.io/c/${OWNER}/bbbbbbbbbbbbb`] = true
+    expect((await allBoards()).find((b) => b.uri === BOARD)?.active).toBeUndefined()
+    delete failing[`https://paperwing.io/c/${OWNER}/bbbbbbbbbbbbb`]
     for (const u of extra) delete records[u]
     delete records[news]
   })

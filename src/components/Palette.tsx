@@ -6,6 +6,7 @@ import { SourceChannelIcon } from './SourceIcon'
 import { linkFrom, postLink } from '../lib/compose'
 import { boardPath, useAllBoards } from '../lib/boards'
 import { findBoards } from '../lib/boardFinder'
+import { OfficialBadge } from './OfficialBadge'
 import { usePrefs } from '../lib/store'
 import { relatedTopics, searchTopics } from '../lib/topics'
 import { useUI } from '../lib/ui'
@@ -121,7 +122,19 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     for (const h of hits)
       out.push({ id: `topic:${h.topic.id}`, group: 'Topics', label: h.topic.label, hint: h.via ? `matches “${h.via}”` : h.topic.blurb, icon: dot(h.topic.hue), run: go(`/t/${h.topic.id}`) })
     for (const b of findBoards(boards, query).slice(0, 4))
-      out.push({ id: `board:${b.uri}`, group: 'Boards', label: b.name, hint: b.official ? 'Official, run by PaperWing' : b.description, icon: <Users size={15} />, run: go(boardPath(b.uri)) })
+      out.push({
+        id: `board:${b.uri}`,
+        group: 'Boards',
+        label: (
+          <>
+            {b.name}
+            {b.official && <OfficialBadge size={13} />}
+          </>
+        ),
+        hint: b.description,
+        icon: <Users size={15} />,
+        run: go(boardPath(b.uri)),
+      })
     out.push({ id: 'search', group: 'Search', label: <>Search stories for “{query}”</>, icon: <Search size={15} />, run: go(`/search?q=${encodeURIComponent(query)}`) })
     if (!hits.some((h) => h.score >= 7) && !interests.some((i) => i.query.toLowerCase() === query.toLowerCase())) {
       out.push({

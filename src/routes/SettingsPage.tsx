@@ -1002,7 +1002,7 @@ function BuildInfo() {
 /** PaperWing's own Bluesky account: news of the app, and where to say hello. */
 const BLUESKY = 'https://bsky.app/profile/paperwing.io'
 const FEEDBACK = `https://bsky.app/intent/compose?text=${encodeURIComponent('@paperwing.io ')}`
-const REPO = 'https://github.com/jordan-simonovski/paperwing'
+const REPO = 'https://github.com/paperwingio/paperwing'
 /** Tips that keep the servers running: free to use, and supported by the people who read it. */
 const SUPPORT = 'https://ko-fi.com/jordo92'
 /** A new bug report with the build and device filled in, so nobody has to go looking for them. */

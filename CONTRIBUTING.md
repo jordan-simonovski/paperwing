@@ -4,8 +4,8 @@ Thanks for wanting to help. PaperWing is a reader for the open web: Hacker News,
 
 ## Ways to help
 
-- **Report a bug.** [Open a bug report](https://github.com/jordan-simonovski/paperwing/issues/new?template=bug_report.yml). In the app, Settings, About, Report a bug fills in your build and device for you.
-- **Suggest an idea.** [Open a feature request](https://github.com/jordan-simonovski/paperwing/issues/new?template=feature_request.yml). Say what you were trying to do, not just the feature you'd want.
+- **Report a bug.** [Open a bug report](https://github.com/paperwingio/paperwing/issues/new?template=bug_report.yml). In the app, Settings, About, Report a bug fills in your build and device for you.
+- **Suggest an idea.** [Open a feature request](https://github.com/paperwingio/paperwing/issues/new?template=feature_request.yml). Say what you were trying to do, not just the feature you'd want.
 - **Fix something.** Issues labelled `good first issue` are a gentle start. For anything bigger than a small fix, open an issue first so we can agree on the approach before you spend the time.
 - **Security problems** go privately, never in a public issue: see [SECURITY.md](SECURITY.md).
 

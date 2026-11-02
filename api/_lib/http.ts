@@ -6,7 +6,7 @@ import ipaddr from 'ipaddr.js'
 import { storyKey } from '../../src/lib/storyKey.js'
 import { Agent, EnvHttpProxyAgent, fetch as undiciFetch, type Dispatcher, type Response as UndiciResponse } from 'undici'
 
-export const UA = 'Mozilla/5.0 (compatible; PaperWing/0.1; +https://github.com/jordan-simonovski/paperwing)'
+export const UA = 'Mozilla/5.0 (compatible; PaperWing/0.1; +https://github.com/paperwingio/paperwing)'
 
 export function json(data: unknown, maxAge = 300, status = 200): Response {
   return new Response(JSON.stringify(data), {

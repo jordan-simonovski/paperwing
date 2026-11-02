@@ -455,6 +455,6 @@ Reddit closed self-service API keys in November 2025; new apps need manual appro
 
 PaperWing is open source under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE).
 
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), [report a bug](https://github.com/jordan-simonovski/paperwing/issues/new?template=bug_report.yml) or [suggest an idea](https://github.com/jordan-simonovski/paperwing/issues/new?template=feature_request.yml). Security problems go privately: see [SECURITY.md](SECURITY.md).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), [report a bug](https://github.com/paperwingio/paperwing/issues/new?template=bug_report.yml) or [suggest an idea](https://github.com/paperwingio/paperwing/issues/new?template=feature_request.yml). Security problems go privately: see [SECURITY.md](SECURITY.md).
 
 PaperWing is free, with no ads. If it's useful to you, you can [support it on Ko-fi](https://ko-fi.com/jordo92): it keeps the servers running. The names and logos of Hacker News, Lobsters, Lemmy, Bluesky, Mastodon and other services shown in the app belong to their owners and are used only to identify where a story comes from.

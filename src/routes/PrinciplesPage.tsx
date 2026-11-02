@@ -7,7 +7,7 @@ import { Pip } from '../components/Pip'
 // written so anyone can hold it to them. Like the privacy and terms pages, they describe what the
 // code does; a change that breaks one of them is a bug.
 
-const REPO = 'https://github.com/jordan-simonovski/paperwing'
+const REPO = 'https://github.com/paperwingio/paperwing'
 const SUPPORT = 'https://ko-fi.com/jordo92'
 const link = 'font-semibold text-ink underline underline-offset-2'
 

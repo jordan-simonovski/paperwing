@@ -61,4 +61,4 @@ export function byActivity<T extends FindableBoard>(boards: T[]): T[] {
   return [...boards].sort((a, b) => Number(!!b.official) - Number(!!a.official) || (b.active ?? 0) - (a.active ?? 0) || Date.parse(b.createdAt) - Date.parse(a.createdAt))
 }
 
-export const activityLabel = (n: number) => (n === 0 ? 'Quiet this week' : n === 1 ? '1 link this week' : `${n} links this week`)
+export const activityLabel = (n: number) => (n === 0 ? 'Quiet this week' : n === 1 ? '1 person posting this week' : `${n} people posting this week`)

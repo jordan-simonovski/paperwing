@@ -1,9 +1,9 @@
 import { boardUrl, PAPERWING_SITE, SUBMISSION_NSID, cleanSubmission, type PaperwingSort, type Submission } from '../../src/lib/paperwing.js'
 import { officialFrom } from '../../src/lib/boardFinder.js'
-import { canPost, cleanBoard, type Board } from '../../src/lib/social.js'
+import { cleanBoard, type Board } from '../../src/lib/social.js'
 import type { Story } from '../../src/lib/types.js'
 import { posts } from './atlinks.js'
-import { moderationOf } from './boardModeration.js'
+import { boardShows, moderationWithin } from './boardModeration.js'
 import { postTime, toStory, type PostView } from './bsky.js'
 import { getRecord, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
@@ -60,6 +60,9 @@ export const official = (did: string, setting = process.env.PAPERWING_OFFICIAL ?
 
 /** An official announcement stays at the top of the front page this long. */
 const PINNED_FOR = 72 * HOUR
+const FRONT_LENGTH = 80
+/** How long the front page waits on a board's moderation before leaving the board's listings out. */
+const MODERATION_WAIT = 4000
 
 /** Labels that keep a post off PaperWing's public pages: moderation takedowns, spam and adult content. */
 const UNLISTED = new Set(['!hide', '!takedown', 'spam', 'porn', 'sexual', 'nudity', 'graphic-media', 'gore'])
@@ -102,41 +105,42 @@ export async function paperwingFront(sort: PaperwingSort, board?: string, now = 
     // On the front page, a board's listing says which board it's from, and counts only if its
     // author may post there (a board that can't be read can't vouch for it).
     const boards = board ? new Map<string, Board>() : await boardsByUri([...new Set(all.flatMap((x) => (x.sub.community ? [x.sub.community] : [])))])
-    // Its moderators' hides and block list follow a board's listings here; a board whose moderation
-    // can't be read keeps its listings off the front page until it can.
+    // Its moderators' hides and block list follow a board's listings here. A board whose moderation
+    // can't be read, or not quickly, keeps its listings off the front page until it can: one slow
+    // moderator's server mustn't hold the whole page up.
     const read = [...boards]
-    const mods = await pool(read, 10, ([u, b]) => moderationOf(u, b))
+    const mods = await pool(read, 10, ([u, b]) => moderationWithin(u, b, MODERATION_WAIT))
     const moderation = new Map(read.map(([u], i) => [u, mods[i]]))
+    const off = blocked()
     const list = all.filter(({ post, sub }) => {
       if (board || !sub.community) return true
       const b = boards.get(sub.community)
       const mod = moderation.get(sub.community)
       const owner = sub.community.split('/')[2]
-      const author = post.author.did
-      return !!b && !!mod && canPost(b, owner, author, official(owner)) && !mod.hidden.has(post.uri) && !mod.kept.has(author)
+      return !!b && !!mod && !off.has(owner) && !off.has(sub.community) && boardShows(b, owner, official(owner), mod, post.uri, post.author.did)
     })
     const subs = new Map(list.map((x) => [x.post.uri, x.sub]))
     const names = new Map([...boards].map(([u, b]) => [u, b.name]))
-    const stories = rank(
+    const ranked = rank(
       list.map((x) => x.post),
       sort,
       now,
-    )
-      .slice(0, 80)
-      .map((p): Story => {
-        const s = subs.get(p.uri)!
-        const name = s.community ? names.get(s.community) : undefined
-        return {
-          ...toStory(p),
-          sourceLabel: 'PaperWing',
-          ...(s.board ? { tags: [s.board] } : {}),
-          ...(s.community && name ? { board: { uri: s.community, name, official: official(s.community.split('/')[2]) } } : {}),
-        }
-      })
-    if (board || sort === 'new') return stories
-    // The newest official announcement from the last few days leads the front page.
-    const pin = stories.filter((s) => s.board?.official && now - s.createdAt < PINNED_FOR).sort((a, b) => b.createdAt - a.createdAt)[0]
-    return pin ? [{ ...pin, pinned: true }, ...stories.filter((s) => s !== pin)] : stories
+    ).map((p): Story => {
+      const s = subs.get(p.uri)!
+      const name = s.community ? names.get(s.community) : undefined
+      return {
+        ...toStory(p),
+        sourceLabel: 'PaperWing',
+        ...(s.board ? { tags: [s.board] } : {}),
+        ...(s.community && name ? { board: { uri: s.community, name, official: official(s.community.split('/')[2]) } } : {}),
+      }
+    })
+    if (board || sort === 'new') return ranked.slice(0, FRONT_LENGTH)
+    // The newest official announcement from the last few days leads the front page, however far
+    // down the ranking it would otherwise be.
+    const pin = ranked.filter((s) => s.board?.official && now - s.createdAt < PINNED_FOR).sort((a, b) => b.createdAt - a.createdAt)[0]
+    if (!pin) return ranked.slice(0, FRONT_LENGTH)
+    return [{ ...pin, pinned: true }, ...ranked.filter((s) => s !== pin).slice(0, FRONT_LENGTH - 1)]
   })
 }
 

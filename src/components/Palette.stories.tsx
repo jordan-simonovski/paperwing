@@ -107,3 +107,29 @@ export const FindsABoard: Story = {
     await waitFor(() => expect(canvas.getByRole('option', { name: /Home Cooking/ })).toBeInTheDocument())
   },
 }
+
+/** Only the server says a board is official: a board that calls itself so in its description gets no badge. */
+export const OfficialOnlyByTheBadge: Story = {
+  parameters: {
+    app: {
+      ui: { palette: true },
+      prefs: { followed: ['tech'] },
+      queries: [
+        [
+          ['boards'],
+          [
+            ...boardList,
+            { ...boardList[0], uri: 'at://did:plc:uuuuuuuuuuuuuuuuuuuuuuuu/io.paperwing.board/3fakeannounce', name: 'Announcements HQ', description: 'Official, run by PaperWing', official: false },
+          ],
+        ],
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    await userEvent.type(canvas.getByRole('combobox'), 'announcements')
+    const real = await waitFor(() => canvas.getByRole('option', { name: /^Announcements(?! HQ)/ }))
+    const fake = canvas.getByRole('option', { name: /Announcements HQ/ })
+    await expect(within(real).getByLabelText('Official PaperWing board')).toBeInTheDocument()
+    await expect(within(fake).queryByLabelText('Official PaperWing board')).toBeNull()
+  },
+}

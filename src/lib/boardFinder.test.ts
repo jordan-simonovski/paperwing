@@ -53,8 +53,8 @@ describe('finding boards', () => {
 
   it('says how lively a board is in a few words', () => {
     expect(activityLabel(0)).toBe('Quiet this week')
-    expect(activityLabel(1)).toBe('1 link this week')
-    expect(activityLabel(12)).toBe('12 links this week')
+    expect(activityLabel(1)).toBe('1 person posting this week')
+    expect(activityLabel(12)).toBe('12 people posting this week')
   })
 })
 

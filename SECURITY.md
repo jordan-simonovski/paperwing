@@ -6,7 +6,7 @@ PaperWing holds things worth protecting: people's sign-ins on their devices, the
 
 Please report privately, not in a public issue:
 
-- **Preferred:** [report a vulnerability on GitHub](https://github.com/jordan-simonovski/paperwing/security/advisories/new).
+- **Preferred:** [report a vulnerability on GitHub](https://github.com/paperwingio/paperwing/security/advisories/new).
 - **Or** send a direct message to [@paperwing.io](https://bsky.app/profile/paperwing.io) on Bluesky asking for a private channel.
 
 Include what you found, how to reproduce it, and what someone could do with it. You'll get a reply within a few days. Please give a reasonable amount of time for a fix before disclosing it publicly.

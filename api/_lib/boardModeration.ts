@@ -1,4 +1,4 @@
-import { BOARD_HIDE_NSID, cleanBoardHide, type Board } from '../../src/lib/social.js'
+import { BOARD_HIDE_NSID, canPost, cleanBoardHide, type Board } from '../../src/lib/social.js'
 import { listAllRecords } from './frontpage.js'
 import { fetchJson } from './http.js'
 
@@ -51,7 +51,38 @@ const isGone = (err: unknown) => err instanceof Error && /\bUpstream 40[04]\b/.t
  * The listings a board's moderators hid and the accounts its block list keeps out. Throws when
  * either can't be read: whoever shows the board's listings must not show them unmoderated.
  */
-export async function moderationOf(uri: string, board: Board): Promise<{ hidden: Set<string>; kept: Set<string> }> {
+export async function moderationOf(uri: string, board: Board): Promise<BoardModeration> {
   const [hidden, kept] = await Promise.all([hiddenOn(uri, board), board.blockList ? listMembers(board.blockList) : Promise.resolve(new Set<string>())])
   return { hidden, kept }
 }
+
+export interface BoardModeration {
+  hidden: Set<string>
+  kept: Set<string>
+}
+
+/**
+ * A board's moderation, or undefined when it can't be read within `ms` (a moderator's server that
+ * is down or slow): whoever shows the board's listings leaves them out rather than wait on it.
+ */
+export async function moderationWithin(uri: string, board: Board, ms: number): Promise<BoardModeration | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`took longer than ${ms}ms`)), ms)
+  })
+  try {
+    return await Promise.race([moderationOf(uri, board), late])
+  } catch (err) {
+    console.warn(`Board ${uri} left out: its moderation couldn't be read (${err instanceof Error ? err.message : String(err)})`)
+    return undefined
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Whether a listing shows on a board, wherever it's shown: its author may post there, its
+ * moderators haven't hidden it and the board's block list doesn't keep its author out.
+ */
+export const boardShows = (board: Board, owner: string, official: boolean, mod: BoardModeration, post: string, author: string) =>
+  canPost(board, owner, author, official) && !mod.hidden.has(post) && !mod.kept.has(author)

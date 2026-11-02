@@ -477,7 +477,7 @@ function MadeInTheOpen() {
         </Link>
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <a className="btn h-9 text-[0.8125rem]" href="https://github.com/jordan-simonovski/paperwing" target="_blank" rel="noopener noreferrer">
+        <a className="btn h-9 text-[0.8125rem]" href="https://github.com/paperwingio/paperwing" target="_blank" rel="noopener noreferrer">
           <Code2 size={14} /> PaperWing on GitHub
         </a>
         <a className="btn h-9 text-[0.8125rem]" href="https://ko-fi.com/jordo92" target="_blank" rel="noopener noreferrer">
