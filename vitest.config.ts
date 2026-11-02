@@ -17,7 +17,7 @@ export default mergeConfig(
       projects: [
         {
           extends: true,
-          test: { name: 'unit', include: ['src/**/*.test.{ts,tsx}', 'api/**/*.test.ts', 'scripts/**/*.test.mjs'], environment: 'node' },
+          test: { name: 'unit', include: ['src/**/*.test.{ts,tsx}', 'api/**/*.test.ts', 'sw/**/*.test.ts', 'scripts/**/*.test.mjs'], environment: 'node' },
         },
         {
           extends: true,

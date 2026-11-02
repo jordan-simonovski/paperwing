@@ -3,6 +3,9 @@ const VERSION = '__VERSION__'
 const PRECACHE = self.__PRECACHE__
 const SHELL = `readout-shell-${VERSION}`
 const RUNTIME = 'readout-runtime'
+// Recent /api answers, for reading offline. Every article, feed and grade has its own address, so
+// only the newest are kept: otherwise the cache grows for good and crowds out the saved library.
+const RUNTIME_KEEP = 200
 // Filled by the app when an article is saved for offline (see src/lib/library.ts).
 const IMAGES = 'readout-images'
 const NAV_TIMEOUT_MS = 3500
@@ -29,11 +32,21 @@ async function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
 }
 
-async function networkFirst(request, cacheName, timeoutMs) {
+/** Drops a cache's oldest entries beyond `keep` (a cache lists its entries oldest written first). */
+async function keepNewest(cache, keep) {
+  const requests = await cache.keys()
+  for (const old of requests.slice(0, Math.max(0, requests.length - keep))) await cache.delete(old)
+}
+
+async function networkFirst(request, cacheName, timeoutMs, keep) {
   const cache = await caches.open(cacheName)
   try {
     const response = await (timeoutMs ? withTimeout(fetch(request), timeoutMs) : fetch(request))
-    if (response.ok) cache.put(request, response.clone())
+    if (response.ok)
+      cache
+        .put(request, response.clone())
+        .then(() => keepNewest(cache, keep))
+        .catch(() => {})
     return response
   } catch (err) {
     const cached = await cache.match(request, MATCH)
@@ -124,7 +137,7 @@ self.addEventListener('fetch', (event) => {
       return
     }
     if (url.pathname.startsWith('/api/')) {
-      event.respondWith(networkFirst(request, RUNTIME, 12000))
+      event.respondWith(networkFirst(request, RUNTIME, 12000, RUNTIME_KEEP))
       return
     }
     return
