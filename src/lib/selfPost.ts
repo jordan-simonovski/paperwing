@@ -109,17 +109,23 @@ export class WordsNotSaved extends Error {
   }
 }
 
-/** Writes the words once. An answer can be lost after the record was written: if it's there, they saved. */
-async function writeWords(p: PendingSelfPost, body: string) {
+/**
+ * Writes the words once, returning the words that are there now. An answer can be lost after the
+ * record was written: if it's there, it saved, and different words in it are replaced where the
+ * sign-in may (or reported as what's there, where it may not).
+ */
+async function writeWords(p: PendingSelfPost, body: string): Promise<string> {
   const record = submissionRecord(p.ref, p.url, p.title, p.board, { front: p.front, body }) as unknown as Record<string, unknown>
   try {
     await createRecord(SUBMISSION_NSID, record, p.rkey)
+    return body
   } catch (err) {
-    const there = await getOwnRecord(SUBMISSION_NSID, p.rkey).then(
-      () => true,
-      () => false,
-    )
+    const there = await getOwnRecord<{ body?: unknown }>(SUBMISSION_NSID, p.rkey).catch(() => undefined)
     if (!there) throw err
+    if (there.value.body === body) return body
+    if (canUpdate(useAtproto.getState().scope, SUBMISSION_NSID) === false) return typeof there.value.body === 'string' ? there.value.body : body
+    await putRecord(SUBMISSION_NSID, p.rkey, record)
+    return body
   }
 }
 
@@ -127,12 +133,13 @@ async function writeWords(p: PendingSelfPost, body: string) {
 export async function saveWords(p: PendingSelfPost, words: string): Promise<{ key: string; story: Story }> {
   const body = words.trim()
   if (!body) throw new Error('Write something first')
+  let saved: string
   try {
-    await writeWords(p, body).catch(() => writeWords(p, body))
+    saved = await writeWords(p, body).catch(() => writeWords(p, body))
   } catch (err) {
     throw new WordsNotSaved(`Posted to Bluesky, but its words didn’t save: ${(err as Error).message}`, p)
   }
-  return { key: storyKey({ kind: 'bs', uri: p.ref.uri }), story: asStory(p.ref, p.title, body, p.createdAt) }
+  return { key: storyKey({ kind: 'bs', uri: p.ref.uri }), story: asStory(p.ref, p.title, saved, p.createdAt) }
 }
 
 /** Replaces a self post's words, keeping everything else in its record. Yours only. */

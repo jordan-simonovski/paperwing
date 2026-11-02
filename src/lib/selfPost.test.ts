@@ -7,6 +7,8 @@ let scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.sub
 let failSubmission = 0
 /** The server writes the record but the answer never arrives. */
 let loseAnswer = false
+/** How many reads of your own records fail before one answers. */
+let failReads = 0
 
 vi.mock('./atproto', async (orig) => {
   const real = await orig<typeof import('./atproto')>()
@@ -25,9 +27,12 @@ vi.mock('./atproto', async (orig) => {
     },
     putRecord: async (collection: string, rkey: string, record: Record<string, unknown>) => {
       writes.push({ op: 'put', collection, rkey, record })
+      const uri = `at://${DID}/${collection}/${rkey}`
+      own[uri] = { uri, cid: 'bafy2', value: { $type: collection, ...record } }
       return { uri: `at://${DID}/${collection}/${rkey}`, cid: 'bafy2' }
     },
     getOwnRecord: async (collection: string, rkey: string) => {
+      if (failReads-- > 0) throw new Error('Read timed out')
       const r = own[`at://${DID}/${collection}/${rkey}`]
       if (!r) throw new Error('RecordNotFound')
       return r
@@ -46,6 +51,7 @@ beforeEach(() => {
   scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
   failSubmission = 0
   loseAnswer = false
+  failReads = 0
 })
 
 describe('writing a self post', () => {
@@ -80,6 +86,25 @@ describe('writing a self post', () => {
     expect(writes[1].rkey).toBe(writes[0].rkey)
     expect(writes[1].record.body).toBe('B, edited meanwhile')
     expect(story).toMatchObject({ key, selfPost: { body: 'B, edited meanwhile' } })
+  })
+
+  it('saving again after a lost answer keeps the newer words, or says which words are there', async () => {
+    // The words landed, but neither the answer nor the read-back arrived: it looks like they didn't save.
+    loseAnswer = true
+    failReads = 2
+    const err = (await writeSelfPost({ title: 'T', body: 'old words' }).catch((e: unknown) => e)) as InstanceType<typeof WordsNotSaved>
+    expect(err).toBeInstanceOf(WordsNotSaved)
+    loseAnswer = false
+
+    const saved = await saveWords(err.pending, 'new words')
+    expect(writes.at(-1)).toMatchObject({ op: 'put', collection: 'io.paperwing.submission', rkey: err.pending.rkey })
+    expect(writes.at(-1)!.record.body).toBe('new words')
+    expect(saved.story.selfPost?.body).toBe('new words')
+
+    // Without the permission to change it, the story shows the words that are actually there.
+    scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create'
+    const kept = await saveWords(err.pending, 'newer still')
+    expect(kept.story.selfPost?.body).toBe('new words')
   })
 
   it('counts words that saved even when the answer was lost', async () => {
