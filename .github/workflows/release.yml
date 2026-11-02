@@ -4,8 +4,10 @@ name: Release
 # `npm run release`: consumes the changesets, bumps the version, rewrites CHANGELOG.md and the app's
 # "What's new". Merging it is the release, and the only production deploy (scripts/vercel-ignore.sh).
 #
-# Needs the repository setting "Allow GitHub Actions to create and approve pull requests"
-# (Settings, Actions, General, Workflow permissions).
+# Opens the pull request as the Release GitHub App (repository variable RELEASE_APP_ID, secret
+# RELEASE_APP_PRIVATE_KEY; the app needs Contents and Pull requests read/write on this repository).
+# A pull request opened with the workflow's own GITHUB_TOKEN never triggers CI, so the Release
+# pull request could never pass its checks.
 on:
   push:
     branches: [main]
@@ -21,7 +23,14 @@ jobs:
     name: Release pull request
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app.outputs.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -33,4 +42,4 @@ jobs:
           title: Release
           commit: Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
