@@ -10,6 +10,7 @@ import {
   Download,
   FileText,
   GitPullRequest,
+  Heart,
   KeyRound,
   Lightbulb,
   Loader2,
@@ -896,6 +897,8 @@ const BuildInfo = () => (
 const BLUESKY = 'https://bsky.app/profile/paperwing.io'
 const FEEDBACK = `https://bsky.app/intent/compose?text=${encodeURIComponent('@paperwing.io ')}`
 const REPO = 'https://github.com/jordan-simonovski/paperwing'
+/** Tips that keep the servers running: free to use, and supported by the people who read it. */
+const SUPPORT = 'https://ko-fi.com/jordo92'
 /** A new bug report with the build and device filled in, so nobody has to go looking for them. */
 const bugReportUrl = () => {
   const installed = window.matchMedia('(display-mode: standalone)').matches
@@ -930,6 +933,9 @@ function About() {
           {/* Feedback lands as a public mention on Bluesky; bugs and ideas as GitHub issues. */}
           <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={FEEDBACK} target="_blank" rel="noopener noreferrer">
             <MessageSquare size={14} /> Send feedback
+          </a>
+          <a className="btn inline-flex h-9 px-3.5 text-[0.8125rem]" href={SUPPORT} target="_blank" rel="noopener noreferrer">
+            <Heart size={14} /> Support PaperWing
           </a>
         </div>
         <p className="pt-2 text-[0.8125rem] font-semibold text-ink-3">Open source, on GitHub</p>
