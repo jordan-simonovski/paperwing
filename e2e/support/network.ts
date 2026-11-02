@@ -35,6 +35,8 @@ export interface Stubs {
   bluesky: Record<string, unknown[]>
   /** The reader view: /api/extract, by article URL. */
   extract: Record<string, Answer<Article>>
+  /** A link's card (its own title and description), by URL: what Post a link reads in. */
+  cards: Record<string, { title?: string; description?: string }>
   /** Whether this deployment has sync (`/api/sync?status`). */
   sync: boolean
 }
@@ -47,10 +49,11 @@ const DEFAULTS: Stubs = {
   lemmy: { 'world@lemmy.world': [SEABED] },
   bluesky: {},
   extract: { [WEB_WE_LOST_ARTICLE.url]: WEB_WE_LOST_ARTICLE },
+  cards: {},
   sync: true,
 }
 
-const MAPS = ['feeds', 'hnItems', 'lemmy', 'bluesky', 'extract'] as const
+const MAPS = ['feeds', 'hnItems', 'lemmy', 'bluesky', 'extract', 'cards'] as const
 
 function mergeStubs(base: Stubs, over: Partial<Stubs>): Stubs {
   const out = { ...base, ...over }
@@ -87,6 +90,7 @@ const HOSTS: Record<string, Handler> = {
       const src = q.get('src') ?? ''
       // Site icons are images; without one the app draws a letter.
       if (src === 'icon') return fail(404, 'No icon')
+      if (src === 'card') return s.cards[q.get('url') ?? ''] ?? {}
       return s.feeds[`${src}:${q.get('label')}`] ?? s.feeds[src] ?? []
     }
     if (p === '/api/extract') return s.extract[q.get('url') ?? ''] ?? fail(422, 'Could not extract an article')

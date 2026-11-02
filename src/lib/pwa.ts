@@ -38,7 +38,9 @@ export function setupPWA() {
 
   if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return
   window.addEventListener('load', async () => {
-    const reg = await navigator.serviceWorker.register('/sw.js')
+    // A browser that refuses (private mode, blocked, an unsupported context) just runs without it.
+    const reg = await navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+    if (!reg) return
     // The first install also fires controllerchange (via clients.claim); only reload when we asked for it.
     let reloadRequested = false
     const apply = (worker: ServiceWorker) => {

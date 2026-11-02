@@ -252,7 +252,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
             <button
               className="inline-flex h-8 items-center gap-1 rounded-full px-2 text-[0.8125rem] font-bold text-signal"
               title={failed.map((f) => `${f.label}: ${f.error}`).join('\n')}
-              aria-label={`${failed.length} sources failed`}
+              aria-label={`${failed.length} ${failed.length === 1 ? 'source' : 'sources'} failed`}
               onClick={() => toast(failed.map((f) => `${f.label}: ${f.error}`).join(' · '), { tone: 'error' })}
             >
               <AlertTriangle size={15} /> <span className="num">{failed.length}</span>
