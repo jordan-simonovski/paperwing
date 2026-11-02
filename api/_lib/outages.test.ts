@@ -13,6 +13,10 @@ describe('matchProviders', () => {
   it('ignores handles, links, markets and status bots', () => {
     expect(names('You lift my heart up when the rest of me is down @someone.bsky.social')).toEqual([])
     expect(names('The Dow is down 600 points and AWS stock fell')).toEqual([])
+    expect(names('Cloudflare Sinks 9.54% to $280.70 as Valuation Doubts Bite. Cloudflare is down 9.54% to $280.70')).toEqual([])
+    expect(names('$NET is down again today, ugh')).toEqual([])
+    // A real report still counts, numbers and all.
+    expect(names('Cloudflare is down for me, 502 errors on every site')).toEqual(['Cloudflare'])
     expect(names('🔴 GitHub is reporting a major outage')).toEqual([])
   })
 })

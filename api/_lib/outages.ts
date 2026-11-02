@@ -48,8 +48,11 @@ export const PROVIDERS: Provider[] = [
 /** An outage claim, not just the word "down": "is down", "outage", "502s", "not loading". */
 const OUTAGE =
   /\b(is|are|was|went|seems?|looks?|appears?|still|totally|completely|fully)\s+(down|offline|broken)\b|\bdown (for (anyone|everyone|me)|again|right now|rn)\b|\b(outage|outages|degraded|502s?|503s?|500 errors?)\b|\b(not|isn'?t|won'?t) (loading|working|responding)\b|\bhaving (issues|problems)\b/i
-// Bots that relay status pages, and posts about prices or markets "going down".
-const NOT_A_REPORT = /^\s*(⚠️|✅|🔴|🟠|🟡|🟢|🚨)|\b(stock|shares?|price|dow|nasdaq|s&p|bitcoin|crypto)\b/i
+// Bots that relay status pages, and posts about prices or markets "going down": "Cloudflare is down
+// 9.54% to $280.70", "$NET slides after earnings". A fall in percent, a dollar figure, a ticker or
+// the vocabulary of markets means money, not an outage.
+const NOT_A_REPORT =
+  /^\s*(⚠️|✅|🔴|🟠|🟡|🟢|🚨)|\b(stocks?|shares?|share price|price target|dow|nasdaq|nyse|s&p|bitcoin|crypto|valuation|market cap|earnings|revenue|investors?|analysts?|guidance|dividend|ipo|sell-?off|rally|downgraded?|upgraded?|premarket|after-hours|trading|portfolio)\b|\b(down|up|fell|falls|drops?|sinks?|slides?|plunges?|tumbles?)\s+\d+(\.\d+)?\s?%|\$\d|(^|\s)\$[A-Z]{1,5}\b/i
 
 export interface Mention {
   text: string
