@@ -73,13 +73,18 @@ export async function GET(request: Request): Promise<Response> {
   for (const a of asked) {
     if (pending.length >= PER_REQUEST || resting.has(a.key.slice(0, 2)) || !needsGrade(a.key, a.comments, grades[a.key])) continue
     // One grader per story at a time, however many readers ask.
-    if (await overLimit(`rd:spice-lock:${a.key}`, 300, 1)) {
+    const lock = `rd:spice-lock:${a.key}`
+    if (await overLimit(lock, 300, 1)) {
       pending.push(a.key)
       continue
     }
     // Each reader starts only a few gradings a day, so no one caller can spend everyone's budget.
-    if (await overLimit(`rd:spice-caller:${clientKey(request)}:${day}`, 86_400, CALLER_LIMIT)) break
-    if (await overLimit(`rd:spice-budget:${day}`, 86_400, DAILY_LIMIT)) break
+    // Out of either, this reader grades nothing: the story is let go, or nobody else could grade it
+    // until the lock ran out.
+    if ((await overLimit(`rd:spice-caller:${clientKey(request)}:${day}`, 86_400, CALLER_LIMIT)) || (await overLimit(`rd:spice-budget:${day}`, 86_400, DAILY_LIMIT))) {
+      await store.bump(lock, 300, -1).catch(() => {})
+      break
+    }
     pending.push(a.key)
     waitUntil(
       grade(a.key, apiKey).catch(async (err) => {
