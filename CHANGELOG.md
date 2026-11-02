@@ -1,5 +1,33 @@
 # What's new
 
+## 0.7.0
+
+_Released 2 November 2026_
+
+### Highlights
+
+- **Find boards worth joining.** Explore lists community boards by how busy they've been this week, Search and the command bar find boards by name, and each topic page shows the boards about it. Posts on the front page now say which board they're from.
+
+### New
+
+- **Choose whether a board post reaches the front page.** When you list a link on a community board, tick "Also on PaperWing's front page" in the share sheet to show it there too. Without the tick, board posts now stay on their board, and a board's hidden posts and blocked accounts stay off the front page as well.
+- **Edit your posts.** Open a post you wrote on PaperWing and tap Edit to change its words; an edited post says so, and tapping Edited shows the earlier versions. If you signed in before today, allow the new Bluesky permission under Settings, Sources first.
+- **Boards where only moderators post.** In a board's settings, turn on "Only moderators post here" and posts from anyone else stay off it. Everyone can still vote and reply, and the share sheet tells people before they try.
+- **Official PaperWing announcements.** Boards run by PaperWing carry an Official badge wherever they show, and the newest announcement sits at the top of the front page for three days. A board that only puts "official" in its name gets no badge.
+- **Write a post, not just a link.** On the front page or any board, tap Write a post to share a title and your own words, formatted with the toolbar and checked in Preview. It goes out as a Bluesky post, and its likes and replies are its votes and comments.
+
+### Improved
+
+- **Pip closes the book when you're caught up.** Finish Today's edition and Pip shuts its book with a small hop, so the end of the edition feels like an end.
+
+### Fixes
+
+- **GitHub links go to PaperWing's new home.** Report a bug, Suggest an idea and the source code links in Settings, on the welcome screen and on the Principles page now open PaperWing's own GitHub organisation.
+- **Easier to use with a keyboard or screen reader.** Text boxes in Settings, Saved and the share sheet show a clear outline when they have focus, an outage notice's status page link can be reached on its own, the "Add to mix" buttons and quoted posts are announced by what they show, and your upvoted scores are a little easier to read.
+- **Published mixes leave out hidden Lemmy posts.** A mix's share link and feed no longer include Lemmy posts marked NSFW, removed by moderators or deleted by their authors, the same ones PaperWing already hides everywhere else.
+- **Offline reading keeps what matters.** Site icons no longer push your feeds and articles out of what PaperWing keeps for reading offline, and pictures from saved articles stop growing without limit, so they can't crowd out your saved library.
+- **Saved links keep their emoji and symbols.** A link saved from your phone's share sheet without a title now shows the page's own title as written, emoji and dashes included, instead of stray codes.
+
 ## 0.6.1
 
 _Released 2 November 2026_
