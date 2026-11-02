@@ -171,6 +171,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
   const byKey = new Map<string, Ranked>()
   let order: Ranked[] = []
   const engagementOf = new Map<Ranked, number>()
+  // The leading copy's own engagement: a row's heat adds up every copy, so it can't say which one is busiest.
+  const leadOf = new Map<Ranked, number>()
 
   for (const batch of batches) {
     for (const s of batch) {
@@ -185,9 +187,10 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         const shareNote = existing.shareNote ?? s.shareNote
         const followed = existing.followed || s.followed
         // Keep the hotter copy as primary so the row links to the liveliest discussion.
-        if (heat > existing.heat && s.hasThread) {
+        if (e > leadOf.get(existing)! && s.hasThread) {
           const { alsoOn, topics, ...old } = existing
           Object.assign(existing, s, { alsoOn: [old as Story, ...alsoOn], topics })
+          leadOf.set(existing, e)
         } else {
           existing.alsoOn.push(s)
         }
@@ -204,6 +207,7 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
       const r: Ranked = { ...s, heat, alsoOn: [], topics: topicsForStory(s, opts.extraTopics) }
       byKey.set(s.key, r)
       engagementOf.set(r, e)
+      leadOf.set(r, e)
       if (link) byLink.set(link, r)
       order.push(r)
     }

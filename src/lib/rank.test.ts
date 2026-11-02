@@ -48,6 +48,12 @@ describe('merge', () => {
     expect(a.key).toBe('lb-1')
     expect(a.alsoOn.map((x) => x.key)).toEqual(['hn-1'])
   })
+  it('leads with the busiest discussion of three, not one that beats the rest put together', () => {
+    const url = 'https://a.dev/x'
+    const [row] = merge([[s('lb-1', url, 0, { weight: 100 })], [s('bs-1', url, 0, { weight: 50 })], [s('lm-1', url, 0, { weight: 120 })]], { sort: 'hot', filters })
+    expect(row.key).toBe('lm-1')
+    expect(row.alsoOn.map((x) => x.key).sort()).toEqual(['bs-1', 'lb-1'])
+  })
   it('applies muted words and hidden keys', () => {
     const out = merge([[s('hn-1', null, 1, { title: 'Crypto pump' }), s('hn-2', null, 1), s('hn-3', null, 1)]], {
       sort: 'new',
