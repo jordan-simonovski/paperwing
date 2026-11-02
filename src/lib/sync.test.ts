@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('idb-keyval', () => import('../test/memoryIdb'))
 import { useLibrary } from './library'
-import { formatCode, joinSync, newSyncCode, syncNow, useSync } from './sync'
+import { usePrefs } from './store'
+import { formatCode, joinSync, newSyncCode, notSyncedText, syncNow, useSync } from './sync'
 
 // Joining sync, through its interface: a code in, the first sync run, and what a person is told.
 
@@ -85,5 +86,65 @@ describe('joining sync', () => {
     await joinSync(oldCode)
     await joinSync(newCode)
     expect(sentTo[newCode]).toBeGreaterThan(0)
+  })
+})
+
+describe('preferences from another device', () => {
+  const pull = async (data: Record<string, unknown>) => {
+    const code = newSyncCode()
+    const { seal } = await import('./syncCrypto')
+    const record = await seal(code, { key: 'prefs', updatedAt: Date.now() + 1000, data })
+    vi.stubGlobal('fetch', answer(200, { records: [record], cursor: 1, more: false }))
+    await joinSync(code)
+  }
+  beforeEach(() => usePrefs.setState({ ...usePrefs.getInitialState(), syncedPrefsAt: 0 }))
+
+  it('arrive whole: people you follow, boards you joined and your blogroll setting included', async () => {
+    const people = [{ did: 'did:plc:abc', handle: 'someone.example' }]
+    const boards = [{ did: 'did:plc:abc', rkey: 'aaaaaaaaaaaaa', name: 'Slow reads' }]
+    await pull({ followed: ['physics'], people, boards, blogrollPublic: true, affinity: { 'topic:physics': 2 } })
+    expect(usePrefs.getState()).toMatchObject({ followed: ['physics'], people, boards, blogrollPublic: true, affinity: { 'topic:physics': 2 } })
+  })
+
+  it('a value of the wrong shape is left out, not written into your settings', async () => {
+    await pull({ followed: 'physics', people: { did: 'x' }, blogrollPublic: 'yes', affinity: [1] })
+    expect(usePrefs.getState()).toMatchObject({ followed: usePrefs.getInitialState().followed, people: [], blogrollPublic: false, affinity: {} })
+  })
+})
+
+describe('a record the server won’t store', () => {
+  it('is remembered and named, without failing the sync, until it goes up', async () => {
+    usePrefs.setState({ ...usePrefs.getInitialState(), followed: ['physics'], syncedPrefsAt: Date.now() })
+    vi.stubGlobal('fetch', answer(200, { records: [], cursor: 1, more: false, accepted: 0, tooLarge: ['prefs'] }))
+    await joinSync(newSyncCode())
+    expect(useSync.getState()).toMatchObject({ error: undefined, notSynced: ['prefs'] })
+    expect(notSyncedText(useSync.getState().notSynced)).toBe('your settings')
+
+    // Trimmed and changed: it goes up, and the notice goes with it.
+    usePrefs.getState().set({ followed: ['maths'] })
+    vi.stubGlobal('fetch', answer(200, { records: [], cursor: 2, more: false, accepted: 1, tooLarge: [] }))
+    await syncNow()
+    expect(useSync.getState().notSynced).toEqual([])
+  })
+
+  it('says how much in a few words', () => {
+    expect(notSyncedText(['s:a', 's:b', 'prefs'])).toBe('your settings and 2 saved items')
+    expect(notSyncedText(['s:a'])).toBe('one saved item')
+    expect(notSyncedText([])).toBeUndefined()
+  })
+})
+
+describe('whether this deployment syncs', () => {
+  it('asks again after a failed first ask: opening the app offline doesn’t turn sync off for the session', async () => {
+    const { syncAvailable } = await import('./sync')
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        .mockResolvedValue(new Response(JSON.stringify({ enabled: true }))),
+    )
+    expect(await syncAvailable()).toBe(false)
+    expect(await syncAvailable()).toBe(true)
   })
 })

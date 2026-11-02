@@ -6,7 +6,8 @@ vi.mock('./og.js', () => ({
 }))
 
 const { GET } = await import('../preview.js')
-const card = async (path: string) => (await GET(new Request(`https://paperwing.io/api/preview?path=${encodeURIComponent(path)}`))).text()
+const preview = (path: string) => GET(new Request(`https://paperwing.io/api/preview?path=${encodeURIComponent(path)}`))
+const card = async (path: string) => (await preview(path)).text()
 
 describe('story preview cards', () => {
   it('describes a shared link with its own title and picture, escaped', async () => {
@@ -25,5 +26,19 @@ describe('story preview cards', () => {
     const html = await card('/t/for-you/"><script>x</script>')
     expect(html).not.toContain('<script>')
     expect(html).toContain('<link rel="canonical" href="https://paperwing.io/">')
+  })
+
+  it('answers a profile path with a stray % with the PaperWing card, not an error', async () => {
+    const res = await preview('/u/100%')
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('<meta property="og:title" content="PaperWing">')
+  })
+  it('caches a card it couldn’t build for minutes, not a day: the next share gets the real one', async () => {
+    const { pageCard } = await import('./og.js')
+    vi.mocked(pageCard).mockRejectedValueOnce(new Error('timeout'))
+    const key = 'ln-' + Buffer.from('https://example.com/slow').toString('base64url')
+    const failed = await preview(`/t/for-you/${key}`)
+    expect(failed.headers.get('cache-control')).toMatch(/s-maxage=300\b/)
+    expect((await preview(`/t/for-you/${key}`)).headers.get('cache-control')).toMatch(/s-maxage=86400/)
   })
 })

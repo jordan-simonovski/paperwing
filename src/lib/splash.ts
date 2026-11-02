@@ -161,10 +161,18 @@ export function playSplash(opts: { force?: boolean } = {}): Promise<void> {
 
   const fontLoad = document.fonts?.load(`${WEIGHT} 64px ${WORD_FAMILY}`)
   const timeout = new Promise((r) => setTimeout(r, 700))
-  void Promise.race([fontLoad, timeout]).then(() => {
-    if (!document.fonts?.check(`${WEIGHT} 64px ${WORD_FAMILY}`)) return remove()
-    run()
-  })
+  // A font that fails to load (blocked, offline) or a drawing that throws mustn't leave a blank
+  // screen over the app: either way the splash just goes.
+  void Promise.race([fontLoad, timeout])
+    .catch(() => undefined)
+    .then(() => {
+      if (!document.fonts?.check(`${WEIGHT} 64px ${WORD_FAMILY}`)) return remove()
+      try {
+        run()
+      } catch {
+        remove()
+      }
+    })
 
   function run() {
     const W = innerWidth

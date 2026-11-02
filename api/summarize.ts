@@ -79,8 +79,9 @@ export async function POST(request: Request): Promise<Response> {
   if (!ownKey) {
     if (!store) return fail('Add your own Anthropic key in Settings to get summaries', 401)
     const day = today()
-    const [mine, everyone] = await Promise.all([overLimit(`rd:summary-quota:${clientKey(request)}:${day}`, 86_400, DAILY_LIMIT), overLimit(`rd:summary-quota:*:${day}`, 86_400, GLOBAL_DAILY_LIMIT)])
-    if (mine || everyone) return fail(`Daily summary limit reached on this deployment. Add your own Anthropic key in Settings to keep going.`, 429)
+    // Your own allowance first: a caller already over it mustn't use up everyone else's (as in spice.ts).
+    const over = (await overLimit(`rd:summary-quota:${clientKey(request)}:${day}`, 86_400, DAILY_LIMIT)) || (await overLimit(`rd:summary-quota:*:${day}`, 86_400, GLOBAL_DAILY_LIMIT))
+    if (over) return fail(`Daily summary limit reached on this deployment. Add your own Anthropic key in Settings to keep going.`, 429)
   }
 
   const client = new Anthropic({ apiKey })

@@ -11,6 +11,7 @@ import { VoteButton } from './Social'
 import { BATCH, pickVisible } from '../lib/threadBudget'
 import { usePrefs } from '../lib/store'
 import type { Comment } from '../lib/types'
+import { keysBelongElsewhere } from '../lib/ui'
 
 type Sort = 'source' | 'new' | 'old'
 
@@ -268,7 +269,8 @@ export function CommentTree({ comments, op, since, sourceName, scrollRef, now, a
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement)?.tagName === 'INPUT') return
+      // Not while you write a reply (a textarea, in the composer's sheet).
+      if (keysBelongElsewhere(e)) return
       if (e.key === 'n') jump(1)
       else if (e.key === 'p') jump(-1)
     }

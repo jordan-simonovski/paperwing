@@ -26,6 +26,8 @@ export function Composer() {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const box = useRef<HTMLTextAreaElement>(null)
+  // Set the moment a send starts, before React re-renders: a second Cmd+Enter mid-send must not post twice.
+  const sending = useRef(false)
   useEffect(() => {
     setText('')
     if (target) setTimeout(() => box.current?.focus(), 60)
@@ -39,6 +41,9 @@ export function Composer() {
   const used = graphemes(text)
   const to = target.to
   const submit = async () => {
+    // The same conditions that disable the Post button, plus one send at a time.
+    if (sending.current || !text.trim() || used > limit) return
+    sending.current = true
     setBusy(true)
     try {
       const where = await send(qc, target, text)
@@ -58,6 +63,7 @@ export function Composer() {
     } catch (err) {
       toast((err as Error).message, { tone: 'error' })
     } finally {
+      sending.current = false
       setBusy(false)
     }
   }
@@ -83,7 +89,11 @@ export function Composer() {
           placeholder="Write a reply"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => (e.metaKey || e.ctrlKey) && e.key === 'Enter' && void submit()}
+          onKeyDown={(e) => {
+            if (!(e.metaKey || e.ctrlKey) || e.key !== 'Enter' || e.repeat) return
+            e.preventDefault()
+            void submit()
+          }}
           aria-label="Your post"
         />
         <div className="flex items-center gap-3">

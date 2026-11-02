@@ -13,12 +13,24 @@ afterEach(() => vi.restoreAllMocks())
 const CODE = 'abcdefghijklmnopqrstuvwxyz'.replace(/[01890]/g, '2')
 const record = (key: string, updatedAt: number, data: unknown = { v: updatedAt }) => ({ key, updatedAt, data })
 const sync = (body: unknown, headers: Record<string, string> = {}) =>
-  call<{ records: { key: string; updatedAt: number; data?: unknown }[]; cursor: number; accepted: number; error?: string }>(POST, '/api/sync', {
+  call<{ records: { key: string; updatedAt: number; data?: unknown }[]; cursor: number; accepted: number; tooLarge?: string[]; error?: string }>(POST, '/api/sync', {
     json: body,
     headers: { 'x-sync-code': CODE, ...headers },
   })
 
 describe('sync', () => {
+  it('names any record it won’t store for size, so the device can say so rather than think it synced', async () => {
+    const big = 'x'.repeat(30_000)
+    const sent = await sync({ since: 0, changes: [record('s:huge', 100, big), record('x:small', 100)] })
+    expect(sent.body).toMatchObject({ accepted: 1, tooLarge: ['s:huge'] })
+  })
+
+  it('gives your settings more room than a single saved item: a long list of feeds still syncs', async () => {
+    const sent = await sync({ since: 0, changes: [record('prefs', 100, 'x'.repeat(120_000))] })
+    expect(sent.body).toMatchObject({ accepted: 1, tooLarge: [] })
+    expect((await sync({ since: 0, changes: [record('prefs', 200, 'x'.repeat(300_000))] })).body.tooLarge).toEqual(['prefs'])
+  })
+
   it('hands one device’s changes to the next, and never caches the answer', async () => {
     const sent = await sync({ since: 0, changes: [record('x:a', 100), record('x:b', 100)] })
     expect(sent.body.accepted).toBe(2)

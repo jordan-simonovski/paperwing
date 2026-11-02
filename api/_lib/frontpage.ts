@@ -66,7 +66,11 @@ interface RecordView<T> {
 export async function getRecord<T>(uri: string): Promise<RecordView<T>> {
   const [, , did, collection, rkey] = uri.split('/')
   const pds = await pdsOf(did)
-  return fetchJson<RecordView<T>>(`${pds}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=${collection}&rkey=${rkey}`, { timeoutMs: 6000 })
+  const view = await fetchJson<RecordView<T>>(`${pds}/xrpc/com.atproto.repo.getRecord?repo=${encodeURIComponent(did)}&collection=${collection}&rkey=${rkey}`, { timeoutMs: 6000 })
+  // Whoever runs that PDS controls its answer. It speaks for the record asked for, never another
+  // repo's: callers take the author from view.uri.
+  if (view?.uri !== uri) throw new Error(`The record doesn't match the one asked for (${uri})`)
+  return view
 }
 
 /** Runs `fn` over `items`, a few at a time: kind to the servers involved. */

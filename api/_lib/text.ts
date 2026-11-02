@@ -31,3 +31,14 @@ export function textHtml(text: string): string {
     )
     .join('\n')
 }
+
+// Fetched pages are anyone's HTML. A tag's body is bounded and can't contain '<', so a page full of
+// unclosed tags is read once rather than rescanned to the end from each one (a quadratic scan that
+// freezes the function for about a minute on 500 KB of "<meta ").
+const PAGE_LIMIT = 600_000
+
+/** A page's `<name …>` tags, in order. */
+export const tagsIn = (html: string, name: string): string[] => [...html.slice(0, PAGE_LIMIT).matchAll(new RegExp(`<${name}\\b[^<>]{0,4000}>`, 'gi'))].map((m) => m[0])
+
+/** The text of a page's <title>, as written (entities and all). */
+export const titleIn = (html: string): string | undefined => /<title\b[^<>]{0,400}>([^<]{0,2000})<\/title>/i.exec(html.slice(0, PAGE_LIMIT))?.[1]

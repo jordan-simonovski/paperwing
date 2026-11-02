@@ -1,4 +1,5 @@
 import { assertPublicUrl, fetchText } from './http.js'
+import { tagsIn } from './text.js'
 import { rss } from './sources.js'
 
 // Finds a site's feeds from any link to it: the homepage, one of its posts, or the feed itself.
@@ -29,7 +30,7 @@ const decode = (s: string) =>
 /** The RSS and Atom feeds a page names in its <link rel="alternate"> tags, comment feeds left out. */
 export function feedLinks(html: string, base: string): string[] {
   const out: string[] = []
-  for (const [tag] of html.slice(0, 400_000).matchAll(/<link\b[^>]*>/gi)) {
+  for (const tag of tagsIn(html, 'link')) {
     const rel = (ATTR(tag, 'rel') ?? '').toLowerCase().split(/\s+/)
     const type = (ATTR(tag, 'type') ?? '').toLowerCase()
     const href = ATTR(tag, 'href')

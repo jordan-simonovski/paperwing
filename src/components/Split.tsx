@@ -5,7 +5,7 @@ import { useMediaQuery } from '../lib/hooks'
 import { navCommitted, navStart } from '../lib/diag'
 import { armHeadline, pretextOn } from '../lib/pretext'
 import { useActivity } from '../lib/store'
-import { isTyping } from '../lib/ui'
+import { keysBelongElsewhere } from '../lib/ui'
 import type { Story } from '../lib/types'
 import type { PaneTab } from './ItemPane'
 import { hideStory, toggleArchived, toggleSaved, toggleWatch } from './StoryRow'
@@ -125,7 +125,7 @@ export function useListKeys(stories: Story[], itemKey: string | undefined, base:
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) return
+      if (keysBelongElsewhere(e)) return
       const idx = stories.findIndex((s) => s.key === cursor)
       const current = stories[idx]
       const move = (delta: number) => {

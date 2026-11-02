@@ -2,7 +2,7 @@ import { commentActions } from '../lib/accounts'
 import { useComposer } from '../lib/compose'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useRef } from 'react'
-import { expect, userEvent } from 'storybook/test'
+import { expect, userEvent, waitFor } from 'storybook/test'
 import type { Comment } from '../lib/types'
 import { comment, NOW, sampleComments, story } from '../test/fixtures'
 import { CommentTree, Spine } from './CommentTree'
@@ -114,5 +114,28 @@ export const ThreadMap: Story = {
   render: (args) => <WithMap {...args} />,
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('navigation', { name: 'Thread map' })).toBeVisible()
+  },
+}
+
+/** n and p jump between top-level comments, but not while you're typing a reply. */
+export const KeysWaitWhileYouType: Story = {
+  args: { comments: longThread() },
+  render: (args) => (
+    <>
+      <textarea aria-label="Your post" />
+      <Pane>{(ref) => <CommentTree {...args} scrollRef={ref} />}</Pane>
+    </>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const pane = canvasElement.querySelector<HTMLDivElement>('div[style*="overflow"]')!
+    await userEvent.click(canvas.getByRole('textbox', { name: 'Your post' }))
+    await userEvent.keyboard('nnn')
+    await expect(canvas.getByRole('textbox', { name: 'Your post' })).toHaveValue('nnn')
+    await new Promise((r) => setTimeout(r, 300))
+    await expect(pane.scrollTop).toBe(0)
+    // Out of the textarea, n moves on.
+    ;(document.activeElement as HTMLElement).blur()
+    await userEvent.keyboard('n')
+    await waitFor(() => expect(pane.scrollTop).toBeGreaterThan(0))
   },
 }

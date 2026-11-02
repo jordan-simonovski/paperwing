@@ -21,6 +21,8 @@ interface Card {
   image?: string
   /** A square picture (an avatar): shown as a small card, not cropped into a wide one. */
   small?: boolean
+  /** The linked page couldn't be read, so this is a stand-in: cached briefly, not for a day. */
+  partial?: boolean
 }
 
 const plain = (html = '') =>
@@ -33,8 +35,8 @@ const count = (n: number | undefined, one: string) => (n ? `${n.toLocaleString('
 
 /** A link's own card (its title, summary and picture), for stories that share one. */
 async function linkCard(url: string): Promise<Partial<Card>> {
-  const [card, image] = await Promise.all([pageCard(url).catch(() => ({}) as { title?: string; description?: string }), ogImage(url).catch(() => undefined)])
-  return { title: card.title, description: card.description, image }
+  const [card, image] = await Promise.all([pageCard(url).catch(() => undefined), ogImage(url).catch(() => undefined)])
+  return { title: card?.title, description: card?.description, image, partial: !card }
 }
 
 const host = (url: string) => siteOf(url, url)
@@ -45,7 +47,7 @@ async function cardFor(key: string): Promise<Card | undefined> {
   if (p?.kind === 'ln') {
     const url = p.url
     const c = await linkCard(url)
-    return { title: c.title ?? host(url), description: c.description ?? `From ${host(url)}, with every discussion about it on PaperWing`, image: c.image }
+    return { title: c.title ?? host(url), description: c.description ?? `From ${host(url)}, with every discussion about it on PaperWing`, image: c.image, partial: c.partial }
   }
   if (p?.kind === 'hn' && /^\d{1,10}$/.test(p.id)) {
     const item = await fetchJson<{ title?: string; url?: string; text?: string; score?: number; descendants?: number; dead?: boolean; deleted?: boolean }>(
@@ -126,14 +128,21 @@ export async function GET(request: Request): Promise<Response> {
   const profile = /^\/u\/([A-Za-z0-9:@._%-]{3,260})$/.exec(path)
   const canonical = `https://${HOME}${match || profile ? path : '/'}`
   let card: Card | undefined
-  if (match) card = await cardFor(match[2]).catch(() => undefined)
-  if (profile) card = await profileCard(decodeURIComponent(profile[1])).catch(() => undefined)
+  // A lookup that failed (a slow site, a bad escape in the path) is cached briefly, so the next
+  // share gets the real card rather than a day of the generic one.
+  let failed = false
+  const settle = (p: () => Promise<Card | undefined>) =>
+    Promise.resolve()
+      .then(p)
+      .catch(() => void (failed = true))
+  if (match) card = (await settle(() => cardFor(match[2]))) ?? undefined
+  if (profile) card = (await settle(() => profileCard(decodeURIComponent(profile[1])))) ?? undefined
   card ??= { title: 'PaperWing', description: 'News from the open web, in one reader: Hacker News, Lemmy, Bluesky, Mastodon and the publishers you trust.' }
   return new Response(page(card, canonical), {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       // Cards are fetched once per post that shares them: a day at the edge keeps it cheap.
-      'cache-control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
+      'cache-control': failed || card.partial ? 'public, max-age=300, s-maxage=300' : 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
       'x-content-type-options': 'nosniff',
       'content-security-policy': "default-src 'none'; img-src https:; style-src 'unsafe-inline'",
     },

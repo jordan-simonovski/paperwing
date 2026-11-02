@@ -6,7 +6,10 @@ const POST = `at://${A}/fyi.unravel.frontpage.post/3mz5u5emjm22a`
 const NEWPOST = `at://${A}/fyi.frontpage.feed.post/3mz7ixzjg6b2p`
 const C1 = `at://${B}/fyi.unravel.frontpage.comment/3ljivixecy42a`
 const C2 = `at://${A}/fyi.frontpage.feed.comment/3ljivixecy42b`
+// Served by A's own PDS, but claiming to be B's record.
+const FORGED = `at://${A}/fyi.frontpage.feed.post/3mzforgedrec2`
 const records: Record<string, unknown> = {
+  [FORGED]: { uri: `at://${B}/fyi.frontpage.feed.post/3mzforgedrec2`, cid: 'cidf', value: { title: 'Not really B', subject: { url: 'https://x.example' }, createdAt: '2026-10-31T10:00:00Z' } },
   [POST]: { uri: POST, cid: 'cidpost', value: { title: 'Why atproto', url: 'https://example.com/atproto', createdAt: '2026-10-30T10:00:00Z' } },
   [NEWPOST]: { uri: NEWPOST, cid: 'cidnew', value: { title: 'New style', subject: { url: 'https://blog.example/p', $type: 'fyi.frontpage.feed.post#urlSubject' }, createdAt: '2026-10-31T10:00:00Z' } },
   [C1]: { uri: C1, cid: 'cid1', value: { content: 'First!\n\nSee https://x.dev/a.', post: { uri: POST, cid: 'cidpost' }, createdAt: '2026-10-30T11:00:00Z' } },
@@ -91,5 +94,11 @@ describe('Frontpage', () => {
   it('refuses keys that are not Frontpage posts', async () => {
     const { frontpageThread } = await import('./frontpage')
     await expect(frontpageThread('fp-' + Buffer.from('at://did:plc:x/app.bsky.feed.post/1').toString('base64url'))).rejects.toThrow('Not a Frontpage post')
+  })
+
+  it('refuses a record its server says belongs to someone else: a PDS speaks only for its own repo', async () => {
+    const { getRecord } = await import('./frontpage')
+    await expect(getRecord(FORGED)).rejects.toThrow(/doesn.t match/)
+    await expect(getRecord(POST)).resolves.toMatchObject({ uri: POST })
   })
 })

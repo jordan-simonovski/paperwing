@@ -67,6 +67,8 @@ export function linkFrom(input: string): string | undefined {
 function addToThread(qc: QueryClient, threadKey: string, parentUri: string | undefined, comment: Comment) {
   qc.setQueryData<Thread | null>(keys.thread(threadKey), (t) => {
     if (!t) return t
+    // On the story itself: the top. (Comments without an atproto ref would otherwise all "match" undefined.)
+    if (parentUri === undefined) return { ...t, comments: [comment, ...t.comments] }
     const place = (cs: Comment[]): [Comment[], boolean] => {
       let found = false
       const next = cs.map((c) => {

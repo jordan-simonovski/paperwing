@@ -1,4 +1,5 @@
 import { assertPublicUrl, readLimited, safeFetch } from './http.js'
+import { tagsIn, titleIn } from './text.js'
 
 // The preview image a page declares for link cards, in order of preference.
 const KEYS = ['og:image:secure_url', 'og:image', 'og:image:url', 'twitter:image', 'twitter:image:src']
@@ -32,7 +33,7 @@ export async function ogImage(raw: string): Promise<string> {
   const url = await assertPublicUrl(raw)
   const { html, finalUrl } = await readHead(url.toString())
   const found = new Map<string, string>()
-  for (const [tag] of html.slice(0, 500_000).matchAll(/<meta\b[^<>]{0,4000}>/gi)) {
+  for (const tag of tagsIn(html, 'meta')) {
     const key = (attr(tag, 'property') ?? attr(tag, 'name'))?.toLowerCase()
     const content = attr(tag, 'content')
     if (key && content && KEYS.includes(key) && !found.has(key)) found.set(key, content.replace(/&amp;/g, '&'))
@@ -66,18 +67,18 @@ const decodeEntities = (s: string) =>
 export async function pageTitle(raw: string): Promise<string | undefined> {
   const url = await assertPublicUrl(raw)
   const { html } = await readHead(url.toString())
-  for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
+  for (const tag of tagsIn(html, 'meta')) {
     const key = (attr(tag, 'property') ?? attr(tag, 'name'))?.toLowerCase()
     const content = attr(tag, 'content')
     if ((key === 'og:title' || key === 'twitter:title') && content) return decodeEntities(content).trim()
   }
-  const title = html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]
+  const title = titleIn(html)
   return title ? decodeEntities(title).replace(/\s+/g, ' ').trim() || undefined : undefined
 }
 
 const metaOf = (html: string) => {
   const found = new Map<string, string>()
-  for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
+  for (const tag of tagsIn(html, 'meta')) {
     const key = (attr(tag, 'property') ?? attr(tag, 'name'))?.toLowerCase()
     const content = attr(tag, 'content')
     if (key && content && !found.has(key))
@@ -97,7 +98,7 @@ export async function pageCard(raw: string): Promise<{ title?: string; descripti
   const url = await assertPublicUrl(raw)
   const { html } = await readHead(url.toString())
   const meta = metaOf(html)
-  const title = meta.get('og:title') ?? meta.get('twitter:title') ?? /<title[^>]*>([^<]*)<\/title>/i.exec(html)?.[1]?.trim()
+  const title = meta.get('og:title') ?? meta.get('twitter:title') ?? titleIn(html)?.trim()
   const description = meta.get('og:description') ?? meta.get('twitter:description') ?? meta.get('description')
   return { title: title?.slice(0, 300), description: description?.slice(0, 1000) }
 }

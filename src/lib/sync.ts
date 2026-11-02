@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { getJson, remembered } from './remembered'
 import { toSynced, useLibrary, type SyncedItem } from './library'
 import { SYNCED_PREFS, usePrefs, type SyncedPrefs } from './store'
 import { cleanSummary, pruneSummaries, useSummaries, type CachedSummary } from './summaryCache'
@@ -19,6 +20,8 @@ interface SyncState {
   pushedAt: number
   lastSync?: number
   error?: string
+  /** Records the server wouldn't store for size: settings ('prefs') or saved items ('s:…'). Kept until one goes up. */
+  notSynced?: string[]
   syncing: boolean
   /** The code comes from a passkey, so other devices join by using it. */
   passkey?: boolean
@@ -37,7 +40,7 @@ export const useSync = create<SyncState>()(
         set({ code, passkey: !!code && !!opts?.passkey, cursor: 0, pushedAt: 0, lastSync: undefined, error: undefined })
       },
     }),
-    { name: 'readout:sync', version: 1, partialize: ({ code, cursor, pushedAt, lastSync, passkey }) => ({ code, cursor, pushedAt, lastSync, passkey }) },
+    { name: 'readout:sync', version: 1, partialize: ({ code, cursor, pushedAt, lastSync, passkey, notSynced }) => ({ code, cursor, pushedAt, lastSync, passkey, notSynced }) },
   ),
 )
 
@@ -52,12 +55,7 @@ export const normalizeCode = (raw: string) => raw.toLowerCase().replace(/[^a-z2-
 export const formatCode = (code: string) => code.match(/.{1,5}/g)?.join('-') ?? code
 export const isCode = (code: string) => /^[a-z2-7]{26}$/.test(code)
 
-let enabled: Promise<boolean> | undefined
-export const syncAvailable = () =>
-  (enabled ??= fetch('/api/sync?status')
-    .then((r) => r.json() as Promise<{ enabled: boolean }>)
-    .then((r) => r.enabled)
-    .catch(() => false))
+export const syncAvailable = remembered(() => getJson<{ enabled: boolean }>('/api/sync?status').then((r) => r.enabled), false)
 
 // Records just applied from the server, so pulling them doesn't count as a local edit to push back.
 const applied = new Map<string, number>()
@@ -94,18 +92,16 @@ async function localChanges(since: number): Promise<SyncRecord[]> {
  */
 const SEALED_SINCE = Date.UTC(2026, 9, 29, 9)
 
-const LISTS = ['followed', 'interests', 'customFeeds', 'bskyFeeds', 'communities', 'mixes', 'followedMixes', 'mutedWords', 'mutedDomains', 'labelers', 'releaseRepos', 'statusPages'] as const
+/** What a preference is: the shape it has when the app starts. A synced value has to match it. */
+const shapeOf = (v: unknown) => (Array.isArray(v) ? 'list' : v === null ? 'null' : typeof v)
 
 /** Only the synced preferences, each the right shape: a record can't overwrite anything else in the store. */
 function cleanPrefs(data: unknown): Partial<SyncedPrefs> | undefined {
   if (!data || typeof data !== 'object') return undefined
   const d = data as Record<string, unknown>
+  const defaults = usePrefs.getInitialState() as unknown as Record<string, unknown>
   const out: Record<string, unknown> = {}
-  for (const k of SYNCED_PREFS) {
-    if (!(k in d)) continue
-    const v = d[k]
-    if ((LISTS as readonly string[]).includes(k) ? Array.isArray(v) : v !== null && typeof v === 'object' && !Array.isArray(v)) out[k] = v
-  }
+  for (const k of SYNCED_PREFS) if (k in d && shapeOf(d[k]) === shapeOf(defaults[k])) out[k] = d[k]
   return out as Partial<SyncedPrefs>
 }
 
@@ -141,9 +137,17 @@ async function applyRecords(code: string, wire: SyncRecord[]) {
 
 async function post(code: string, body: object) {
   const res = await fetch('/api/sync', { method: 'POST', headers: { 'content-type': 'application/json', 'x-sync-code': code }, body: JSON.stringify(body) })
-  const data = (await res.json()) as { records: SyncRecord[]; cursor: number; more: boolean; error?: string }
+  const data = (await res.json()) as { records: SyncRecord[]; cursor: number; more: boolean; tooLarge?: string[]; error?: string }
   if (!res.ok) throw new Error(data.error ?? `Sync failed (${res.status})`)
   return data
+}
+
+/** What didn't sync, for people: "your settings" and/or "2 saved items", or undefined when everything did. */
+export function notSyncedText(keys: string[] | undefined): string | undefined {
+  if (!keys?.length) return undefined
+  const items = keys.filter((k) => k.startsWith('s:')).length
+  const parts = [keys.includes('prefs') && 'your settings', items && (items === 1 ? 'one saved item' : `${items} saved items`)].filter(Boolean)
+  return parts.length ? parts.join(' and ') : 'a few things'
 }
 
 let running: Promise<void> | undefined
@@ -165,10 +169,12 @@ export function syncNow(): Promise<void> {
       const changes = await localChanges(useSync.getState().pushedAt)
       let cursor = useSync.getState().cursor
       let first = true
+      const tooLarge: string[] = []
       // Pushes in batches; every response also carries a page of other devices' changes.
       for (let i = 0; i === 0 || i < changes.length; i += 400) {
         const sealed = await Promise.all(changes.slice(i, i + 400).map((r) => seal(code, r)))
         const page = await post(code, { since: cursor, exact: !first, changes: sealed })
+        tooLarge.push(...(page.tooLarge ?? []))
         first = false
         await applyRecords(code, page.records)
         cursor = page.cursor
@@ -182,7 +188,11 @@ export function syncNow(): Promise<void> {
       }
       // Progress and errors belong to the code they were for, never to one joined since.
       if (useSync.getState().code !== code) return
-      useSync.setState({ cursor, pushedAt: startedAt, lastSync: Date.now(), error: undefined })
+      // What the server wouldn't store isn't resent until it changes (it would only be refused again),
+      // but it's remembered and shown, rather than a sync that looks complete. Anything that went up since is off the list.
+      const sent = new Set(changes.map((c) => c.key))
+      const notSynced = [...new Set([...(useSync.getState().notSynced ?? []).filter((k) => !sent.has(k)), ...tooLarge])]
+      useSync.setState({ cursor, pushedAt: startedAt, lastSync: Date.now(), error: undefined, notSynced })
       void useLibrary.getState().hydrate()
     } catch (err) {
       if (useSync.getState().code !== code) return

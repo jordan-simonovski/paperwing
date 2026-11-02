@@ -59,7 +59,7 @@ import { codeFromPasskey, createSyncPasskey, useSyncReadiness } from '../lib/pas
 import { pushAvailable, pushInfo, usePush } from '../lib/push'
 import { STATUS_PAGES } from '../lib/statusPageList'
 import { SummarySettings } from '../components/SummarySettings'
-import { formatCode, joinSync, startSyncWithNewCode, syncNow, useSync } from '../lib/sync'
+import { formatCode, joinSync, notSyncedText, startSyncWithNewCode, syncNow, useSync } from '../lib/sync'
 import { ago, fullDate, plural } from '../lib/format'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { isIOS, usePWA } from '../lib/pwa'
@@ -206,7 +206,8 @@ function StorageStatus() {
 }
 
 function SyncSettings() {
-  const { code, lastSync, error, syncing, passkey, setCode } = useSync()
+  const { code, lastSync, error, syncing, passkey, setCode, notSynced } = useSync()
+  const tooLarge = notSyncedText(notSynced)
   const { available, passkeys: support } = useSyncReadiness()
   const [busy, setBusy] = useState(false)
   const [joining, setJoining] = useState('')
@@ -316,7 +317,17 @@ function SyncSettings() {
     <>
       <div className="flex flex-wrap items-center gap-3">
         <p className="flex-1 text-[0.9375rem] text-ink-2">
-          {syncing ? 'Syncing…' : error ? <span className="font-semibold text-signal">Last sync failed: {error}</span> : lastSync ? `In sync. Last synced ${ago(lastSync)}` : 'Not synced yet'}
+          {syncing ? (
+            'Syncing…'
+          ) : error ? (
+            <span className="font-semibold text-signal">Last sync failed: {error}</span>
+          ) : tooLarge ? (
+            <span className="font-semibold text-signal">Synced, except {tooLarge}: too large to sync. Fewer feeds or a shorter note brings it under the limit.</span>
+          ) : lastSync ? (
+            `In sync. Last synced ${ago(lastSync)}`
+          ) : (
+            'Not synced yet'
+          )}
         </p>
         <button className="btn" onClick={() => void syncNow()} disabled={syncing}>
           <RefreshCw size={15} className={syncing ? 'spin' : undefined} /> Sync now

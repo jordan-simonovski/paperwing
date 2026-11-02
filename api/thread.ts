@@ -14,7 +14,12 @@ export async function GET(request: Request): Promise<Response> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'fetch failed'
     // Gone where it was posted (removed by moderators or deleted): say so, and let it cache a while.
-    if (/\b404\b/.test(message)) return json({ error: `It was removed or deleted on ${src === 'lobsters' ? 'Lobsters' : src === 'frontpage' ? 'Frontpage' : 'its status page'}` }, 600, 404)
+    // (Built here: json() never caches an error, and this one is worth caching.)
+    if (/\b404\b/.test(message))
+      return new Response(JSON.stringify({ error: `It was removed or deleted on ${src === 'lobsters' ? 'Lobsters' : src === 'frontpage' ? 'Frontpage' : 'its status page'}` }), {
+        status: 404,
+        headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, s-maxage=600' },
+      })
     return fail(message, 502)
   }
 }

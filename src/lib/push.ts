@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { toast } from './ui'
 import { isWatching, useWatch } from './watch'
+import { getJson, remembered } from './remembered'
 
 // Notifications and the icon badge. This device tells the server what it wants to hear about
 // (api/push.ts): the daily edition, replies in watched threads, major incidents from chosen status
@@ -15,13 +16,7 @@ interface PushInfo {
   /** Whether QStash is on the deployment, so alerts can schedule themselves. */
   scheduler?: boolean
 }
-let info: Promise<PushInfo> | undefined
-export const pushInfo = (fresh = false) =>
-  (info =
-    (fresh ? undefined : info) ??
-    fetch('/api/push?key')
-      .then((r) => r.json() as Promise<PushInfo>)
-      .catch((): PushInfo => ({ enabled: false })))
+export const pushInfo = remembered(() => getJson<PushInfo>('/api/push?key'), { enabled: false } as PushInfo)
 
 /** True when this deployment sends notifications and this browser can receive them (iOS: only once installed). */
 export const pushAvailable = async () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && (await pushInfo()).enabled

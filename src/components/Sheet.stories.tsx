@@ -54,3 +54,24 @@ export const OpenAndClose: Story = {
     await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
   },
 }
+
+/** A sheet whose owner re-renders as you type (a new onClose each time) keeps your cursor where it is. */
+export const TypingInsideStaysPut: Story = {
+  render: function Render(args) {
+    const [text, setText] = useState('')
+    return (
+      <Sheet {...args} onClose={() => args.onClose()}>
+        <label className="block p-4">
+          Note <input className="input" value={text} onChange={(e) => setText(e.target.value)} />
+        </label>
+      </Sheet>
+    )
+  },
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole('textbox', { name: 'Note' })
+    await userEvent.click(input)
+    await userEvent.keyboard('worth it')
+    await expect(input).toHaveValue('worth it')
+    await expect(input).toHaveFocus()
+  },
+}

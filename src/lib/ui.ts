@@ -52,6 +52,14 @@ export function isTyping(e: KeyboardEvent): boolean {
 }
 
 /**
+ * Whether a page's own shortcuts should leave this key alone: you're typing, or a sheet is open on
+ * top (its keys are its own, Escape included, and "x" mustn't hide the story underneath).
+ */
+export function keysBelongElsewhere(e: KeyboardEvent): boolean {
+  return isTyping(e) || e.metaKey || e.ctrlKey || e.altKey || !!document.querySelector('.sheet-root.open')
+}
+
+/**
  * A story's PaperWing address: it opens the story with every network's discussion, and link
  * previews (Bluesky, iMessage, Slack) show the story's own card (api/preview.ts). Always the home
  * address, wherever PaperWing is running, so shared links don't point at an old domain.

@@ -31,13 +31,17 @@ function dealFrom(opener: HTMLElement, panel: HTMLElement) {
 /** A panel over the page, for phones: tap outside, press Escape or follow a link inside to close. */
 export function Sheet({ open, onClose, side, label, children }: Props) {
   const panel = useRef<HTMLDivElement>(null)
+  // Owners often pass a new onClose on every render; the panel opens once per open, not per render
+  // (re-running would take focus back from whatever you're typing in).
+  const close = useRef(onClose)
+  close.current = onClose
 
   useEffect(() => {
     if (!open) return
     // Pretext motion: the panel's items deal out of the button that opened it.
     const opener = document.activeElement
     if (pretextOn() && opener instanceof HTMLElement && panel.current && !panel.current.contains(opener)) dealFrom(opener, panel.current)
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close.current()
     window.addEventListener('keydown', onKey)
     // The page underneath shouldn't scroll along with the panel.
     const root = document.documentElement
@@ -48,7 +52,7 @@ export function Sheet({ open, onClose, side, label, children }: Props) {
       window.removeEventListener('keydown', onKey)
       root.style.overflow = before
     }
-  }, [open, onClose])
+  }, [open])
 
   return (
     <div className={`sheet-root sheet-${side}${open ? ' open' : ''}`} inert={!open}>

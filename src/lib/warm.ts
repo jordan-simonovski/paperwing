@@ -16,8 +16,15 @@ import { usePrefs } from './store'
 export function prefetchLandingFeed(qc: QueryClient) {
   const m = location.pathname.match(/^\/(?:t\/([^/]+)(?:\/[^/]*)?)?\/?$/)
   if (!m) return
+  let channel = 'for-you'
+  try {
+    if (m[1]) channel = decodeURIComponent(m[1])
+  } catch {
+    // A stray % (a link cut short) isn't an escape. Nothing to warm up; the page says what's wrong.
+    return
+  }
   const params = new URLSearchParams(location.search)
   const sort = (params.get('sort') as SortMode | null) ?? (usePrefs.getState().feedOrder === 'latest' ? 'new' : 'hot')
-  const plan = planChannel(readReader(), m[1] ? decodeURIComponent(m[1]) : 'for-you', { variant: params.get('v') ?? undefined, sort, blueskyEnabled: false })
+  const plan = planChannel(readReader(), channel, { variant: params.get('v') ?? undefined, sort, blueskyEnabled: false })
   for (const f of plan?.feeds ?? []) void qc.prefetchQuery({ queryKey: keys.feed(f.id), queryFn: () => fetchFeed(f.ref) })
 }

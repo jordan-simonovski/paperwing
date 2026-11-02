@@ -39,17 +39,42 @@ export async function commentCount(key: string): Promise<number | undefined> {
   }
 }
 
-/** Counts for many threads, a few at a time. A thread that can't be read is left out. */
-export async function commentCounts(keys: string[], concurrency = 8): Promise<Map<string, number>> {
+/** Where a thread's count comes from: a Mastodon server by name, otherwise the network. */
+const hostOf = (key: string) => {
+  const p = parseStoryKey(key)
+  return p?.kind === 'md' ? `md:${p.instance}` : key.slice(0, 2)
+}
+
+/**
+ * Counts for many threads, a few at a time. A thread that can't be read is left out.
+ *
+ * A Mastodon thread lives on whatever server its reader picked, and a server can be slow on purpose.
+ * So no server gets more than two requests at once, the networks everyone shares go first, and the
+ * whole thing stops at its time budget with what it has: an alert run has to finish within its
+ * function's limit, however many threads are watched on slow servers.
+ */
+export async function commentCounts(keys: string[], { concurrency = 8, budgetMs = 20_000, perHost = 2 } = {}): Promise<Map<string, number>> {
   const out = new Map<string, number>()
-  const queue = [...new Set(keys.filter(countable))]
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-      for (let key = queue.shift(); key; key = queue.shift()) {
-        const n = await commentCount(key).catch(() => undefined)
-        if (typeof n === 'number') out.set(key, n)
-      }
-    }),
-  )
-  return out
+  const unique = [...new Set(keys.filter(countable))]
+  const queue = [...unique.filter((k) => !k.startsWith('md-')), ...unique.filter((k) => k.startsWith('md-'))]
+  const busy = new Map<string, number>()
+  const stopAt = Date.now() + budgetMs
+  const next = () => {
+    const i = queue.findIndex((k) => (busy.get(hostOf(k)) ?? 0) < perHost)
+    return i < 0 ? undefined : queue.splice(i, 1)[0]
+  }
+  const worker = async () => {
+    for (let key = next(); key && Date.now() < stopAt; key = next()) {
+      const host = hostOf(key)
+      busy.set(host, (busy.get(host) ?? 0) + 1)
+      const n = await commentCount(key).catch(() => undefined)
+      busy.set(host, busy.get(host)! - 1)
+      if (typeof n === 'number') out.set(key, n)
+    }
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined
+  await Promise.race([Promise.all(Array.from({ length: Math.min(concurrency, queue.length) }, worker)), new Promise((done) => (timer = setTimeout(done, budgetMs)))])
+  clearTimeout(timer)
+  // A copy: requests still in flight past the budget mustn't change what the caller already has.
+  return new Map(out)
 }

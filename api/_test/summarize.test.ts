@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { today } from '../_lib/http.js'
+import { clientKey, today } from '../_lib/http.js'
 import { kv } from '../_lib/kv.js'
 import { call, memoryStore } from './harness.js'
 import { POST } from '../summarize.js'
@@ -40,5 +40,14 @@ describe('discussion summaries', () => {
     process.env.ANTHROPIC_API_KEY = 'deployment-key'
     delete process.env.SYNC_MEMORY
     expect((await summarize(discussion)).status).toBe(401)
+  })
+
+  it('a caller over their own limit doesn’t use up everyone else’s', async () => {
+    process.env.ANTHROPIC_API_KEY = 'deployment-key'
+    const headers = { 'x-forwarded-for': '203.0.113.9' }
+    const mine = `rd:summary-quota:${clientKey(new Request('https://x', { headers }))}:${today()}`
+    await kv().bump(mine, 86_400, 10_000)
+    for (let i = 0; i < 5; i++) expect((await summarize(discussion, headers)).status).toBe(429)
+    expect(await kv().get(`rd:summary-quota:*:${today()}`)).toBeNull()
   })
 })

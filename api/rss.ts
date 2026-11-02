@@ -24,10 +24,13 @@ interface Feed {
 const ORIGIN = `https://${HOME}`
 const host = (u: string) => siteOf(u)
 
+/** The address names no feed: worth caching. Anything else that goes wrong is a hiccup, which isn't. */
+class NotFound extends Error {}
+
 /** A topic: its publishers and its best recent Hacker News stories. */
 async function topicFeed(id: string): Promise<Feed> {
   const topic = TOPIC_BY_ID.get(id)
-  if (!topic) throw new Error('No such topic')
+  if (!topic) throw new NotFound('No such topic')
   const [published, hn] = await Promise.all([
     linkStories([{ kind: 'topic', id }]).catch(() => [] as Story[]),
     topic.hnQuery
@@ -73,7 +76,7 @@ async function build(parts: string[]): Promise<Feed> {
       return { title: 'PaperWing: new', description: 'Everything listed on PaperWing, newest first', page: `${ORIGIN}/t/paperwing?sort=new`, items: await paperwingFront('new') }
     case 'board': {
       const topic = TOPIC_BY_ID.get(a ?? '')
-      if (!topic) throw new Error('No such board')
+      if (!topic) throw new NotFound('No such board')
       return {
         title: `PaperWing: ${topic.label}`,
         description: `Stories listed on PaperWing’s ${topic.label} board`,
@@ -88,7 +91,7 @@ async function build(parts: string[]): Promise<Feed> {
       return { title: `${board.name} on PaperWing`, description: board.description ?? 'A community board on PaperWing', page: `${ORIGIN}/c/${a}/${b}`, items: stories }
     }
     case 'mix': {
-      if (!a || !b) throw new Error('A mix feed needs its owner and id')
+      if (!a || !b) throw new NotFound('A mix feed needs its owner and id')
       const { mix, handle } = await readMix(`at://${a}/io.paperwing.mix/${b}`)
       return {
         title: `${mix.name}: a PaperWing mix${handle ? ` by @${handle}` : ''}`,
@@ -99,14 +102,14 @@ async function build(parts: string[]): Promise<Feed> {
     }
     case 'u': {
       const actor = actorOf(decodeURIComponent(a ?? ''))
-      if (!actor) throw new Error('Not a handle')
+      if (!actor) throw new NotFound('Not a handle')
       const p = await person(actor)
       const who = p.profile.name ? `${p.profile.name} (@${p.profile.handle})` : `@${p.profile.handle}`
       const items = [...p.stories, ...(p.shares ?? [])].sort((x, y) => y.createdAt - x.createdAt)
       return { title: `${who} on PaperWing`, description: `What ${who} lists and shares on PaperWing`, page: `${ORIGIN}/u/${p.profile.handle}`, items }
     }
     default:
-      throw new Error('No such feed')
+      throw new NotFound('No such feed')
   }
 }
 
@@ -149,6 +152,10 @@ export async function GET(request: Request): Promise<Response> {
       headers: { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'public, max-age=600, s-maxage=600, stale-while-revalidate=3600', 'access-control-allow-origin': '*' },
     })
   } catch (err) {
-    return new Response(err instanceof Error ? err.message : 'No such feed', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, s-maxage=300' } })
+    const missing = err instanceof NotFound
+    return new Response(missing ? err.message : 'This feed couldn’t be built just now. Try again shortly.', {
+      status: missing ? 404 : 502,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': missing ? 'public, s-maxage=300' : 'no-store' },
+    })
   }
 }

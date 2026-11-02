@@ -1,6 +1,7 @@
 import { plainText } from './html'
 import type { DiscussionSummary, SummaryComment, SummaryRequest } from './summaryTypes'
 import type { Comment, Story, Thread } from './types'
+import { getJson, remembered } from './remembered'
 
 // Turns the threads around a story into one compact transcript for /api/summarize, with a short
 // ref per comment so the summary can point back at them.
@@ -73,11 +74,7 @@ export const ownKey = {
   },
 }
 
-let status: Promise<{ server: boolean; model?: string }> | undefined
-export const summaryStatus = () =>
-  (status ??= fetch('/api/summarize?status')
-    .then((r) => r.json() as Promise<{ server: boolean; model?: string }>)
-    .catch(() => ({ server: false })))
+export const summaryStatus = remembered(() => getJson<{ server: boolean; model?: string }>('/api/summarize?status'), { server: false } as { server: boolean; model?: string })
 
 export async function requestSummary(request: SummaryRequest): Promise<{ summary: DiscussionSummary; model: string }> {
   const key = ownKey.get()
