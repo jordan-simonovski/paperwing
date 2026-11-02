@@ -22,6 +22,7 @@ import { ArticleView } from './ArticleView'
 import { CommentTree, nextThread, Spine } from './CommentTree'
 import { DiscussionBar, usePlaces } from './DiscussionBar'
 import { WebMentions } from './WebMentions'
+import { ModerateOnBoard } from './ModerateOnBoard'
 import { SpiceDetail } from './Spice'
 import { QuoteCard } from './QuoteCard'
 import { FollowSite } from './FollowBlogs'
@@ -246,6 +247,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
               )}
               <SpiceDetail places={[story, ...(alsoOn ?? [])]} />
               <StoryActions story={story} root={thread.data?.story.ref ?? story.ref} />
+              <ModerateOnBoard story={story} />
               <WhyRanked story={story} topics={topics} />
             </div>
 

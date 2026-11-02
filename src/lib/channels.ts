@@ -23,6 +23,8 @@ export interface Channel {
   quiet?: string
   /** A person's profile (u:<handle or DID>): the header shows who they are. */
   person?: string
+  /** A community board (cb:<owner>:<rkey>): the header shows its rules and moderators. */
+  board?: { did: string; rkey: string; uri: string }
   /** What to show instead of stories when the channel can't have any yet. */
   empty?: { title: string; body: string; action?: { label: string; to: string } }
   /** A link in the channel's header: editing your mix, the page of one you follow. */
@@ -126,6 +128,8 @@ interface Ctx {
   followedMixes?: FollowedMix[]
   /** People followed on PaperWing: their listings join For you. */
   people?: FollowedPerson[]
+  /** Community boards you've joined. */
+  boards?: { uri: string; name: string }[]
   releaseRepos?: string[]
   /** Signed in to Mastodon, so Following can work. */
   mastodon?: boolean
@@ -327,6 +331,28 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
       ],
     }
   }
+  if (id.startsWith('cb:')) {
+    const m = /^cb:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(id)
+    if (!m) return undefined
+    const uri = `at://${m[1]}/io.paperwing.board/${m[2]}`
+    const joined = ctx.boards?.find((b) => b.uri === uri)
+    const v = variant === 'new' || variant === 'top' ? variant : 'hot'
+    return {
+      id,
+      label: joined?.name ?? 'Community board',
+      eyebrow: 'Community board',
+      feeds: [{ kind: 'board', did: m[1], rkey: m[2], sort: v, name: joined?.name }],
+      native: true,
+      board: { did: m[1], rkey: m[2], uri },
+      quiet: 'Nothing here yet. Open a story, tap Share, list it on PaperWing and pick this board.',
+      variant: v,
+      variants: [
+        { id: 'hot', label: 'Hot' },
+        { id: 'new', label: 'New' },
+        { id: 'top', label: 'Top this week' },
+      ],
+    }
+  }
   if (id.startsWith('u:')) {
     const actor = id.slice(2)
     const known = ctx.people?.find((p) => p.did === actor || p.handle === actor)
@@ -515,6 +541,8 @@ export function rssPath(channelId: string): string | undefined {
   if (channelId.startsWith('paperwing:')) return `/rss/board/${channelId.slice(10)}`
   if (TOPIC_BY_ID.has(channelId)) return `/rss/topic/${channelId}`
   if (channelId.startsWith('u:')) return `/rss/u/${encodeURIComponent(channelId.slice(2))}`
+  const board = /^cb:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(channelId)
+  if (board) return `/rss/c/${board[1]}/${board[2]}`
   const mix = /^mix:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(channelId)
   if (mix) return `/rss/mix/${mix[1]}/${mix[2]}`
   return undefined

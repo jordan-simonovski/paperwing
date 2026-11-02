@@ -1,10 +1,33 @@
 import { profilePath, useMe } from '../lib/people'
 import { Avatar } from './Avatar'
-import { Activity, Bell, Bookmark, CalendarDays, Compass, Download, FileText, FolderGit2, Layers, Moon, Newspaper, Plus, Rss, Search, Settings, Sparkles, Sun, Tag, WifiOff, X } from 'lucide-react'
+import {
+  Activity,
+  Bell,
+  Bookmark,
+  CalendarDays,
+  Compass,
+  Download,
+  FileText,
+  FolderGit2,
+  Layers,
+  Moon,
+  Newspaper,
+  Plus,
+  Rss,
+  Search,
+  Settings,
+  Sparkles,
+  Sun,
+  Tag,
+  Users,
+  WifiOff,
+  X,
+} from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
 import { bskyFeedChannel, findTopic, followsTech } from '../lib/channels'
 import { mixChannel } from '../lib/mixes'
+import { boardPath } from '../lib/boards'
 import { useUnread } from '../lib/inbox'
 import { useOnline } from '../lib/hooks'
 import { stateOf, useLibrary } from '../lib/library'
@@ -72,7 +95,7 @@ export function OfflineBadge() {
 
 /** Everywhere you can go: the sidebar on wide screens, the drawer on phones. */
 function RailLinks({ drawer }: { drawer?: boolean }) {
-  const { followed, interests, bskyFeeds, communities, mixes, followedMixes, people } = usePrefs()
+  const { followed, interests, bskyFeeds, communities, mixes, followedMixes, people, boards } = usePrefs()
   // The collapsed sidebar hides group labels, so groups need a gap of their own there.
   const gap = drawer ? undefined : 'max-[1279px]:mt-5'
   // Hacker News, Lobsters, papers, projects, releases and status pages are tech's own: shown to
@@ -168,6 +191,19 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
           {mixes.length + followedMixes.length ? 'New mix' : 'Make a mix'}
         </RailLink>
       </div>
+
+      {boards.length > 0 && (
+        <>
+          <p className="rail-group rail-label">Boards</p>
+          <div className={gap}>
+            {boards.map((b) => (
+              <RailLink key={b.uri} to={boardPath(b.uri)} icon={<Users size={16} />}>
+                {b.name}
+              </RailLink>
+            ))}
+          </div>
+        </>
+      )}
 
       {people.length > 0 && (
         <>

@@ -59,6 +59,10 @@ export function PrivacyPage() {
             Posting, voting and sharing happen only when you ask. Stories you list on PaperWing are ordinary public Bluesky posts with a small public record in your own Bluesky account; you can delete
             them on Bluesky like any post.
           </p>
+          <p>
+            The same goes for PaperWing’s social features, each only when you use it: items you share with a note, margin notes on articles, your blogroll (if you turn it on), and community boards you
+            start or moderate. Each is a public record in your own Bluesky account that anyone can read, and you can remove it from PaperWing or any tool that manages your account.
+          </p>
         </Part>
 
         <Part title="AI summaries">

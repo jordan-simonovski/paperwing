@@ -26,6 +26,8 @@ export type FeedRef =
   | { kind: 'mastodon'; feed: 'trends' | 'home' | 'tags'; tags?: string[]; topic?: string; topics?: string[] }
   /** What someone has listed on PaperWing, newest first (api/_lib/people.ts). `actor` is a handle or DID. */
   | { kind: 'person'; actor: string; label?: string }
+  /** A community board's listings (api/_lib/boards.ts). */
+  | { kind: 'board'; did: string; rkey: string; sort: 'hot' | 'new' | 'top'; name?: string }
   /** Incidents from providers' status pages (api/_lib/statuspages.ts); every provider when `providers` is unset. */
   | { kind: 'status'; providers?: string[]; active?: boolean; hosts?: string[] }
 

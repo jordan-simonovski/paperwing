@@ -175,6 +175,18 @@ Sign in under Settings, Sources to upvote and comment on Hacker News from PaperW
 - **In the app.** Signed in, an HN story's up arrow is a real upvote on HN as well as "more like this". Stories get a Comment button, and comments get Reply and Upvote (never on your own). A new comment shows in the thread straight away.
 - **Limits.** If HN asks for a captcha (it does after failed sign-ins), sign in once at news.ycombinator.com first. An expired cookie signs you out here with a note to sign in again.
 
+## Social, on the open web
+
+PaperWing's social features are public atproto records in each person's own Bluesky account (`src/lib/social.ts`), found through Constellation, so they need no database and belong to the people who make them. Bluesky stays the place for reputation: likes are votes, replies are comments.
+
+- **Shared items** (`io.paperwing.share`): Google Reader style. Share a link with a note; it shows on your profile, in its RSS feed, and in For you for people who follow you.
+- **Blogrolls** (`io.paperwing.blogroll`): opt in under Settings, Your feeds, and your profile lists the blogs you read, with Follow all.
+- **Margin notes** (`io.paperwing.note`): select a passage in the reader view and note it. Notes from anyone are highlighted in the article (CSS Highlight API) and listed under it.
+- **Community boards** (`io.paperwing.board`): a space with a name, rules and moderators, at `/c/<owner>/<id>`. Listings are submissions linking to the board's page; moderators hide listings with `io.paperwing.boardhide` records; the owner can keep accounts out with a Bluesky moderation list.
+- **Webmentions**: blogs replying to an article, through webmention.io, under its discussions.
+- **RSS out and OPML**: every public page is a feed at `/rss/...` (front page, boards, topics, mixes, profiles, community boards), and Settings imports and exports OPML.
+- **Mixes**: Add to mix sits next to Follow on blogs, topics, communities and feeds.
+
 ## Posting to PaperWing
 
 PaperWing has its own front page of links people submit, with Bluesky as the backend (`src/lib/paperwing.ts`, `api/_lib/paperwing.ts`):

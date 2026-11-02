@@ -1,4 +1,5 @@
 import { fetchPerson } from '../people'
+import { fetchBoard } from '../boards'
 import { useMastodon } from '../mastodon'
 import type { FeedRef } from '../topics'
 import type { Article, Story, Thread } from '../types'
@@ -30,6 +31,8 @@ export function feedId(ref: FeedRef): string {
       return `pw:${ref.sort}:${ref.board ?? ''}`
     case 'person':
       return `pp:${ref.actor}`
+    case 'board':
+      return `cb:${ref.did}:${ref.rkey}:${ref.sort}`
     case 'bskyFeed':
       return `bsf:${ref.uri}`
     case 'lobsters':
@@ -101,6 +104,8 @@ export function feedLabel(ref: FeedRef): string {
       return ref.board ? 'PaperWing board' : 'PaperWing'
     case 'person':
       return ref.label ?? `@${ref.actor}`
+    case 'board':
+      return ref.name ?? 'Community board'
     case 'mastodon':
       return ref.feed === 'tags' ? `Mastodon ${(ref.tags ?? []).map((t) => `#${t}`).join(' ')}` : ref.feed === 'home' ? 'Mastodon following' : 'Mastodon trending'
   }
@@ -144,6 +149,8 @@ export async function fetchFeed(ref: FeedRef): Promise<Story[]> {
       return (await api('feed', { src: 'paperwing', sort: ref.sort, board: ref.board })) as Story[]
     case 'person':
       return ((p) => [...p.stories, ...(p.shares ?? [])])(await fetchPerson(ref.actor))
+    case 'board':
+      return (await fetchBoard(ref.did, ref.rkey, ref.sort)).stories
   }
 }
 

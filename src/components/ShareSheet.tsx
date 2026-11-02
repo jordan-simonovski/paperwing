@@ -33,6 +33,7 @@ export function ShareSheet({ story, onClose }: { story: Story; onClose: () => vo
   const mdPost = useMastodon(canPostToMastodon)
   const lemmy = useLemmyAccount((l) => !!l.jwt)
   const communities = usePrefs((p) => p.communities)
+  const joinedBoards = usePrefs((p) => p.boards)
   const link = shareLink(story) ?? ''
   const fromHn = story.source === 'hn'
 
@@ -153,11 +154,22 @@ export function ShareSheet({ story, onClose }: { story: Story; onClose: () => vo
                 {paperwing && canList && (
                   <select className="input mt-2.5 h-10" value={board} onChange={(e) => setBoard(e.target.value)} aria-label="Board">
                     <option value="">Front page only</option>
-                    {TOPICS.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.label}
-                      </option>
-                    ))}
+                    {joinedBoards.length > 0 && (
+                      <optgroup label="Your community boards">
+                        {joinedBoards.map((b) => (
+                          <option key={b.uri} value={b.uri}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Topic boards">
+                      {TOPICS.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 )}
               </div>

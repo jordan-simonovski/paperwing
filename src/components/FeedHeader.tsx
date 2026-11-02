@@ -1,5 +1,6 @@
 import { AddToMix } from './AddToMix'
 import { RssButton } from './RssButton'
+import { BoardHeader } from './BoardHeader'
 import { ProfileHeader } from './ProfileHeader'
 import { AlertTriangle, Check, Loader2, Plus, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
@@ -98,7 +99,9 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
 
   return (
     <>
-      {channel.person ? (
+      {channel.board ? (
+        <BoardHeader did={channel.board.did} rkey={channel.board.rkey} uri={channel.board.uri} />
+      ) : channel.person ? (
         <ProfileHeader actor={channel.person} />
       ) : (
         <header className="px-3 pt-3 md:px-4 md:pt-4">

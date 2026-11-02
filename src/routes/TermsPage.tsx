@@ -77,6 +77,10 @@ export function TermsPage() {
             PaperWing’s front page, boards and Bluesky feeds are shared spaces. Listings that are spam, abusive or illegal, or that a network’s own moderation has labelled, can be left off them, and
             so can the accounts behind them. That only affects PaperWing’s pages: your Bluesky post stays yours.
           </p>
+          <p>
+            <strong>Community boards</strong> are run by the people who start them. Their owners and moderators set their rules, can hide listings from their board and keep accounts out of it, and are
+            responsible for how they moderate. PaperWing’s own rules still apply on every board.
+          </p>
         </Part>
 
         <Part title="Your accounts on other networks">

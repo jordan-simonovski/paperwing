@@ -118,8 +118,17 @@ export function cleanBoard(raw: unknown): Board | undefined {
   return { name, description: str(r.description, 600), rules: str(r.rules, 2000), topic, moderators, ...(blockList ? { blockList } : {}), createdAt: date(r.createdAt) }
 }
 
-/** A board's public address, which listings link to (Constellation finds them by it). */
-export const communityBoardUrl = (did: string, rkey: string) => `https://paperwing.io/c/${did}/${rkey}`
+/** What's written for a board: the board, plus PaperWing's address, so every board can be found (Constellation, by .site). */
+export const boardRecord = (b: Omit<Board, 'createdAt'> & { createdAt?: string }) => ({
+  name: b.name,
+  ...(b.description ? { description: b.description } : {}),
+  ...(b.rules ? { rules: b.rules } : {}),
+  ...(b.topic ? { topic: b.topic } : {}),
+  moderators: b.moderators,
+  ...(b.blockList ? { blockList: b.blockList } : {}),
+  site: 'https://paperwing.io',
+  createdAt: b.createdAt ?? new Date().toISOString(),
+})
 
 /** A moderator hiding a listing from a board. */
 export interface BoardHide {

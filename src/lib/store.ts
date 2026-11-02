@@ -1,3 +1,4 @@
+import type { JoinedBoard } from './boards'
 import type { FollowedPerson } from './people'
 import type { ReaderKind } from './pretext/actors'
 import { create } from 'zustand'
@@ -96,6 +97,8 @@ interface Prefs {
   followedMixes: FollowedMix[]
   /** People you follow on PaperWing: their listings come into For you. */
   people: FollowedPerson[]
+  /** Community boards you've joined. */
+  boards: JoinedBoard[]
   /** Your feeds shown on your PaperWing profile as a blogroll (io.paperwing.blogroll). */
   blogrollPublic: boolean
   interests: Interest[]
@@ -133,6 +136,7 @@ export const SYNCED_PREFS = [
   'followedMixes',
   'people',
   'blogrollPublic',
+  'boards',
   'mutedWords',
   'mutedDomains',
   'labelers',
@@ -168,6 +172,7 @@ export const usePrefs = create<Prefs>()(
       followedMixes: [],
       people: [],
       blogrollPublic: false,
+      boards: [],
       interests: [],
       mutedWords: [],
       mutedDomains: [],

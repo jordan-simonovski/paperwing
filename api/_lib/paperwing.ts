@@ -17,7 +17,7 @@ const CONSTELLATION = 'https://constellation.microcosm.blue'
 const HOUR = 3_600_000
 
 /** Submission record URIs linking to a target, newest first, a few pages at most. */
-async function submissions(target: string, path: string, max = 300): Promise<string[]> {
+export async function submissions(target: string, path: string, max = 300): Promise<string[]> {
   const out: string[] = []
   let cursor: string | null = null
   do {
@@ -51,7 +51,7 @@ export const blocked = (env = process.env.PAPERWING_BLOCKED ?? '') => new Set(en
 
 /** Labels that keep a post off PaperWing's public pages: moderation takedowns, spam and adult content. */
 const UNLISTED = new Set(['!hide', '!takedown', 'spam', 'porn', 'sexual', 'nudity', 'graphic-media', 'gore'])
-const unlisted = (p: PostView) => [...(p.labels ?? []), ...(p.author.labels ?? [])].some((l) => UNLISTED.has(l.val))
+export const unlisted = (p: PostView) => [...(p.labels ?? []), ...(p.author.labels ?? [])].some((l) => UNLISTED.has(l.val))
 
 /** Submitted Bluesky posts for the site or one board, each once, that still exist. */
 async function submittedPosts(board?: string): Promise<{ post: PostView; board?: string }[]> {

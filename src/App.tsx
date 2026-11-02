@@ -13,6 +13,8 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/t/for-you" replace /> },
       { path: 't/:channel/:itemKey?', element: <FeedPage /> },
       { path: 'u/:actor/:itemKey?', element: <FeedPage /> },
+      { path: 'c/:did/:rkey/:itemKey?', element: <FeedPage /> },
+      { path: 'boards/:rkey?', lazy: () => import('./routes/BoardEditorPage').then((m) => ({ Component: m.BoardEditorPage })) },
       { path: 'search/:itemKey?', lazy: () => import('./routes/SearchPage').then((m) => ({ Component: m.SearchPage })) },
       { path: 'activity/:itemKey?', lazy: () => import('./routes/ActivityPage').then((m) => ({ Component: m.ActivityPage })) },
       { path: 'saved/:itemKey?', lazy: () => import('./routes/SavedPage').then((m) => ({ Component: m.SavedPage })) },

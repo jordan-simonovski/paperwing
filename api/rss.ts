@@ -4,6 +4,7 @@ import type { Story } from '../src/lib/types.js'
 import { fetchJson } from './_lib/http.js'
 import { linkStories, readMix } from './_lib/mixfeed.js'
 import { paperwingFront } from './_lib/paperwing.js'
+import { boardFront } from './_lib/boards.js'
 import { actorOf, person } from './_lib/people.js'
 
 // RSS out: PaperWing's own pages as feeds any reader can follow, so nothing here only works inside
@@ -86,6 +87,10 @@ async function build(parts: string[]): Promise<Feed> {
     }
     case 'topic':
       return topicFeed(a ?? '')
+    case 'c': {
+      const { board, stories } = await boardFront(a ?? '', b ?? '', 'hot')
+      return { title: `${board.name} on PaperWing`, description: board.description ?? 'A community board on PaperWing', page: `${ORIGIN}/c/${a}/${b}`, items: stories }
+    }
     case 'mix': {
       if (!a || !b) throw new Error('A mix feed needs its owner and id')
       const { mix, handle } = await readMix(`at://${a}/io.paperwing.mix/${b}`)

@@ -8,6 +8,7 @@ import { readMix } from './_lib/mixfeed.js'
 import { paperwingFront } from './_lib/paperwing.js'
 import { actorOf, person } from './_lib/people.js'
 import { marginNotes } from './_lib/notes.js'
+import { allBoards, boardFront } from './_lib/boards.js'
 import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './_lib/sources.js'
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
 
@@ -51,6 +52,16 @@ export async function GET(request: Request): Promise<Response> {
         const did = p.get('did')
         return did ? json(await frontpageActivity(did), 60) : fail('did required')
       }
+      case 'board': {
+        // A community board and its listings: a minute at the edge (and in KV).
+        const did = p.get('did') ?? ''
+        const rkey = p.get('rkey') ?? ''
+        const sort = p.get('sort')
+        return json(await boardFront(did, rkey, sort === 'new' || sort === 'top' ? sort : 'hot'), 60)
+      }
+      case 'boards':
+        // Every community board, for Explore: five minutes at the edge.
+        return json(await allBoards(), 300)
       case 'notes': {
         // Margin notes on an article, from anyone: two minutes at the edge.
         const url = p.get('url')

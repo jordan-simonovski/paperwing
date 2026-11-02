@@ -103,7 +103,7 @@ export function Root() {
   // (a sign-in, pairing, a share) are left alone.
   if (pathname === '/brand') return <Outlet />
   // A story someone shared (/t/<channel>/<story>) opens straight away, with a note to set up after.
-  const sharedStory = /^\/(t\/[^/]+\/[^/]+|u\/[^/]+)/.test(pathname)
+  const sharedStory = /^\/(t\/[^/]+\/[^/]+|u\/[^/]+|c\/[^/]+\/[^/]+)/.test(pathname)
   if (!welcomed && !sharedStory && !/^\/(welcome|privacy|terms|principles|pair|share|settings|mix\/|atproto-callback|mastodon\/callback)/.test(pathname)) return <Navigate to="/welcome" replace />
 
   return (
