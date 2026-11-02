@@ -38,9 +38,10 @@ npm run build          # type-checks (tsc -b) and builds
 npm run lint
 npm test               # unit tests, in Node
 npm run test:stories   # every Storybook story, rendered in Chromium (npx playwright install chromium once)
+npm run test:e2e       # the journeys in e2e/, against the built app, at desktop and phone sizes
 ```
 
-All four must pass. Formatting is Prettier (pinned in `package.json`, with its settings there: no semicolons, single
+All five must pass. Formatting is Prettier (pinned in `package.json`, with its settings there: no semicolons, single
 quotes, a 200-character line). Format what you touched:
 
 ```sh
@@ -69,6 +70,7 @@ Then:
 | `scripts/` | Icon rendering, Bluesky feed publishing, mobile checks |
 | `.storybook/` | Storybook config and the harness every story renders in |
 | `src/test/` | Fixtures shared by tests and stories |
+| `e2e/` | End-to-end journeys, with the stubbed network they run against |
 | `.claude/skills/` | Design references for coding agents (deep modules, seams, TDD) |
 | `AGENTS.md` | The checklist coding agents follow, including the pre-PR review |
 | `.compound-engineering/` | The pinned Compound Engineering review, checked by `scripts/compound-review/` |
@@ -94,6 +96,27 @@ export const SignedIn: Story = {
 ```
 
 Build data with the helpers in `src/test/fixtures.ts` (`story()`, `ranked()`, `NOW`), use real public links, and keep images local (`/icon-512.png` or a data URI) so stories never touch the network. If a component can't be shown without reaching into the app, that's usually a sign it wants its data passed in as props.
+
+## End-to-end tests
+
+`npm run test:e2e` builds the app, serves it with `vite preview` and drives it in Chromium (Playwright), once at desktop size and once as a phone. Each spec in `e2e/` is one journey, written from the reader's side: find things by role, label and text (`getByRole('button', { name: 'Save' })`), never by class. `npx playwright test e2e/search.spec.ts --project=phone --headed` runs one where you can watch it.
+
+The journeys never reach the network. `e2e/support/network.ts` answers every request the app makes from fixtures, our own `/api` and the sources the browser calls directly alike, and aborts anything it doesn't know. The clock is pinned to the fixtures' `NOW`, and any uncaught error in the page fails the test. A journey changes only what it needs:
+
+```ts
+import { fail } from './support/network'
+import { gotoFeed, row } from './support/app'
+import { expect, test } from './support/test'
+
+test.use({ stubs: { hnTop: fail(500) } }) // Hacker News is down; `prefs: { followed: ['space'] }` would set up the reader
+
+test('For you still shows every other source', async ({ page }) => {
+  await gotoFeed(page)
+  await expect(row(page, 'A New Proof Smooths Out the Math of Melting')).toBeVisible()
+})
+```
+
+What each upstream sends is in `e2e/fixtures/upstream.ts`, in its own wire shape (Algolia hits, Lemmy posts, stories from `/api/feed`). If the app starts calling somewhere new, stub it in `network.ts`; a failing journey's report lists any request that went unanswered. Wait on what's on screen, never on a fixed delay.
 
 ## API tests
 

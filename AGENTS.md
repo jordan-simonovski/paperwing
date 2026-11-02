@@ -10,8 +10,8 @@ safety rules and the house style are in `CONTRIBUTING.md`; read it first. Design
 
 Before committing:
 
-- `npm run build`, `npm run lint`, `npm test` and `npm run test:stories` pass. Format what you touched, and only
-  that: `npx prettier --write <files>` (Prettier is pinned in `package.json`; a global or cached one formats differently).
+- `npm run build`, `npm run lint`, `npm test`, `npm run test:stories` and `npm run test:e2e` pass. Format what you
+  touched, and only that: `npx prettier --write <files>` (Prettier is pinned in `package.json`; a global or cached one formats differently).
 - New behaviour has a test at the module's interface (`*.test.ts` beside it), written before the code where it
   can be. UI you add or change has a story beside it (`*.stories.tsx`), rendered from its parameters only: no
   network, no shared state (see "Stories" in `CONTRIBUTING.md`).

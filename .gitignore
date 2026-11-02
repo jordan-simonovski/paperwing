@@ -7,3 +7,5 @@ dist
 storybook-static
 __pycache__/
 .claude/worktrees/
+test-results/
+playwright-report/

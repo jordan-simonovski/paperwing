@@ -23,6 +23,7 @@
     "check": "npm run lint && npm run typecheck && npm test",
     "test": "vitest run --project unit",
     "test:stories": "vitest run --project stories",
+    "test:e2e": "playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "changeset": "changeset",
@@ -59,6 +60,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
+    "@playwright/test": "1.63.0",
     "@storybook/addon-a11y": "^10.6.5",
     "@storybook/addon-docs": "^10.6.5",
     "@storybook/addon-vitest": "^10.6.5",

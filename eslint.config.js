@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint'
 
 // Deliberately small: the rules that catch real runtime bugs, not style.
 export default tseslint.config(
-  { ignores: ['dist', '.vercel', 'node_modules', 'sw', 'scripts'] },
+  { ignores: ['dist', '.vercel', 'node_modules', 'sw', 'scripts', 'test-results', 'playwright-report'] },
   {
     files: ['src/**/*.{ts,tsx}', '.storybook/**/*.{ts,tsx}'],
     languageOptions: { parser: tseslint.parser },
