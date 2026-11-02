@@ -31,16 +31,17 @@ export type FeedRef =
   /** Incidents from providers' status pages (api/_lib/statuspages.ts); every provider when `providers` is unset. */
   | { kind: 'status'; providers?: string[]; active?: boolean; hosts?: string[] }
 
-export type ClusterId = 'intelligence' | 'systems' | 'code' | 'world' | 'news' | 'science' | 'culture' | 'sport' | 'life'
+export type ClusterId = 'intelligence' | 'systems' | 'code' | 'world' | 'news' | 'science' | 'culture' | 'sport' | 'making' | 'life'
 
 /** Topics come in packs: tech (where PaperWing started) and everything else. */
 export type Pack = 'tech' | 'general'
 
 export const CLUSTERS: Record<ClusterId, { label: string; blurb: string; pack: Pack }> = {
   news: { label: 'News', blurb: 'The world, its politics and its money', pack: 'general' },
-  science: { label: 'Science', blurb: 'Findings, missions and medicine', pack: 'general' },
+  science: { label: 'Science', blurb: 'Findings, fields and the papers behind them', pack: 'general' },
   culture: { label: 'Culture', blurb: 'Screens, records, books and games', pack: 'general' },
   sport: { label: 'Sport', blurb: 'Results and the stories around them', pack: 'general' },
+  making: { label: 'Making', blurb: 'Printers, circuits and things people build', pack: 'general' },
   life: { label: 'Life', blurb: 'The everyday good stuff', pack: 'general' },
   intelligence: { label: 'Intelligence', blurb: 'Models, agents, papers and the hardware under them', pack: 'tech' },
   systems: { label: 'Systems', blurb: 'Running software in production and knowing what it is doing', pack: 'tech' },
@@ -70,8 +71,11 @@ export interface Topic {
    * against `terms`. `via` is the instance that reads it (programming.dev when unset).
    */
   lemmy?: { community: string; check?: boolean; via?: string }[]
-  /** Community-run Bluesky feeds for this topic, shown on its own page. */
-  bsky?: { uri: string; name: string }[]
+  /**
+   * Community-run Bluesky feeds for this topic, shown on its own page. `forYou` also reads it in
+   * For you, for a topic whose conversation is the news (researchers sharing their papers).
+   */
+  bsky?: { uri: string; name: string; forYou?: boolean }[]
   /** Mastodon hashtags, without the #. */
   mastodon?: string[]
   /** Status pages whose incidents belong here, by id from api/_lib/statuspages.ts; 'all' for every one. */

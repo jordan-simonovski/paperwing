@@ -95,8 +95,9 @@ export function topicFeeds(t: Topic, limit?: number, statusHosts: string[] = [])
     topic: l.check ? t.id : undefined,
     via: l.via,
   }))
-  // Community feeds on Bluesky are conversation more than news: the topic's own page only.
-  const bsky: FeedRef[] = !limit ? (t.bsky ?? []).map((f) => ({ kind: 'bskyFeed', uri: f.uri, name: f.name })) : []
+  // Community feeds on Bluesky are conversation more than news: the topic's own page only, unless
+  // the topic marks one for For you.
+  const bsky: FeedRef[] = (t.bsky ?? []).filter((f) => !limit || f.forYou).map((f) => ({ kind: 'bskyFeed', uri: f.uri, name: f.name }))
   // The topic's PaperWing board: what people submitted to it.
   const board: FeedRef[] = !limit && TOPIC_BY_ID.has(t.id) ? [{ kind: 'paperwing', sort: 'hot', board: t.id }] : []
   const mastodon: FeedRef[] = !limit && t.mastodon?.length ? [{ kind: 'mastodon', feed: 'tags', tags: t.mastodon }] : []

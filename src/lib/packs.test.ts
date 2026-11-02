@@ -30,6 +30,35 @@ describe('topic packs', () => {
   })
 })
 
+describe('science fields, papers and making', () => {
+  const at = (title: string, url: string | null = null): Story => ({ ...story(title), url })
+  it('finds a paper by where it links, whatever the post says', () => {
+    expect(topicsForStory(at('Sleep and the gut, a thread 🧵', 'https://www.biorxiv.org/content/10.1101/2026.10.01.123456v1'))).toContain('papers')
+    expect(topicsForStory(at('Results from our run', 'https://arxiv.org/abs/2610.01234'))).toContain('papers')
+    expect(topicsForStory(story('Our new preprint: how octopuses sleep'))).toContain('papers')
+  })
+  it('tags each field and hobby build', () => {
+    expect(topicsForStory(story('Physicists confirm a new superconductor at room pressure'))).toContain('physics')
+    expect(topicsForStory(story('A volcanic eruption under the ice sheet'))).toContain('earth')
+    expect(topicsForStory(story('Ancient DNA rewrites the Bronze Age map of Europe'))).toContain('archaeology')
+    expect(topicsForStory(story('I printed a Voron enclosure over the weekend'))).toContain('3d-printing')
+    expect(topicsForStory(story('An ESP32 weather station on a hand-soldered PCB'))).toContain('electronics')
+  })
+  it('leaves tech and business metaphors alone', () => {
+    expect(matchesTopic(TOPIC_BY_ID.get('physics')!, 'Writing a physics engine in Rust')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('earth')!, 'A seismic shift in cloud pricing')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('maths')!, 'Choosing a network topology for your cluster')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('chemistry')!, 'Rate cuts are a catalyst for the market')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('ecology')!, 'The JavaScript ecosystem in 2026')).toBeUndefined()
+  })
+  it('reads where researchers share their papers in For you, and keeps other community feeds to their topic pages', () => {
+    const bsky = (followed: string[]) => resolveChannel('for-you', undefined, { ...base, followed })!.feeds.filter((f) => f.kind === 'bskyFeed')
+    expect(bsky(['papers'])).toContainEqual(expect.objectContaining({ name: 'Preprint Discourse' }))
+    expect(bsky(['papers'])).not.toContainEqual(expect.objectContaining({ name: 'AcademicSky' }))
+    expect(bsky(['climate', 'physics'])).toEqual([])
+  })
+})
+
 describe('For you and Publishers by pack', () => {
   it('keeps Hacker News for tech readers only', () => {
     const hn = (followed: string[]) => resolveChannel('for-you', undefined, { ...base, followed })!.feeds.some((f) => f.kind === 'hn')
