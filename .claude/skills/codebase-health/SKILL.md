@@ -10,14 +10,15 @@ protects, and where the traps are. Each section is reference; read the one your 
 
 ## The gates
 
-Hooks install with `npm install` (the `prepare` script sets `core.hooksPath` to `.githooks/`).
+Hooks install with `npm install` (the `prepare` script sets `core.hooksPath` to `.githooks/`; not in CI,
+which runs the same checks itself). Tests for the hooks and the budget live in `scripts/*.test.mjs`.
 
 | Where | What runs | Catches |
 | --- | --- | --- |
 | `pre-commit` | Prettier and ESLint on staged files; refuses `.env*` files | Formatting drift, hook-rule bugs, leaked keys |
 | `commit-msg` | Refuses AI co-author and "Generated with" lines | Attribution `AGENTS.md` forbids |
-| `pre-push` | Changeset present for app changes, `check:changesets`, lint, format, build (types), `check:budget`, unit tests | Everything cheap enough to run on every push |
-| CI `check` | All of the above, plus `test:stories` (axe set to `error`) and `test:e2e` | Broken UI, accessibility regressions, broken journeys |
+| `pre-push` | Changeset present for app changes (`scripts/changelog/require.sh`), `check:changesets`, lint, format, build (types), `check:budget`, unit tests; refuses when the checkout isn't exactly what's pushed | Everything cheap enough to run on every push |
+| CI `check` | All of the above (the changeset rule on pull requests), plus `test:stories` (axe set to `error`) and `test:e2e` | Broken UI, accessibility regressions, broken journeys, and anything pushed without hooks |
 | CI `lighthouse` | `check:lighthouse` on `/welcome` and `/privacy`, phone emulation | Accessibility below 0.95, best practices below 0.9 and layout shift above 0.1 fail; performance, LCP and SEO warn |
 
 A failing gate is fixed, never bypassed: `--no-verify` is for a broken hook, and the fix to the hook

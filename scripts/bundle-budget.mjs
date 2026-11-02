@@ -10,7 +10,7 @@ const BUDGET_KB = {
   totalJs: 560, // every chunk, lazy ones included (the service worker precaches them all)
 }
 
-const dist = 'dist'
+const dist = process.argv[2] ?? 'dist'
 const html = readFileSync(`${dist}/index.html`, 'utf8')
 const gz = (file) => gzipSync(readFileSync(`${dist}/${file}`)).length / 1024
 const entryFiles = [...html.matchAll(/(?:src|href)="\/(assets\/[^"]+\.js)"/g)].map((m) => m[1])
@@ -18,6 +18,14 @@ const cssFiles = [...html.matchAll(/href="\/(assets\/[^"]+\.css)"/g)].map((m) =>
 const allJs = readdirSync(`${dist}/assets`)
   .filter((f) => f.endsWith('.js'))
   .map((f) => `assets/${f}`)
+
+// A changed base path or asset naming would match nothing and read as 0 KB: that's a broken gate, not a pass.
+if (!entryFiles.length || !cssFiles.length || !allJs.length) {
+  console.error(
+    `Bundle budget: nothing to measure (entry ${entryFiles.length}, css ${cssFiles.length}, js ${allJs.length} files). Update the patterns in scripts/bundle-budget.mjs to match ${dist}/index.html.`,
+  )
+  process.exit(1)
+}
 
 const sum = (files) => files.reduce((n, f) => n + gz(f), 0)
 const actual = { entry: sum(entryFiles), css: sum(cssFiles), totalJs: sum(allJs) }

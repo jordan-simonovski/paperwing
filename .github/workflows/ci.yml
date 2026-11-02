@@ -13,10 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the changeset check compares with the pull request's base
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      # App changes need a changeset, or they never reach "What's new" or production (.changeset/README.md).
+      - if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: sh scripts/changelog/require.sh "$(git merge-base "$BASE_SHA" HEAD)" HEAD
       - run: npm ci
       - run: npm run build
       # What a first visit downloads, gzipped, against a budget (scripts/bundle-budget.mjs).

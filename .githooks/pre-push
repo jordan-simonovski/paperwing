@@ -6,24 +6,30 @@ set -e
 
 zero=0000000000000000000000000000000000000000
 base_branch=origin/main
-user_facing='^(src/|api/|sw/|public/|index\.html$)'
-not_shipped='(\.test\.tsx?|\.stories\.tsx)$|^src/test/|^api/_test/'
-
+pushed=""
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ "$local_sha" = "$zero" ] && continue # deleting a branch
   case "$remote_ref" in refs/heads/changeset-release/*) continue ;; esac
+  pushed="$pushed $local_sha"
   base=$(git merge-base "$local_sha" "$base_branch" 2>/dev/null || echo "")
   [ -z "$base" ] && continue
-  files=$(git diff --name-only "$base" "$local_sha")
-  # A release commit rewrites CHANGELOG.md and consumes the changesets: nothing to ask for.
-  echo "$files" | grep -qx 'CHANGELOG.md' && continue
-  if echo "$files" | grep -E "$user_facing" | grep -vE "$not_shipped" >/dev/null &&
-    ! echo "$files" | grep -E '^\.changeset/.+\.md$' | grep -v README.md >/dev/null; then
-    echo "pre-push: $remote_ref changes the app but adds no changeset." >&2
-    echo "  Add one for readers (npx changeset, see .changeset/README.md), or npx changeset add --empty." >&2
+  sh scripts/changelog/require.sh "$base" "$local_sha" || { echo "pre-push: $remote_ref needs a changeset." >&2; exit 1; }
+done
+
+[ -z "$pushed" ] && exit 0
+
+# The checks below run on the checkout, so it has to be exactly what's being pushed.
+head=$(git rev-parse HEAD)
+for sha in $pushed; do
+  if [ "$sha" != "$head" ]; then
+    echo "pre-push: the checks run on the checked-out commit, but you're pushing another one. Check it out and push from there." >&2
     exit 1
   fi
 done
+if ! git diff --quiet HEAD; then
+  echo "pre-push: uncommitted changes would be checked instead of what you're pushing. Commit or stash them first." >&2
+  exit 1
+fi
 
 npm run --silent check:changesets
 npm run --silent lint

@@ -42,7 +42,7 @@ npm run test:e2e       # the journeys in e2e/, against the built app, at desktop
 ```
 
 All five must pass. `npm install` also installs git hooks (`.githooks/`): commits check formatting and lint on
-what you staged, and pushes check for a changeset, then run the build, the bundle budget
+what you staged, and pushes check for a changeset (CI checks pull requests for one too), then run the build, the bundle budget
 (`npm run check:budget`) and the unit tests. CI adds the stories, the journeys and Lighthouse
 (`npm run check:lighthouse`, settings in `lighthouserc.json`). Formatting is Prettier (pinned in `package.json`, with its settings there: no semicolons, single
 quotes, a 200-character line). Format what you touched:
