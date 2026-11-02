@@ -1,6 +1,7 @@
 # Agent instructions
 
-Repo-wide rules for coding agents (Claude Code reads this through `CLAUDE.md`). How the code is laid out, the
+Repo-wide rules for coding agents (Claude Code reads this through `CLAUDE.md`). The project's words are in
+`GLOSSARY.md`: name modules, tests and copy with them. How the code is laid out, the
 safety rules and the house style are in `CONTRIBUTING.md`; read it first. Design references are in
 `.claude/skills/`: `codebase-design` for module shape (deep modules, seams, adapters), `tdd` for the test loop,
 `improve-codebase-architecture` for finding refactors, `ce-code-review` for review.
