@@ -1,0 +1,32 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent } from 'storybook/test'
+import { useActivity } from '../lib/store'
+import { READER, story } from '../test/fixtures'
+import { Votes } from './StoryRow'
+
+const s = story({ key: 'hn-42' })
+
+const meta = {
+  title: 'Feed/Votes',
+  component: Votes,
+  args: { story: s },
+  parameters: { layout: 'centered' },
+} satisfies Meta<typeof Votes>
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const NoVote: Story = {}
+export const Up: Story = { args: { vote: 1 } }
+export const Down: Story = { args: { vote: -1 } }
+export const NoScoreYet: Story = { args: { story: story({ score: undefined, source: 'rss', sourceLabel: 'Quanta' }) } }
+export const BlueskyLikes: Story = { args: { story: story({ source: 'bluesky', sourceLabel: 'Bluesky', score: 1 }) } }
+
+/** Signed in to Hacker News, the up arrow is a real HN upvote as well. */
+export const SignedInToHackerNews: Story = { parameters: { app: { hn: { user: READER.handle, cookie: 'x', votes: {} } } } }
+
+export const DownvoteIsLocal: Story = {
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Less like this' }))
+    await expect(useActivity.getState().votes['hn-42']).toBe(-1)
+  },
+}

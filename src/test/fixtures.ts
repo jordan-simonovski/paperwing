@@ -1,5 +1,8 @@
+import { resolveChannel, type Channel } from '../lib/channels'
+import type { FeedStatus } from '../lib/hooks'
 import type { Ranked } from '../lib/rank'
-import type { Story } from '../lib/types'
+import { feedId, feedLabel } from '../lib/sources'
+import type { Comment, Story, Thread } from '../lib/types'
 
 // Stories and tests build their data from these, so a change to Story's shape is fixed in one place.
 
@@ -62,3 +65,91 @@ export const sampleStories = (): Ranked[] => [
     topics: ['web'],
   }),
 ]
+
+/** A Bluesky account for stories and tests that need someone signed in. */
+export const READER = { did: 'did:plc:readerexampleabcdefghijk', handle: 'reader.example', name: 'Robin Reader' }
+
+/**
+ * Story parameters for someone signed in with Bluesky: the account, their profile, and their
+ * activity (pass notices to light up the unread badge). Plain data, so tests can use it too.
+ */
+export function signedInWithBluesky(notices: { kind: 'reply' | 'like' | 'mention' | 'follow'; actor: string; text?: string; subject?: string }[] = []) {
+  return {
+    atproto: { did: READER.did, handle: READER.handle },
+    queries: [
+      [['me', READER.did], { handle: READER.handle, name: READER.name }],
+      [
+        ['activity', 'bluesky', READER.did, true],
+        {
+          notices: notices.map((n, i) => ({ id: `n${i}`, network: 'bluesky', kind: n.kind, actors: [n.actor], at: NOW - (i + 1) * 600_000, text: n.text, subject: n.subject })),
+          mine: [],
+        },
+      ],
+      [['activity', 'frontpage', READER.did], { notices: [], mine: [] }],
+    ] as [unknown[], unknown][],
+  }
+}
+
+/* ------------------------------------------------------------- comments */
+
+let c = 0
+/** A comment: plain HTML text, an hour before NOW unless said otherwise. */
+export function comment(overrides: Partial<Comment> = {}): Comment {
+  c++
+  return { id: `c${c}`, author: 'dang', html: '<p>A fine point, well made.</p>', createdAt: NOW - HOUR, score: 12, children: [], ...overrides }
+}
+
+/** A believable Hacker News discussion of "The Web We Lost", with nested replies. */
+export const sampleComments = (): Comment[] => [
+  comment({
+    author: 'tptacek',
+    html: '<p>The thing people forget is that RSS readers were <i>the</i> social network for a lot of us. Google Reader’s shared items did what every “discover” tab tries and fails to do.</p>',
+    score: 214,
+    createdAt: NOW - 2.5 * HOUR,
+    children: [
+      comment({
+        author: 'anildash',
+        html: '<p>This is exactly it. The tools let you see what people you trusted were reading, with their note on why.</p>',
+        score: 88,
+        createdAt: NOW - 2 * HOUR,
+        children: [comment({ author: 'pg', html: '<p>And nobody was optimising it for minutes spent.</p>', score: 41, createdAt: NOW - 30 * 60_000 })],
+      }),
+      comment({ author: 'jacquesm', html: '<p>Blogrolls were the original recommendation engine. A human one.</p>', score: 37, createdAt: NOW - 90 * 60_000 }),
+    ],
+  }),
+  comment({
+    author: 'simonw',
+    html: '<p>I still run my blog with an RSS feed and webmentions. It works fine; the audience just has to come back to it. Here’s how: <a href="https://simonwillison.net/">simonwillison.net</a></p>',
+    score: 156,
+    createdAt: NOW - 2 * HOUR,
+    children: [comment({ author: 'dredmorbius', deleted: true, html: '', score: undefined, createdAt: NOW - HOUR })],
+  }),
+  comment({ author: 'throwaway42', html: '<p>Counterpoint: discovery was terrible and most people never found any of it.</p>', score: 9, createdAt: NOW - 20 * 60_000 }),
+]
+
+/** A thread as the reader loads it: the story and its comments. */
+export const thread = (s: Story = story(), comments: Comment[] = sampleComments()): Thread => ({ story: s, comments })
+
+/** A real channel, resolved the way FeedPage does, for someone following these topics. */
+export function channelFor(id: string, followed: string[] = ['tech', 'science', 'space', 'web'], variant?: string) {
+  const channel = resolveChannel(id, variant, { followed, interests: [], customFeeds: [] })
+  if (!channel) throw new Error(`No channel ${id}`)
+  return channel
+}
+
+/** Load states for each of a channel's feeds: all done, or with some still loading or failed. */
+export function statusesFor(channel: Channel, opts: { failed?: number; loading?: number } = {}): FeedStatus[] {
+  return channel.feeds.map((ref, i) => {
+    const failed = i < (opts.failed ?? 0)
+    const loading = !failed && i < (opts.failed ?? 0) + (opts.loading ?? 0)
+    return {
+      ref,
+      id: feedId(ref),
+      label: feedLabel(ref),
+      status: failed ? 'error' : loading ? 'pending' : 'success',
+      count: failed || loading ? 0 : 12 + ((i * 7) % 20),
+      error: failed ? 'The feed answered 503' : undefined,
+      fetching: loading,
+    }
+  })
+}

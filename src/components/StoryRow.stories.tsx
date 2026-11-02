@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent } from 'storybook/test'
 import { NOW, ranked, story } from '../test/fixtures'
-import { StoryRow } from './StoryRow'
+import { RowSkeleton, StoryRow } from './StoryRow'
 
 const meta = {
   title: 'Feed/StoryRow',
@@ -67,3 +67,6 @@ export const UpvoteTeachesTheRanking: Story = {
     await expect(up).toHaveAttribute('aria-pressed', 'true')
   },
 }
+
+/** While a feed loads. */
+export const Skeleton: Story = { render: () => <RowSkeleton /> }
