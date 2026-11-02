@@ -21,6 +21,7 @@ import { landHeadline } from '../lib/pretext'
 import { ArticleView } from './ArticleView'
 import { CommentTree, nextThread, Spine } from './CommentTree'
 import { DiscussionBar, usePlaces } from './DiscussionBar'
+import { WebMentions } from './WebMentions'
 import { SpiceDetail } from './Spice'
 import { QuoteCard } from './QuoteCard'
 import { FollowSite } from './FollowBlogs'
@@ -249,6 +250,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
             </div>
 
             <DiscussionBar story={story} alsoOn={alsoOn} coverage={coverage} onOpen={(k) => onOpen(k, 'discussion')} />
+            <WebMentions url={story.url} now={now} />
 
             <div className="seg mt-6" role="tablist">
               {(
