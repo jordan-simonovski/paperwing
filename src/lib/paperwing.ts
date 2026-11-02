@@ -1,3 +1,4 @@
+import { storyKey } from './storyKey.js'
 import { TOPIC_BY_ID } from './topics.js'
 
 // Posting to PaperWing. A submission is a normal Bluesky post, plus this record in the poster's
@@ -24,7 +25,66 @@ export interface Submission {
   community?: string
   /** A board listing that its poster also put on PaperWing's front page (board listings stay on their board otherwise). */
   front?: boolean
+  /** A self post's words, in Markdown: the post is the listing, and its link is its own page here. Editable. */
+  body?: string
   createdAt: string
+}
+
+/** One version of a self post's body, as PaperWing saw it. */
+export interface SelfPostVersion {
+  body: string
+  /** When PaperWing first saw this version (ms). */
+  seenAt: number
+}
+/** A self post's words and the versions PaperWing has seen, oldest first (the last is the body). */
+export interface SelfPostBody {
+  body: string
+  versions: SelfPostVersion[]
+}
+
+/** How long a self post's body may be, in characters. */
+export const BODY_LIMIT = 20_000
+
+/**
+ * A self post's own page on PaperWing, which its Bluesky post links to. The post's address is in
+ * it, so the link can only belong to that one post: a row or a thread knows a self post by it.
+ */
+export const selfPostUrl = (postUri: string) => `${PAPERWING_SITE}/t/paperwing/${storyKey({ kind: 'bs', uri: postUri })}`
+
+/** Whether a post's link is its own page on PaperWing: then it's a self post, not a link. */
+export function isSelfPost(url: string | null | undefined, postUri: string): boolean {
+  if (!url) return false
+  try {
+    const u = new URL(url)
+    return u.origin === PAPERWING_SITE && u.pathname.split('/').pop() === storyKey({ kind: 'bs', uri: postUri })
+  } catch {
+    return false
+  }
+}
+
+/** A self post's body lives in the submission record at the post's own key, in the same repo. */
+export function submissionUriOf(postUri: string): string | undefined {
+  const m = /^at:\/\/(did:[a-z0-9:._%-]+)\/app\.bsky\.feed\.post\/([a-z2-7]{13})$/.exec(postUri)
+  return m ? `at://${m[1]}/${SUBMISSION_NSID}/${m[2]}` : undefined
+}
+
+const S32 = '234567abcdefghijklmnopqrstuvwxyz'
+let lastTid = 0n
+/**
+ * A record key (TID) made here rather than by the server: the time in microseconds and a random
+ * clock id, base32-sortable. A self post needs its key before it's written, to link to itself.
+ */
+export function newTid(now = Date.now()): string {
+  let n = (BigInt(now) * 1000n) << 10n
+  n |= BigInt(Math.floor(Math.random() * 1024))
+  if (n <= lastTid) n = lastTid + 1n
+  lastTid = n
+  let out = ''
+  for (let i = 0; i < 13; i++) {
+    out = S32[Number(n & 31n)] + out
+    n >>= 5n
+  }
+  return out
 }
 
 const POST = /^at:\/\/did:[a-z0-9:._%-]+\/app\.bsky\.feed\.post\/[a-z2-7]{13}$/
@@ -52,6 +112,7 @@ export function cleanSubmission(raw: unknown): Submission | undefined {
     board,
     ...(community ? { community } : {}),
     ...(community && r.front === true ? { front: true } : {}),
+    ...(typeof r.body === 'string' && r.body.trim() ? { body: r.body.trim().slice(0, BODY_LIMIT) } : {}),
     site: PAPERWING_SITE,
     boardUrl: board ? boardUrl(board) : cm && community ? communityUrl(cm[1], cm[2]) : undefined,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date(0).toISOString(),
@@ -59,7 +120,13 @@ export function cleanSubmission(raw: unknown): Submission | undefined {
 }
 
 /** The record written alongside a Bluesky post to submit it. */
-export const submissionRecord = (post: { uri: string; cid: string }, url: string, title: string, board?: string, opts: { front?: boolean } = {}): Omit<Submission, 'site'> & { site: string } => {
+export const submissionRecord = (
+  post: { uri: string; cid: string },
+  url: string,
+  title: string,
+  board?: string,
+  opts: { front?: boolean; body?: string } = {},
+): Omit<Submission, 'site'> & { site: string } => {
   // A board is a topic id, or a community board's at:// URI.
   const cm = board ? AT_COMMUNITY.exec(board) : null
   return {
@@ -68,6 +135,7 @@ export const submissionRecord = (post: { uri: string; cid: string }, url: string
     url,
     title,
     ...(cm ? { community: board!, boardUrl: communityUrl(cm[1], cm[2]), ...(opts.front ? { front: true } : {}) } : board ? { board, boardUrl: boardUrl(board) } : {}),
+    ...(opts.body?.trim() ? { body: opts.body.trim() } : {}),
     site: PAPERWING_SITE,
     createdAt: new Date().toISOString(),
   }

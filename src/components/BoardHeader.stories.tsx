@@ -59,11 +59,12 @@ export const OfficialBoard: Story = {
   },
 }
 
-/** On a board where only moderators post, a moderator still gets the how-to. */
+/** On a board where only moderators post, a moderator still gets the ways to post. */
 export const ModeratorsOnlyToAModerator: Story = {
   parameters: { app: { queries: [[['board', OWNER, RKEY], { ...board, modsOnly: true }]], atproto: { did: MOD, handle: 'molly.wiki' } } },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText(/To post here/)).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Write a post' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Post a link' })).toBeVisible()
   },
 }
 

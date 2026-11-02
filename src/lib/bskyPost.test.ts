@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { postMedia, sharedLink } from './bskyPost'
+import { postMedia, selfPostOf, sharedLink } from './bskyPost'
+import { selfPostUrl } from './paperwing'
 import { kindOf } from './rank'
 
 const link = (uri: string) => ({ features: [{ $type: 'app.bsky.richtext.facet#link', uri }] })
@@ -11,6 +12,16 @@ describe('sharedLink', () => {
   })
   it('treats reaction GIFs as no link', () => {
     expect(sharedLink({ record: { text: 'lol' }, embed: { $type: 'app.bsky.embed.external#view', external: { uri: 'https://static.klipy.com/gifs/abc.gif' } } })).toBeUndefined()
+  })
+  it('a self post shares no link: its card is its own page on PaperWing', () => {
+    const uri = 'at://did:plc:ukwly4246zmbi537o4u36pff/app.bsky.feed.post/3m2abcdefghij'
+    const self = { uri, record: { text: 'Ask PaperWing' }, embed: { $type: 'app.bsky.embed.external#view', external: { uri: selfPostUrl(uri) } } }
+    expect(sharedLink(self)).toBeUndefined()
+    expect(selfPostOf(self)).toBe(true)
+    // Another post linking to it shares it like any other link.
+    const other = { ...self, uri: 'at://did:plc:ukwly4246zmbi537o4u36pff/app.bsky.feed.post/3m2abcdefghik' }
+    expect(sharedLink(other)).toBe(selfPostUrl(uri))
+    expect(selfPostOf(other)).toBe(false)
   })
   it('ignores links to other Bluesky posts', () => {
     expect(sharedLink({ record: { text: 'x', facets: [link('https://bsky.app/profile/a/post/1')] } })).toBeUndefined()

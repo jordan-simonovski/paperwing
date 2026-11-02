@@ -10,6 +10,7 @@ import { sanitize } from '../lib/html'
 import { stateOf, useLibrary } from '../lib/library'
 import type { Ranked } from '../lib/rank'
 import { useActivity, usePrefs } from '../lib/store'
+import { useAtproto } from '../lib/atproto'
 import { judge, moderateComments } from '../lib/moderation'
 import { useOutlets } from '../lib/coverage'
 import { Covered } from './Covered'
@@ -25,6 +26,7 @@ import { WebMentions } from './WebMentions'
 import { ModerateOnBoard } from './ModerateOnBoard'
 import { SpiceDetail } from './Spice'
 import { QuoteCard } from './QuoteCard'
+import { SelfPostBody } from './SelfPostBody'
 import { FollowSite } from './FollowBlogs'
 import { StoryActions, useCommentActions } from './Social'
 import { SummaryCard } from './SummaryCard'
@@ -117,6 +119,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
 
   const topics = useMemo(() => (story ? topicsForStory(story) : []), [story])
   const vote = useActivity((a) => (story ? a.votes[story.key] : undefined))
+  const me = useAtproto((a) => a.did)
 
   if (!story) {
     return (
@@ -279,7 +282,16 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                     <div className="mb-2 rounded-2xl bg-sunk p-5">
                       {story.text && (
                         <Covered warning={cw && !cwMediaOnly ? `Content warning: ${cw}` : undefined}>
-                          <div className="prose-c" dangerouslySetInnerHTML={{ __html: sanitize(story.text) }} />
+                          {story.selfPost ? (
+                            <SelfPostBody
+                              body={story.selfPost.body}
+                              versions={story.selfPost.versions}
+                              now={now}
+                              onEdit={me && story.authorDid === me ? () => useComposer.getState().open({ kind: 'self-post', edit: story }) : undefined}
+                            />
+                          ) : (
+                            <div className="prose-c" dangerouslySetInnerHTML={{ __html: sanitize(story.text) }} />
+                          )}
                         </Covered>
                       )}
                       {story.media && (

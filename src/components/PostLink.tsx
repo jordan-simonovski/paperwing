@@ -1,4 +1,4 @@
-import { ArrowRight, ClipboardPaste, Link2, Loader2 } from 'lucide-react'
+import { ArrowRight, ClipboardPaste, Link2, Loader2, PenLine } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useId, useState } from 'react'
 import { linkFrom, useComposer } from '../lib/compose'
@@ -62,9 +62,15 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
           next()
         }}
       >
-        <h2 className="flex items-center gap-2 text-[1.0625rem] font-bold">
-          <Link2 size={17} /> Post a link
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="flex flex-1 items-center gap-2 text-[1.0625rem] font-bold">
+            <Link2 size={17} /> Post a link
+          </h2>
+          {/* No link, just something to say: a self post. */}
+          <button type="button" className="btn h-8 px-3 text-[0.8125rem]" onClick={() => useComposer.getState().open({ kind: 'self-post', board })}>
+            <PenLine size={14} /> Write a post instead
+          </button>
+        </div>
         <p className="text-[0.875rem] text-ink-3">Anything worth reading, whether or not PaperWing has found it. Next, choose where it goes: PaperWing, a board, or your other networks.</p>
         <div className="space-y-1">
           <label htmlFor={linkId} className="block text-[0.8125rem] font-semibold text-ink-2">

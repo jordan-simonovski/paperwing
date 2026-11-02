@@ -4,7 +4,8 @@ import { markup } from '../markup'
 import { api, getJson } from './http'
 import { acceptLabelers } from '../moderation'
 import { usePrefs } from '../store'
-import { bskyKeyOf, postHtml, postMedia, quotedPost, sharedLink, type Shareable } from '../bskyPost'
+import { bskyKeyOf, postHtml, postMedia, quotedPost, selfPostOf, sharedLink, type Shareable } from '../bskyPost'
+import { fetchSelfPost, withSelfPost } from '../selfPost'
 
 // Feeds come from our own generator (api/atproto.ts); threads straight from Bluesky's public,
 // CORS-open AppView, so opening a post costs no function call.
@@ -110,7 +111,10 @@ export async function blueskyThread(key: string): Promise<Thread> {
   const uri = uriFromKey(key)
   const { thread } = await bsky<{ thread: ThreadNode }>(`${APPVIEW}/app.bsky.feed.getPostThread?uri=${encodeURIComponent(uri)}&depth=10&parentHeight=0`)
   if (!thread.post) throw new Error('This post is unavailable')
-  return { story: postStory(thread.post, key), comments: mapReplies(thread.replies) }
+  const story = postStory(thread.post, key)
+  // A PaperWing self post: its words are on PaperWing, not in the post. Without them, the post's own snippet stands.
+  const self = selfPostOf(thread.post) ? await fetchSelfPost(key).catch(() => undefined) : undefined
+  return { story: self ? withSelfPost(story, self) : story, comments: mapReplies(thread.replies) }
 }
 
 /** One link as written by different posts: no scheme, www, query, fragment or trailing slash. */

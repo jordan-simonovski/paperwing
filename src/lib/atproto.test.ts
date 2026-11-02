@@ -1,6 +1,6 @@
 import { FetchRequestError, TokenRefreshError } from '@atproto/oauth-client-browser'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CLIENT_METADATA, SCOPE, session, useAtproto } from './atproto'
+import { canUpdate, CLIENT_METADATA, SCOPE, session, useAtproto } from './atproto'
 import { clientMetadata, HOME } from './oauthClient'
 
 // The OAuth client is faked so a test chooses what restoring a sign-in does; its error classes stay real.
@@ -22,6 +22,16 @@ describe('atproto sign-in', () => {
   it('asks for mix records under PaperWing’s own domain', () => {
     expect(SCOPE).toContain('repo:io.paperwing.mix?action=create&action=update&action=delete')
     expect(clientMetadata('https://tech-reader-nine.vercel.app').client_id).toBe('https://tech-reader-nine.vercel.app/oauth-client-metadata.json')
+  })
+})
+
+describe('what a sign-in may change', () => {
+  it('may edit self posts only once it was asked to', () => {
+    expect(canUpdate(SCOPE, 'io.paperwing.submission')).toBe(true)
+    expect(canUpdate('atproto repo:io.paperwing.submission?action=create', 'io.paperwing.submission')).toBe(false)
+    expect(canUpdate('atproto repo:io.paperwing.submission', 'io.paperwing.submission')).toBe(true)
+    expect(canUpdate('atproto repo:io.paperwing.submissionx?action=update', 'io.paperwing.submission')).toBe(false)
+    expect(canUpdate(undefined, 'io.paperwing.submission')).toBeUndefined()
   })
 })
 
