@@ -162,20 +162,38 @@ export const bskyFeedUri = (id: string) => {
 /** The Lemmy channel: the communities with the most going on, across the instances programming.dev follows. */
 const LEMMY_TECH = ['technology@lemmy.world', 'programming@programming.dev', 'selfhosted@lemmy.world', 'opensource@lemmy.ml', 'localllama@sh.itjust.works', 'linux@lemmy.ml']
 
-export const SOURCE_CHANNELS = [
-  { id: 'paperwing', label: 'PaperWing' },
-  { id: 'hn', label: 'Hacker News' },
-  { id: 'lobsters', label: 'Lobsters' },
-  { id: 'bluesky', label: 'Bluesky' },
-  { id: 'lemmy', label: 'Lemmy' },
-  { id: 'mastodon', label: 'Mastodon' },
-  { id: 'frontpage', label: 'Frontpage' },
-  { id: 'status', label: 'Status' },
-  { id: 'ml-research', label: 'Papers' },
-  { id: 'releases', label: 'Releases' },
-  { id: 'open-source', label: 'Projects' },
-  { id: 'blogs', label: 'Blogs' },
+/** How a source channel is drawn: a network's own logo, or one of PaperWing's marks. */
+export type SourceMark = 'paperwing' | 'hn' | 'lobsters' | 'bluesky' | 'mastodon' | 'lemmy' | 'frontpage' | 'status' | 'papers' | 'projects' | 'releases' | 'blogs'
+
+export interface SourceChannel {
+  id: string
+  label: string
+  mark: SourceMark
+  /** Tech's own: shown to people who follow tech. */
+  tech?: boolean
+}
+
+/** Every source with a channel of its own, in the order the sidebar, Explore and the command bar list them. */
+export const SOURCE_CHANNELS: SourceChannel[] = [
+  { id: 'paperwing', label: 'PaperWing', mark: 'paperwing' },
+  { id: 'hn', label: 'Hacker News', mark: 'hn', tech: true },
+  { id: 'lobsters', label: 'Lobsters', mark: 'lobsters', tech: true },
+  { id: 'bluesky', label: 'Bluesky', mark: 'bluesky' },
+  { id: 'mastodon', label: 'Mastodon', mark: 'mastodon' },
+  { id: 'lemmy', label: 'Lemmy', mark: 'lemmy' },
+  { id: 'frontpage', label: 'Frontpage', mark: 'frontpage' },
+  { id: 'status', label: 'Status', mark: 'status', tech: true },
+  { id: 'ml-research', label: 'ML papers', mark: 'papers', tech: true },
+  { id: 'open-source', label: 'Projects', mark: 'projects', tech: true },
+  { id: 'releases', label: 'Releases', mark: 'releases', tech: true },
+  { id: 'blogs', label: 'Blogs', mark: 'blogs' },
 ]
+
+/** The source channels a reader sees: tech's own only if they follow tech, and Blogs are Publishers to everyone else. */
+export function sourceChannels(followed: string[]): SourceChannel[] {
+  const tech = followsTech(followed)
+  return SOURCE_CHANNELS.filter((c) => tech || !c.tech).map((c) => (c.id === 'blogs' && !tech ? { ...c, label: 'Publishers' } : c))
+}
 
 export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx): Channel | undefined {
   if (id === 'for-you') {

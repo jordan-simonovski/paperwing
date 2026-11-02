@@ -1,30 +1,11 @@
-import { Activity, FileText, FolderGit2, Rss, Search, Tag } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { PaperwingIcon, SourceIcon } from '../components/SourceIcon'
+import { SourceChannelIcon } from '../components/SourceIcon'
 import { TopicCard } from '../components/TopicCard'
-import { followsTech, interestTopic, SOURCE_CHANNELS } from '../lib/channels'
+import { followsTech, interestTopic, sourceChannels } from '../lib/channels'
 import { usePrefs } from '../lib/store'
 import { CLUSTERS, searchTopics, TOPICS, type ClusterId } from '../lib/topics'
-
-/** Sources that are tech's own, shown to people following tech. */
-const TECH_SOURCES = new Set(['hn', 'lobsters', 'status', 'ml-research', 'releases', 'open-source'])
-
-// The sidebar lists sources on wide screens; on a phone this is the way in.
-const SOURCE_ICONS: Record<string, React.ReactNode> = {
-  paperwing: <PaperwingIcon size={16} />,
-  hn: <SourceIcon source="hn" size={16} />,
-  lobsters: <SourceIcon source="lobsters" size={16} />,
-  bluesky: <SourceIcon source="bluesky" size={16} />,
-  mastodon: <SourceIcon source="mastodon" size={16} />,
-  lemmy: <SourceIcon source="lemmy" size={16} />,
-  frontpage: <SourceIcon source="frontpage" size={16} />,
-  status: <Activity size={16} />,
-  'ml-research': <FileText size={16} />,
-  releases: <Tag size={16} />,
-  'open-source': <FolderGit2 size={16} />,
-  blogs: <Rss size={16} />,
-}
 
 /** Explore's Topics tab: every pack, its sources, and your own interests. */
 export function TopicsBody() {
@@ -59,10 +40,10 @@ export function TopicsBody() {
       <section className="mt-6">
         <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-3">Sources</h2>
         <div className="mt-2 flex flex-wrap gap-2 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none]">
-          {SOURCE_CHANNELS.filter((c) => tech || !TECH_SOURCES.has(c.id)).map((c) => (
+          {sourceChannels(followed).map((c) => (
             <Link key={c.id} to={`/t/${c.id}`} className="chip h-9 flex-none gap-2 px-3.5 text-[0.875rem]">
-              {SOURCE_ICONS[c.id]}
-              {c.id === 'blogs' && !tech ? 'Publishers' : c.label}
+              <SourceChannelIcon mark={c.mark} />
+              {c.label}
             </Link>
           ))}
         </div>

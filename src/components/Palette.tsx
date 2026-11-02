@@ -1,7 +1,8 @@
 import { ArrowRight, Bookmark, CornerDownLeft, Hash, Link2, Moon, Newspaper, Plus, Search, Settings, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { allTopics, findTopic, SOURCE_CHANNELS } from '../lib/channels'
+import { allTopics, findTopic, sourceChannels } from '../lib/channels'
+import { SourceChannelIcon } from './SourceIcon'
 import { linkFrom, postLink } from '../lib/compose'
 import { usePrefs } from '../lib/store'
 import { relatedTopics, searchTopics } from '../lib/topics'
@@ -65,7 +66,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     const nav: Item[] = [
       { id: 'for-you', group: 'Go to', label: 'For you', icon: <Sparkles size={15} />, run: go('/t/for-you') },
       { id: 'front', group: 'Go to', label: 'Front page', icon: <Newspaper size={15} />, run: go('/t/front') },
-      ...SOURCE_CHANNELS.map((c) => ({ id: c.id, group: 'Go to', label: c.label, icon: <Hash size={15} />, run: go(`/t/${c.id}`) })),
+      ...sourceChannels(followed).map((c) => ({ id: c.id, group: 'Go to', label: c.label, icon: <SourceChannelIcon mark={c.mark} size={15} />, run: go(`/t/${c.id}`) })),
       { id: 'topics', group: 'Go to', label: 'Explore topics', icon: <Hash size={15} />, run: go('/explore') },
       { id: 'communities', group: 'Go to', label: 'Explore communities', icon: <Hash size={15} />, run: go('/explore/communities') },
       { id: 'saved', group: 'Go to', label: 'Saved', icon: <Bookmark size={15} />, run: go('/saved') },

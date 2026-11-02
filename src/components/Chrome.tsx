@@ -1,31 +1,9 @@
 import { profilePath, useMe } from '../lib/people'
 import { Avatar } from './Avatar'
-import {
-  Activity,
-  Bell,
-  Bookmark,
-  CalendarDays,
-  Compass,
-  Download,
-  FileText,
-  FolderGit2,
-  Layers,
-  Moon,
-  Newspaper,
-  Plus,
-  Rss,
-  Search,
-  Settings,
-  Sparkles,
-  Sun,
-  Tag,
-  Users,
-  WifiOff,
-  X,
-} from 'lucide-react'
+import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
-import { bskyFeedChannel, findTopic, followsTech } from '../lib/channels'
+import { bskyFeedChannel, findTopic, followsTech, sourceChannels } from '../lib/channels'
 import { mixChannel } from '../lib/mixes'
 import { boardPath } from '../lib/boards'
 import { useUnread } from '../lib/inbox'
@@ -36,7 +14,7 @@ import { usePWA } from '../lib/pwa'
 import { usePrefs } from '../lib/store'
 import { useUI } from '../lib/ui'
 import { Sheet } from './Sheet'
-import { PaperwingIcon, SourceIcon } from './SourceIcon'
+import { SourceChannelIcon, SourceIcon } from './SourceIcon'
 import { Pip } from './Pip'
 
 function RailLink({ to, icon, children, end }: { to: string; icon: React.ReactNode; children: React.ReactNode; end?: boolean }) {
@@ -133,50 +111,11 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
 
       <p className="rail-group rail-label">Sources</p>
       <div className={gap}>
-        <RailLink to="/t/paperwing" icon={<PaperwingIcon size={16} />}>
-          PaperWing
-        </RailLink>
-        {tech && (
-          <>
-            <RailLink to="/t/hn" icon={<SourceIcon source="hn" size={16} />}>
-              Hacker News
-            </RailLink>
-            <RailLink to="/t/lobsters" icon={<SourceIcon source="lobsters" size={16} />}>
-              Lobsters
-            </RailLink>
-          </>
-        )}
-        <RailLink to="/t/bluesky" icon={<SourceIcon source="bluesky" size={16} />}>
-          Bluesky
-        </RailLink>
-        <RailLink to="/t/mastodon" icon={<SourceIcon source="mastodon" size={16} />}>
-          Mastodon
-        </RailLink>
-        <RailLink to="/t/lemmy" icon={<SourceIcon source="lemmy" size={16} />}>
-          Lemmy
-        </RailLink>
-        <RailLink to="/t/frontpage" icon={<SourceIcon source="frontpage" size={16} />}>
-          Frontpage
-        </RailLink>
-        {tech && (
-          <>
-            <RailLink to="/t/status" icon={<Activity size={16} />}>
-              Status
-            </RailLink>
-            <RailLink to="/t/ml-research" icon={<FileText size={16} />}>
-              Papers
-            </RailLink>
-            <RailLink to="/t/open-source" icon={<FolderGit2 size={16} />}>
-              Projects
-            </RailLink>
-            <RailLink to="/t/releases" icon={<Tag size={16} />}>
-              Releases
-            </RailLink>
-          </>
-        )}
-        <RailLink to="/t/blogs" icon={<Rss size={16} />}>
-          {tech ? 'Blogs' : 'Publishers'}
-        </RailLink>
+        {sourceChannels(followed).map((c) => (
+          <RailLink key={c.id} to={`/t/${c.id}`} icon={<SourceChannelIcon mark={c.mark} />}>
+            {c.label}
+          </RailLink>
+        ))}
       </div>
 
       {/* Mixes are your own channels: always here, with a way to start one. */}

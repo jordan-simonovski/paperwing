@@ -1,4 +1,5 @@
-import { Activity } from 'lucide-react'
+import { Activity, FileText, FolderGit2, Rss, Tag } from 'lucide-react'
+import type { SourceMark } from '../lib/channels'
 import { useState } from 'react'
 import type { Logo as SimpleIcon } from '../lib/logos'
 import {
@@ -198,4 +199,24 @@ export function PaperwingIcon({ size = 16 }: { size?: number }) {
       <Pip variant="head" className="block size-full" />
     </span>
   )
+}
+
+/** A source channel's mark, wherever source channels are listed (the sidebar, Explore, the command bar). */
+export function SourceChannelIcon({ mark, size = 16 }: { mark: SourceMark; size?: number }) {
+  switch (mark) {
+    case 'paperwing':
+      return <PaperwingIcon size={size} />
+    case 'status':
+      return <Activity size={size} aria-hidden />
+    case 'papers':
+      return <FileText size={size} aria-hidden />
+    case 'projects':
+      return <FolderGit2 size={size} aria-hidden />
+    case 'releases':
+      return <Tag size={size} aria-hidden />
+    case 'blogs':
+      return <Rss size={size} aria-hidden />
+    default:
+      return <SourceIcon source={mark} size={size} />
+  }
 }
