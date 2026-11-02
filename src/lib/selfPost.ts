@@ -1,4 +1,4 @@
-import { canUpdate, canWrite, createRecord, getOwnRecord, putRecord, useAtproto } from './atproto'
+import { canUpdate, canWrite, createRecord, getOwnRecord, putRecord, useAtproto, type StrongRef } from './atproto'
 import { facetsFor, graphemes } from './facets'
 import { markdownHtml, markdownText } from './markdown'
 import { BODY_LIMIT, newTid, selfPostUrl, SUBMISSION_NSID, submissionRecord, type SelfPostBody } from './paperwing'
@@ -85,14 +85,54 @@ export async function writeSelfPost(i: SelfPostInput): Promise<{ key: string; st
     },
     rkey,
   )
-  const record = submissionRecord(ref, url, title, i.board, { front: i.front, body }) as unknown as Record<string, unknown>
-  // The post is up either way. Without its words it's a title and a link to an empty page: try again once.
-  try {
-    await createRecord(SUBMISSION_NSID, record, rkey).catch(() => createRecord(SUBMISSION_NSID, record, rkey))
-  } catch (err) {
-    throw new Error(`Posted to Bluesky, but its words didn’t save: ${(err as Error).message}`)
+  return saveWords({ ref, rkey, url, title, board: i.board, front: i.front, createdAt: now }, body)
+}
+
+/** A self post whose Bluesky post is up, waiting on its words: saving them again never posts twice. */
+export interface PendingSelfPost {
+  ref: StrongRef
+  rkey: string
+  url: string
+  title: string
+  board?: string
+  front?: boolean
+  createdAt: number
+}
+
+/** The Bluesky post went out but its words didn't save. `pending` saves them again (saveWords) without a second post. */
+export class WordsNotSaved extends Error {
+  constructor(
+    message: string,
+    readonly pending: PendingSelfPost,
+  ) {
+    super(message)
   }
-  return { key: storyKey({ kind: 'bs', uri: ref.uri }), story: asStory(ref, title, body, now) }
+}
+
+/** Writes the words once. An answer can be lost after the record was written: if it's there, they saved. */
+async function writeWords(p: PendingSelfPost, body: string) {
+  const record = submissionRecord(p.ref, p.url, p.title, p.board, { front: p.front, body }) as unknown as Record<string, unknown>
+  try {
+    await createRecord(SUBMISSION_NSID, record, p.rkey)
+  } catch (err) {
+    const there = await getOwnRecord(SUBMISSION_NSID, p.rkey).then(
+      () => true,
+      () => false,
+    )
+    if (!there) throw err
+  }
+}
+
+/** Saves a self post's words beside its Bluesky post, trying twice. Returns its key and the story to show. */
+export async function saveWords(p: PendingSelfPost, words: string): Promise<{ key: string; story: Story }> {
+  const body = words.trim()
+  if (!body) throw new Error('Write something first')
+  try {
+    await writeWords(p, body).catch(() => writeWords(p, body))
+  } catch (err) {
+    throw new WordsNotSaved(`Posted to Bluesky, but its words didn’t save: ${(err as Error).message}`, p)
+  }
+  return { key: storyKey({ kind: 'bs', uri: p.ref.uri }), story: asStory(p.ref, p.title, body, p.createdAt) }
 }
 
 /** Replaces a self post's words, keeping everything else in its record. Yours only. */

@@ -54,13 +54,16 @@ export const OnABoard: Story = {
   },
 }
 
-/** Editing your own: the words, not the title, which is the Bluesky post’s. */
+/** Editing your own: the words, not the title, which is the Bluesky post’s. Save waits for a change. */
 export const Editing: Story = {
   parameters: { app: { atproto: bsky } },
   args: { edit: mine },
   play: async () => {
-    await waitFor(() => expect(page().getByRole('textbox', { name: 'Your post' })).toHaveValue('I’m on **Piranesi**.'))
+    const words = page().getByRole('textbox', { name: 'Your post' })
+    await waitFor(() => expect(words).toHaveValue('I’m on **Piranesi**.'))
     await expect(page().queryByRole('textbox', { name: 'Title' })).toBeNull()
+    await expect(page().getByRole('button', { name: 'Save' })).toBeDisabled()
+    await userEvent.type(words, ' Loving it.')
     await expect(page().getByRole('button', { name: 'Save' })).toBeEnabled()
   },
 }

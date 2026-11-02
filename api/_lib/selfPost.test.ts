@@ -28,6 +28,7 @@ vi.mock('./frontpage.js', () => ({
 }))
 
 const { selfPostBody, VERSIONS_KEPT } = await import('./selfPost.js')
+const { kv } = await import('./kv.js')
 
 memoryStore()
 beforeEach(() => {
@@ -79,6 +80,21 @@ describe('a self post’s body', () => {
     expect(versions).toHaveLength(VERSIONS_KEPT)
     expect(versions[0].body).toBe('v0')
     expect(versions.at(-1)!.body).toBe(`v${VERSIONS_KEPT + 4}`)
+  })
+
+  it('never loses its history to a store that fails to answer', async () => {
+    written('first', 'v1')
+    await selfPostBody(KEY, t0)
+    written('second', 'v2')
+    await selfPostBody(KEY, minutes(2))
+    // One failed read (a timeout, an outage), then one that returns garbage: neither may overwrite what's kept.
+    const get = vi.spyOn(kv(), 'get').mockRejectedValueOnce(new Error('Upstash timed out')).mockResolvedValueOnce('{not json')
+    written('third', 'v3')
+    expect((await selfPostBody(KEY, minutes(4))).body).toBe('third')
+    expect((await selfPostBody(KEY, minutes(6))).body).toBe('third')
+    get.mockRestore()
+    const { versions } = await selfPostBody(KEY, minutes(8))
+    expect(versions.map((v) => v.body)).toEqual(['first', 'second', 'third'])
   })
 
   it('belongs only to its own post: a record pointing anywhere else is no body', async () => {

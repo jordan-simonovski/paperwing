@@ -19,18 +19,21 @@ const md = new Marked({
 /** A self post's body as HTML (not yet sanitized). */
 export const markdownHtml = (body: string): string => md.parse(body, { async: false })
 
+/** Tokens that run on within a line: everything else (a paragraph, a line break, a list item, a quote) ends a run of words. */
+const INLINE = new Set(['text', 'strong', 'em', 'codespan', 'link', 'del', 'escape', 'image'])
+
 /** A self post's body as one line of plain text: the snippet in its Bluesky post, and previews. */
 export function markdownText(body: string): string {
   const out: string[] = []
-  const walk = (tokens: Token[], block: boolean) => {
+  const walk = (tokens: Token[]) => {
     for (const t of tokens) {
-      if ('items' in t && Array.isArray(t.items)) walk(t.items as Token[], true)
-      else if ('tokens' in t && Array.isArray(t.tokens) && t.tokens.length) walk(t.tokens, false)
+      if ('items' in t && Array.isArray(t.items)) walk(t.items as Token[])
+      else if ('tokens' in t && Array.isArray(t.tokens) && t.tokens.length) walk(t.tokens)
       else if (t.type === 'image' || 'text' in t) out.push((t as { text: string }).text)
-      if (block) out.push(' ')
+      if (!INLINE.has(t.type)) out.push(' ')
     }
   }
-  walk(md.lexer(body), true)
+  walk(md.lexer(body))
   return out.join('').replace(/\s+/g, ' ').trim()
 }
 
@@ -57,7 +60,8 @@ function wrap({ value, start, end }: Edit, mark: string): Edit {
 
 /** Every line the selection touches, with a prefix each (or without it, when they all have one). */
 function lines({ value, start, end }: Edit, prefix: (i: number) => string, has: RegExp): Edit {
-  const from = value.lastIndexOf('\n', start - 1) + 1
+  // (lastIndexOf from -1 still looks at index 0: at the very start, the line starts there.)
+  const from = start === 0 ? 0 : value.lastIndexOf('\n', start - 1) + 1
   const nl = value.indexOf('\n', end)
   const to = nl === -1 ? value.length : nl
   const picked = value.slice(from, to).split('\n')

@@ -36,7 +36,9 @@ export function SelfPostBody({ body, versions, onEdit, now = Date.now() }: { bod
         <Sheet open onClose={() => setOpen(false)} side="bottom" label="Versions">
           <div className="space-y-4 p-4">
             <h2 className="text-[1.0625rem] font-bold">Versions</h2>
-            <p className="text-[0.8125rem] text-ink-3">Every version PaperWing has seen, newest first, with when it first saw it. Edits made in quick succession may show as one.</p>
+            <p className="text-[0.8125rem] text-ink-3">
+              The original and the newest versions PaperWing has seen, newest first, with when it first saw each. Edits made within a minute of each other may show as one.
+            </p>
             {[...versions].reverse().map((v, i) => (
               <section
                 key={v.seenAt}

@@ -38,11 +38,17 @@ export async function selfPostBody(key: string, now = Date.now()): Promise<SelfP
   if (off.has(uri) || off.has(uri.split('/')[2])) throw new NotSelfPost('It was removed from PaperWing')
 
   const store = `pw:self:${uri}`
+  // A store that fails to answer (or answers garbage) is not one with nothing kept: writing then
+  // would replace the post's history with one version, for a year. Answer, but keep nothing.
+  let unread = false
   const kept = kvConfigured()
     ? await kv()
         .get(store)
         .then((v) => (v ? (JSON.parse(v) as Kept) : undefined))
-        .catch(() => undefined)
+        .catch(() => {
+          unread = true
+          return undefined
+        })
     : undefined
   if (kept && now - kept.checkedAt < FRESH_FOR) return { body: kept.versions.at(-1)!.body, versions: kept.versions }
 
@@ -56,7 +62,7 @@ export async function selfPostBody(key: string, now = Date.now()): Promise<SelfP
     if (versions.at(-1)?.body !== sub.body) versions = [...versions, { body: sub.body, seenAt: now }]
     if (versions.length > VERSIONS_KEPT) versions = [versions[0], ...versions.slice(-(VERSIONS_KEPT - 1))]
   }
-  if (kvConfigured())
+  if (kvConfigured() && !unread)
     await kv()
       .set(store, JSON.stringify({ checkedAt: now, cid: record.cid, versions } satisfies Kept), KEEP_FOR)
       .catch(() => {})

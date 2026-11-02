@@ -40,6 +40,12 @@ describe('a self post’s Markdown', () => {
     expect(markdownText('# Title\n\nSome **bold** words, a [link](https://a.example) and `code`.\n\n- one\n- two')).toBe('Title Some bold words, a link and code. one two')
     expect(markdownText('![alt text](https://x.example/p.png)')).toBe('alt text')
   })
+
+  it('keeps words apart across line breaks and quoted paragraphs', () => {
+    expect(markdownText('line one\nline two')).toBe('line one line two')
+    expect(markdownText('> one\n>\n> two')).toBe('one two')
+    expect(markdownText('**bold**words stay *joined*!')).toBe('boldwords stay joined!')
+  })
 })
 
 describe('the formatting toolbar', () => {
@@ -63,6 +69,13 @@ describe('the formatting toolbar', () => {
     expect(show(format(format(at('[one\ntwo]'), 'list'), 'list'))).toBe('[one\ntwo]')
     expect(show(format(at('[one\ntwo]'), 'numbered'))).toBe('[1. one\n2. two]')
     expect(show(format(at('he said: [wow]'), 'quote'))).toBe('[> he said: wow]')
+  })
+
+  it('with nothing selected, acts on the line the cursor is on', () => {
+    expect(show(format(at('[]'), 'list'))).toBe('[- ]')
+    expect(show(format(at('[]\nfoo'), 'list'))).toBe('[- ]\nfoo')
+    expect(show(format(at('foo\n[]bar'), 'quote'))).toBe('foo\n[> bar]')
+    expect(show(format(at('fo[]o'), 'numbered'))).toBe('[1. foo]')
   })
 
   it('fences code across lines', () => {

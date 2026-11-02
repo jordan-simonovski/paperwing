@@ -6,7 +6,7 @@ import { canUpdate, canWrite, useAtproto } from '../lib/atproto'
 import { useComposer } from '../lib/compose'
 import { BODY_LIMIT, SUBMISSION_NSID } from '../lib/paperwing'
 import { keys } from '../lib/query'
-import { editSelfPost, withSelfPost, writeSelfPost } from '../lib/selfPost'
+import { editSelfPost, saveWords, withSelfPost, WordsNotSaved, writeSelfPost, type PendingSelfPost } from '../lib/selfPost'
 import type { Story, Thread } from '../lib/types'
 import { toast } from '../lib/ui'
 import { BoardPicker, useBoardShut } from './BoardPicker'
@@ -27,10 +27,14 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
   const [board, setBoard] = useState(given ?? '')
   const [front, setFront] = useState(false)
   const [busy, setBusy] = useState(false)
+  // The Bluesky post is up but its words didn't save: Post now saves only the words, never a second post.
+  const [pending, setPending] = useState<PendingSelfPost>()
   const { shut } = useBoardShut(board)
   const allowed = edit ? canUpdate(scope, SUBMISSION_NSID) !== false : canWrite(scope, SUBMISSION_NSID) !== false
   const over = body.trim().length > BODY_LIMIT
-  const ready = !!did && allowed && !!body.trim() && !over && (!!edit || (!!title.trim() && !shut))
+  // Saving the same words again isn't an edit.
+  const changed = !edit || body.trim() !== edit.selfPost?.body
+  const ready = !!did && allowed && !!body.trim() && !over && changed && (!!edit || !!pending || (!!title.trim() && !shut))
 
   const submit = async () => {
     if (!ready || busy) return
@@ -41,12 +45,14 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         // The thread on screen shows the new words now; PaperWing records the version when it next reads them.
         const words = body.trim()
         qc.setQueryData<Thread | null>(keys.thread(edit.key), (t) =>
-          t?.story.selfPost ? { ...t, story: withSelfPost(t.story, { body: words, versions: [...t.story.selfPost.versions, { body: words, seenAt: Date.now() }] }) } : t,
+          t?.story.selfPost && t.story.selfPost.body !== words
+            ? { ...t, story: withSelfPost(t.story, { body: words, versions: [...t.story.selfPost.versions, { body: words, seenAt: Date.now() }] }) }
+            : t,
         )
         toast('Saved')
         onClose()
       } else {
-        const { key, story } = await writeSelfPost({ title, body, board: board || undefined, front: board.startsWith('at://') && front })
+        const { key, story } = pending ? await saveWords(pending, body) : await writeSelfPost({ title, body, board: board || undefined, front: board.startsWith('at://') && front })
         // Bluesky takes a moment to have it: show the post straight away.
         qc.setQueryData<Thread>(keys.thread(key), { story, comments: [] })
         onClose()
@@ -54,6 +60,7 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         void navigate(`/t/paperwing/${key}`)
       }
     } catch (err) {
+      if (err instanceof WordsNotSaved) setPending(err.pending)
       toast((err as Error).message, { tone: 'error' })
     } finally {
       setBusy(false)
@@ -106,14 +113,20 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         ) : (
           <label className="block space-y-1">
             <span className="text-[0.8125rem] font-semibold text-ink-2">Title</span>
-            <input className="input" value={title} maxLength={300} onChange={(e) => setTitle(e.target.value)} placeholder="What’s it about?" autoFocus />
+            <input className="input" value={title} maxLength={300} onChange={(e) => setTitle(e.target.value)} placeholder="What’s it about?" autoFocus disabled={!!pending} />
           </label>
         )}
 
         <MarkdownEditor value={body} onChange={setBody} label="Your post" placeholder="Say what you want to say. Markdown works." autoFocus={!!edit} />
         {over && <p className="text-[0.8125rem] text-signal">That’s over {BODY_LIMIT.toLocaleString()} characters.</p>}
 
-        {!edit && did && allowed && (
+        {pending && (
+          <p className="rounded-xl bg-sunk px-3.5 py-3 text-[0.875rem]" role="status">
+            Your Bluesky post is up, but its words didn’t save. Save them again: it won’t post twice.
+          </p>
+        )}
+
+        {!edit && !pending && did && allowed && (
           <div className="rounded-xl bg-sunk px-3.5 py-3">
             <p className="mb-2 text-[0.8125rem] text-ink-3">Your Bluesky post has the title, the start of your words and a link here. Likes are its votes, replies its comments.</p>
             <BoardPicker board={board} onBoard={setBoard} front={front} onFront={setFront} />
@@ -125,7 +138,7 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
             Cancel
           </button>
           <button className="btn btn-primary" disabled={!ready || busy}>
-            {busy ? <Loader2 size={15} className="spin" /> : <Send size={15} />} {edit ? 'Save' : 'Post'}
+            {busy ? <Loader2 size={15} className="spin" /> : <Send size={15} />} {edit ? 'Save' : pending ? 'Save the words' : 'Post'}
           </button>
         </div>
       </form>

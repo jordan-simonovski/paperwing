@@ -5,6 +5,8 @@ const writes: { op: string; collection: string; rkey?: string; record: Record<st
 const own: Record<string, { uri: string; cid: string; value: Record<string, unknown> }> = {}
 let scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
 let failSubmission = 0
+/** The server writes the record but the answer never arrives. */
+let loseAnswer = false
 
 vi.mock('./atproto', async (orig) => {
   const real = await orig<typeof import('./atproto')>()
@@ -14,9 +16,11 @@ vi.mock('./atproto', async (orig) => {
     canUpdate: real.canUpdate,
     createRecord: async (collection: string, record: Record<string, unknown>, rkey?: string) => {
       if (collection === 'io.paperwing.submission' && failSubmission-- > 0) throw new Error('PDS hiccup')
-      writes.push({ op: 'create', collection, rkey, record })
       const uri = `at://${DID}/${collection}/${rkey ?? '3m2zzzzzzzzzz'}`
+      if (own[uri]) throw new Error('Record already exists')
+      writes.push({ op: 'create', collection, rkey, record })
       own[uri] = { uri, cid: 'bafy1', value: { $type: collection, ...record } }
+      if (loseAnswer && collection === 'io.paperwing.submission') throw new Error('Network connection lost')
       return { uri, cid: 'bafypost' }
     },
     putRecord: async (collection: string, rkey: string, record: Record<string, unknown>) => {
@@ -32,7 +36,7 @@ vi.mock('./atproto', async (orig) => {
 })
 vi.mock('./facets', () => ({ facetsFor: async () => [], graphemes: (s: string) => [...s].length }))
 
-const { editSelfPost, postText, writeSelfPost } = await import('./selfPost')
+const { editSelfPost, postText, saveWords, WordsNotSaved, writeSelfPost } = await import('./selfPost')
 const { selfPostUrl, cleanSubmission } = await import('./paperwing')
 const { parseStoryKey } = await import('./storyKey')
 
@@ -41,6 +45,7 @@ beforeEach(() => {
   for (const k of Object.keys(own)) delete own[k]
   scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
   failSubmission = 0
+  loseAnswer = false
 })
 
 describe('writing a self post', () => {
@@ -59,12 +64,29 @@ describe('writing a self post', () => {
     expect(out.story).toMatchObject({ key: out.key, title: 'What are you reading?', url: null, selfPost: { body: 'I’m on **Piranesi**.\n\nYou?' } })
   })
 
-  it('tries the words twice before saying they didn’t save', async () => {
+  it('tries the words twice before saying they didn’t save, and trying again never posts twice', async () => {
     failSubmission = 1
     await writeSelfPost({ title: 'T', body: 'B' })
     expect(writes.map((w) => w.collection)).toEqual(['app.bsky.feed.post', 'io.paperwing.submission'])
+    writes.length = 0
+
     failSubmission = 2
-    await expect(writeSelfPost({ title: 'T', body: 'B' })).rejects.toThrow(/Posted to Bluesky, but its words didn’t save/)
+    const err = await writeSelfPost({ title: 'T', body: 'B' }).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(WordsNotSaved)
+    expect((err as Error).message).toMatch(/Posted to Bluesky, but its words didn’t save/)
+    // Trying again writes only the words, at the post's own key: still one Bluesky post.
+    const { key, story } = await saveWords((err as InstanceType<typeof WordsNotSaved>).pending, 'B, edited meanwhile')
+    expect(writes.map((w) => w.collection)).toEqual(['app.bsky.feed.post', 'io.paperwing.submission'])
+    expect(writes[1].rkey).toBe(writes[0].rkey)
+    expect(writes[1].record.body).toBe('B, edited meanwhile')
+    expect(story).toMatchObject({ key, selfPost: { body: 'B, edited meanwhile' } })
+  })
+
+  it('counts words that saved even when the answer was lost', async () => {
+    loseAnswer = true
+    const { story } = await writeSelfPost({ title: 'T', body: 'B' })
+    expect(story.selfPost?.body).toBe('B')
+    expect(writes.filter((w) => w.collection === 'io.paperwing.submission')).toHaveLength(1)
   })
 
   it('needs a title and some words', async () => {
