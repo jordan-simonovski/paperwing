@@ -23,7 +23,19 @@ export const kindOf = (s: Pick<Story, 'url' | 'hasThread' | 'media'>): StoryKind
 
 const TRACKING = /^(utm_|ref$|ref_src$|source$|fbclid$|gclid$|mc_|s$|si$)/
 
+const canonical = new Map<string, string>()
+
 export function canonicalUrl(raw: string): string {
+  let c = canonical.get(raw)
+  if (c === undefined) {
+    c = canonicalize(raw)
+    if (canonical.size > 5000) canonical.clear()
+    canonical.set(raw, c)
+  }
+  return c
+}
+
+function canonicalize(raw: string): string {
   try {
     const u = new URL(raw)
     for (const k of [...u.searchParams.keys()]) if (TRACKING.test(k)) u.searchParams.delete(k)

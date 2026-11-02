@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { words } from './cluster'
+import { queryClient } from './query'
 import { api } from './sources/http'
 import type { Story } from './types'
 
@@ -64,17 +65,26 @@ const outletOf = (s: Pick<Story, 'site' | 'sourceLabel' | 'url'>) => {
   }
 }
 
-/**
- * Everyone covering a story: what the feed grouped with it, plus what a news search found.
- * `search` false only reads a search already done (a row shouldn't start one per story).
- * `outlets` counts publishers, this story's own included.
- */
-export function useOutlets(story: Story | undefined, grouped: Story[] = [], search = true) {
-  const found = useCoverage(story, search && !!story && newsLike(story))
-  const stories = useMemo(() => {
-    const seen = new Set([story?.url, ...grouped.map((c) => c.url)])
-    return [...grouped, ...(found.data ?? []).filter((s) => !seen.has(s.url) && !!seen.add(s.url))]
-  }, [grouped, found.data, story?.url])
-  const outlets = useMemo(() => new Set([story ? outletOf(story) : undefined, ...stories.map(outletOf)].filter(Boolean)).size, [story, stories])
+/** Everyone covering a story: what the feed grouped with it plus search results, and how many publishers that is (its own included). */
+function outletsFrom(story: Story | undefined, grouped: Story[], found: Story[] = []) {
+  const seen = new Set([story?.url, ...grouped.map((c) => c.url)])
+  const stories = [...grouped, ...found.filter((s) => !seen.has(s.url) && !!seen.add(s.url))]
+  const outlets = new Set([story ? outletOf(story) : undefined, ...stories.map(outletOf)].filter(Boolean)).size
+  return { stories, outlets }
+}
+
+/** Everyone covering a story: what the feed grouped with it, plus a news search for it. */
+export function useOutlets(story: Story | undefined, grouped: Story[] = []) {
+  const found = useCoverage(story, !!story && newsLike(story))
+  const { stories, outlets } = useMemo(() => outletsFrom(story, grouped, found.data), [story, grouped, found.data])
   return { stories, outlets, searching: found.isFetching }
+}
+
+/**
+ * The same for a feed row, which never starts a search and only reads one already done (when the
+ * story was opened). Not a query subscription: fifty rows each registering one made the query
+ * cache, and so its saved copy, churn on every list change.
+ */
+export function rowOutlets(story: Story, grouped: Story[] = []) {
+  return outletsFrom(story, grouped, queryClient.getQueryData<Story[]>(['coverage', story.key]))
 }

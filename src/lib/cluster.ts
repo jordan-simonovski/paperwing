@@ -20,8 +20,21 @@ const norm = (w: string) => {
   return t.length > 4 && /[^siu]s$/.test(t) ? t.slice(0, -1) : t
 }
 
+// Every ranking pass splits every title again; the titles rarely change, so remember them.
+const parsedTitles = new Map<string, { token: string; entity: boolean }[]>()
+
 /** A title's words, with a flag for the ones that look like names, products or numbers. */
 export function words(title: string): { token: string; entity: boolean }[] {
+  let parsed = parsedTitles.get(title)
+  if (!parsed) {
+    parsed = parseWords(title)
+    if (parsedTitles.size > 5000) parsedTitles.clear()
+    parsedTitles.set(title, parsed)
+  }
+  return parsed
+}
+
+function parseWords(title: string): { token: string; entity: boolean }[] {
   // Credits say who published, not what happened: "(Alexandra Alter/New York Times)", " | TechCrunch".
   const headline = title.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+[|\u2013\u2014-]\s+[^|\u2013\u2014-]{2,40}$/, '')
   const raw = headline.split(/[^\p{L}\p{N}.+#'\u2019]+/u).filter(Boolean)

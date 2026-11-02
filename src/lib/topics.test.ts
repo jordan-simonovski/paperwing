@@ -45,3 +45,14 @@ describe('topic search', () => {
     expect(topicsForStory(story('How I run 1:1s with my reports'))).toContain('leadership')
   })
 })
+
+describe('topicsForStory caching', () => {
+  it('hands back a fresh array each time, so callers can add to it', () => {
+    const s = story('Distributed tracing with OpenTelemetry')
+    const first = topicsForStory(s)
+    first.push('mutated')
+    const second = topicsForStory(s)
+    expect(second).not.toContain('mutated')
+    expect(second).toContain('observability')
+  })
+})

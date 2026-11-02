@@ -788,22 +788,31 @@ export function compileTerm(term: string): RegExp {
   return termPattern(term).re
 }
 
-function termPattern(term: string): { re: RegExp } {
+function termPattern(term: string): { re: RegExp; body: string; caseSensitive: boolean } {
   const caseSensitive = term.startsWith('=')
   let body = caseSensitive ? term.slice(1) : term
   const prefix = body.endsWith('*')
   if (prefix) body = body.slice(0, -1)
   // Terms containing a backslash are treated as pre-escaped regex.
-  const src = (body.includes('\\') ? body : escape(body)).replace(/ /g, '[\\s-]+')
-  return { re: new RegExp(`(?<![\\w])${src}${prefix ? '[\\w-]*' : ''}(?![\\w])`, caseSensitive ? '' : 'i') }
+  const src = `${(body.includes('\\') ? body : escape(body)).replace(/ /g, '[\\s-]+')}${prefix ? '[\\w-]*' : ''}`
+  return { re: new RegExp(`(?<![\\w])${src}(?![\\w])`, caseSensitive ? '' : 'i'), body: src, caseSensitive }
 }
 
+// One regex per topic (two when some terms are case-sensitive) rather than one per term: a topic
+// has a dozen or more terms and every story is checked against every topic, so this is the
+// difference between a few hundred regex scans per story and a few dozen.
 const compiled = new Map<string, RegExp[]>()
 function patternsFor(topic: Pick<Topic, 'id' | 'terms'>): RegExp[] {
-  let list = compiled.get(topic.id)
+  const key = `${topic.id}\u0000${topic.terms.join('\u0000')}`
+  let list = compiled.get(key)
   if (!list) {
-    list = topic.terms.map((t) => termPattern(t).re)
-    compiled.set(topic.id, list)
+    const groups: [string[], string[]] = [[], []]
+    for (const term of topic.terms) {
+      const { body, caseSensitive } = termPattern(term)
+      groups[caseSensitive ? 1 : 0].push(`(?:${body})`)
+    }
+    list = groups.flatMap((alts, i) => (alts.length ? [new RegExp(`(?<![\\w])(?:${alts.join('|')})(?![\\w])`, i === 0 ? 'i' : '')] : []))
+    compiled.set(key, list)
   }
   return list
 }
@@ -834,14 +843,24 @@ for (const t of TOPICS) {
   }
 }
 
-export function storyText(s: Pick<Story, 'title' | 'tags' | 'url'>): string {
-  let host = ''
-  try {
-    host = s.url ? new URL(s.url).hostname : ''
-  } catch {
-    /* ignore malformed */
+const hosts = new Map<string, string>()
+function hostOf(url: string | null | undefined): string {
+  if (!url) return ''
+  let host = hosts.get(url)
+  if (host === undefined) {
+    try {
+      host = new URL(url).hostname
+    } catch {
+      host = ''
+    }
+    if (hosts.size > 5000) hosts.clear()
+    hosts.set(url, host)
   }
-  return `${s.title} ${(s.tags ?? []).join(' ')} ${host}`
+  return host
+}
+
+export function storyText(s: Pick<Story, 'title' | 'tags' | 'url'>): string {
+  return `${s.title} ${(s.tags ?? []).join(' ')} ${hostOf(s.url)}`
 }
 
 export function matchesTopic(topic: Pick<Topic, 'id' | 'terms'>, text: string): string | undefined {
@@ -852,11 +871,22 @@ export function matchesTopic(topic: Pick<Topic, 'id' | 'terms'>, text: string): 
   return undefined
 }
 
+// The same stories are ranked again on every sort change, refresh and feed arrival, and their
+// topics never change, so they're worked out once per story.
+const storyTopics = new Map<string, string[]>()
+
 export function topicsForStory(s: Story, extra: Topic[] = []): string[] {
   const text = storyText(s)
+  const key = `${s.sourceLabel}\u0000${text}\u0000${extra.map((t) => `${t.id}=${t.terms.join(',')}`).join(';')}`
+  const cached = storyTopics.get(key)
+  // A copy: callers add to it (a cluster's leader takes its members' topics).
+  if (cached) return [...cached]
   const found = new Set(DEDICATED.get(s.sourceLabel.toLowerCase()) ?? [])
   for (const t of [...TOPICS, ...extra]) if (!found.has(t.id) && matchesTopic(t, text)) found.add(t.id)
-  return [...found]
+  const topics = [...found]
+  if (storyTopics.size > 5000) storyTopics.clear()
+  storyTopics.set(key, topics)
+  return [...topics]
 }
 
 /* --------------------------------------------------------------- search */

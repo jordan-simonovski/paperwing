@@ -3,8 +3,8 @@ import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
 import { Link } from 'react-router'
 import { ArrowBigDown, ArrowBigUp, Bookmark, BookmarkCheck, EyeOff, Image as ImageIcon, Loader2, MessageSquare, Play, Newspaper, Share2 } from 'lucide-react'
-import { memo, useRef } from 'react'
-import { compact, domainOf, fullDate, timeAgo } from '../lib/format'
+import { memo, useMemo, useRef } from 'react'
+import { compact, domainOf, fullDate, fullNumber, timeAgo } from '../lib/format'
 import { useSwipeActions } from '../lib/gestures'
 import { plainText } from '../lib/html'
 import { stateOf, useLibrary } from '../lib/library'
@@ -14,7 +14,7 @@ import { useImpression } from '../lib/impressions'
 import { topicsForStory } from '../lib/topics'
 import { LESSON, useActivity, usePrefs } from '../lib/store'
 import { usePlatformVote } from '../lib/platformVote'
-import { useOutlets } from '../lib/coverage'
+import { rowOutlets } from '../lib/coverage'
 import type { Story } from '../lib/types'
 import { toast } from '../lib/ui'
 import { scoreUnit, SOURCE_NAMES, sourceLabel } from './Source'
@@ -59,7 +59,9 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
   const thumb = thumbnails ? thumbFor(s) : undefined
   const also = [...new Set(s.alsoOn.map(sourceLabel))]
   // Other outlets' takes on the same event: what the feed grouped, plus a news search already run for it.
-  const { stories: coverage, outlets } = useOutlets(s, s.coverage, false)
+  // Re-read when the row is selected: opening a story is what runs its news search.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { stories: coverage, outlets } = useMemo(() => rowOutlets(s, s.coverage), [s, selected])
   const covered = outlets > 1 ? coverage : []
 
   return (
@@ -84,7 +86,8 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
             </>
           )}
           <span aria-hidden>·</span>
-          <time dateTime={new Date(s.createdAt).toISOString()} title={fullDate(s.createdAt)}>
+          {/* The full date is only for hovering, and formatting it for every row costs on phones: set it on the way in. */}
+          <time dateTime={new Date(s.createdAt).toISOString()} onPointerEnter={(e) => (e.currentTarget.title ||= fullDate(s.createdAt))}>
             {timeAgo(s.createdAt, now)}
           </time>
           {domain && (
@@ -227,7 +230,7 @@ export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1
   }
   const upOn = vote === 1 || !!platform?.on
   return (
-    <span className={`pill votes${upOn ? ' up' : vote === -1 ? ' down' : ''}`} title={s.score !== undefined ? `${s.score.toLocaleString()} ${unit} on ${SOURCE_NAMES[s.source]}` : undefined}>
+    <span className={`pill votes${upOn ? ' up' : vote === -1 ? ' down' : ''}`} title={s.score !== undefined ? `${fullNumber(s.score)} ${unit} on ${SOURCE_NAMES[s.source]}` : undefined}>
       <button onClick={() => press(1)} aria-label={platform?.label ?? 'More like this'} aria-pressed={upOn} title={platform ? `${platform.label}, and more like this (u)` : 'More like this (u)'}>
         <ArrowBigUp size={18} fill={upOn ? 'currentColor' : 'none'} />
       </button>

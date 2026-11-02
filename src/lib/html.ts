@@ -24,7 +24,17 @@ export function sanitize(html: string): string {
   })
 }
 
+// Rows ask for this on every render, and parsing builds a whole document each time.
+const texts = new Map<string, string>()
+
 export function plainText(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  return doc.body.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+  let text = texts.get(html)
+  if (text === undefined) {
+    // Most excerpts are already plain text: no tags or entities, nothing to parse.
+    text = /[<&]/.test(html) ? (new DOMParser().parseFromString(html, 'text/html').body.textContent ?? '') : html
+    text = text.replace(/\s+/g, ' ').trim()
+    if (texts.size > 3000) texts.clear()
+    texts.set(html, text)
+  }
+  return text
 }

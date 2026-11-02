@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { systemSwipesBack, useEdgeSwipeBack } from '../lib/gestures'
 import { useMediaQuery } from '../lib/hooks'
@@ -7,7 +7,7 @@ import { armHeadline, pretextOn } from '../lib/pretext'
 import { useActivity } from '../lib/store'
 import { isTyping } from '../lib/ui'
 import type { Story } from '../lib/types'
-import { ItemPane, type PaneTab } from './ItemPane'
+import type { PaneTab } from './ItemPane'
 import { hideStory, toggleArchived, toggleSaved, toggleWatch } from './StoryRow'
 
 /**
@@ -61,6 +61,20 @@ export function usePane(base: string) {
   return { open, close }
 }
 
+// The reading pane (threads, the reader view, summaries, related coverage and everything they need)
+// is a separate chunk, so the list doesn't wait on it at launch. It's fetched as soon as the app
+// is idle, so the first story opened finds it ready.
+const loadPane = () => import('./ItemPane')
+const ItemPane = lazy(() => loadPane().then((m) => ({ default: m.ItemPane })))
+let preloaded = false
+function preloadPane() {
+  if (preloaded) return
+  preloaded = true
+  const go = () => void loadPane()
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 3000 })
+  else setTimeout(go, 1500)
+}
+
 interface Props {
   base: string
   itemKey?: string
@@ -79,13 +93,20 @@ export function Split({ base, itemKey, list, idle }: Props) {
   useLayoutEffect(() => {
     if (!itemKey) navCommitted()
   }, [itemKey])
+  useEffect(preloadPane, [])
   return (
     <>
       <div className="list-col scroll-thin" id="list-scroll">
         {list}
       </div>
       <aside ref={paneRef} className={`pane-col ${itemKey ? 'open' : 'idle'}`} aria-label="Reading pane">
-        {itemKey ? <ItemPane key={itemKey} itemKey={itemKey} onClose={close} onOpen={open} /> : wide ? idle : null}
+        {itemKey ? (
+          <Suspense fallback={null}>
+            <ItemPane key={itemKey} itemKey={itemKey} onClose={close} onOpen={open} />
+          </Suspense>
+        ) : wide ? (
+          idle
+        ) : null}
       </aside>
     </>
   )

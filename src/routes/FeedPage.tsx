@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { ChannelBrief } from '../components/ChannelBrief'
 import { FeedHeader } from '../components/FeedHeader'
@@ -18,6 +18,8 @@ import { canReadTimeline, useAtproto } from '../lib/atproto'
 import type { SourceKind } from '../lib/types'
 
 const PAGE = 50
+/** Rows rendered straight away when a list changes: a screen and a bit. The rest follow a frame later. */
+const FIRST = 10
 // Topics where a provider outage is news.
 const OUTAGE_CHANNELS = new Set(['sre', 'observability', 'cloud-native', 'for-you'])
 
@@ -81,6 +83,25 @@ export function FeedPage() {
     [feed.stories, sourceFilter, kindFilter, hideRead, hideRead ? read : null, itemKey],
   )
   const { cursor, open } = useListKeys(visible, itemKey, base, feed.refetch)
+
+  // A new list (another channel, sort or filter) paints its first screen of rows at once and the
+  // rest just after, in an interruptible render, so a tap on Hot, Latest or Top answers straight
+  // away instead of waiting on fifty rows nobody can see yet.
+  const listKey = `${channelId}|${variant}|${sort}|${sourceFilter}|${kindFilter}`
+  const [eager, setEager] = useState({ key: listKey, rows: FIRST })
+  if (eager.key !== listKey) setEager({ key: listKey, rows: FIRST })
+  const rendered = Math.min(limit, eager.key === listKey ? eager.rows : FIRST)
+  useEffect(() => {
+    if (eager.rows === Infinity) return
+    let timer = 0
+    const raf = requestAnimationFrame(() => {
+      timer = window.setTimeout(() => startTransition(() => setEager((e) => (e.key === eager.key ? { ...e, rows: Infinity } : e))))
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+    }
+  }, [eager])
   // Pretext motion: arriving at a feed, or changing its sort or filters, settles its headlines in.
   const pretext = usePretext()
   useTypesetIn(`${channelId}|${variant}|${sort}|${sourceFilter}|${kindFilter}`, pretext && visible.length > 0 && !itemKey)
@@ -147,7 +168,7 @@ export function FeedPage() {
             <div role="feed" aria-busy={feed.loading}>
               {feed.loading && !visible.length && pretext && <TypesetLoader label={channel.label} />}
               {feed.loading && !visible.length && Array.from({ length: pretext ? 4 : 8 }, (_, i) => <RowSkeleton key={i} />)}
-              {visible.slice(0, limit).map((s) => (
+              {visible.slice(0, rendered).map((s) => (
                 <StoryRow key={s.key} story={s} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} />
               ))}
             </div>

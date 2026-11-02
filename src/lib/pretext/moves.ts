@@ -45,13 +45,20 @@ export function landHeadline(key: string, headline: HTMLElement, pane: HTMLEleme
  */
 export function settleVisible(root: ParentNode = document) {
   if (!pretextOn() || !usePrefs.getState().feedMotion) return
-  const els = [...root.querySelectorAll<HTMLElement>('.feed-title, .list-col .row-title')]
-    .filter((el) => {
-      const r = el.getBoundingClientRect()
-      return r.height > 0 && r.bottom > 0 && r.top < innerHeight
-    })
-    .slice(0, 8)
+  // In document order, so stop at the first one below the screen instead of measuring every row.
+  const els: HTMLElement[] = []
+  for (const el of root.querySelectorAll<HTMLElement>('.feed-title, .list-col .row-title')) {
+    const r = el.getBoundingClientRect()
+    if (r.top >= innerHeight || els.length === 8) break
+    if (r.height > 0 && r.bottom > 0) els.push(el)
+  }
   els.forEach((el, i) => {
-    el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 380, delay: i * 30, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' })
+    el.animate(
+      [
+        { opacity: 0, transform: 'translateY(6px)' },
+        { opacity: 1, transform: 'none' },
+      ],
+      { duration: 380, delay: i * 30, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' },
+    )
   })
 }

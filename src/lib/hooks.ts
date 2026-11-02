@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { Channel } from './channels'
 import { allTopics, findTopic } from './channels'
 import { useLibrary } from './library'
@@ -49,11 +49,18 @@ export function latestFeed(ref: FeedRef): FeedRef {
   }
 }
 
+/** The feeds a channel reads in this sort. Bluesky feeds only once the deployment says it can serve them. */
+export function channelFeeds(channel: Channel | undefined, sort: SortMode, bluesky: boolean | undefined): FeedRef[] {
+  const latest = sort === 'new' && !channel?.native
+  return (channel?.feeds ?? []).filter((f) => bluesky === true || f.kind !== 'bluesky').map((f) => (latest ? latestFeed(f) : f))
+}
+
 export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
   // Bluesky feeds only run once the deployment says it can serve them.
   const bluesky = useBlueskyEnabled()
   const latest = sort === 'new' && !channel?.native
-  const feeds = useMemo(() => (channel?.feeds ?? []).filter((f) => bluesky === true || f.kind !== 'bluesky').map((f) => (latest ? latestFeed(f) : f)), [channel, bluesky, latest])
+  // Only Latest reads other feeds: Hot, Top and Spicy rank the same ones, so changing between them fetches nothing.
+  const feeds = useMemo(() => channelFeeds(channel, latest ? 'new' : 'hot', bluesky), [channel, bluesky, latest])
   const queries = useQueries({
     queries: feeds.map((ref) => ({
       queryKey: ['feed', feedId(ref)],
@@ -65,6 +72,9 @@ export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
   const extraTopics = useMemo(() => allTopics(interests).filter((t) => t.id.startsWith('q:')), [interests])
 
   const dataStamp = queries.map((q) => q.dataUpdatedAt).join(',')
+  // Rows are memoised, but ranking builds every story afresh: hand back the previous object when
+  // nothing about a story changed, so changing the sort or a feed arriving only renders what's new.
+  const previous = useRef(new Map<string, { json: string; story: Ranked }>())
   const stories = useMemo(() => {
     const batches = feeds.map((ref, i) => {
       const data = queries[i]?.data ?? []
@@ -79,7 +89,16 @@ export function useChannelFeed(channel: Channel | undefined, sort: SortMode) {
     // voting never reorders the list under you. The next refresh or visit reflects them.
     const { impressions: seen, votes } = useActivity.getState()
     const { affinity } = usePrefs.getState()
-    const merged = merge(batches, { sort, native: channel?.native, boost: channel?.boost, extraTopics, filters: { mutedWords, mutedDomains, hidden }, seen, affinity, votes })
+    const fresh = merge(batches, { sort, native: channel?.native, boost: channel?.boost, extraTopics, filters: { mutedWords, mutedDomains, hidden }, seen, affinity, votes })
+    const kept = previous.current
+    if (kept.size > 3000) kept.clear()
+    const merged = fresh.map((s) => {
+      const json = JSON.stringify(s)
+      const before = kept.get(s.key)
+      if (before?.json === json) return before.story
+      kept.set(s.key, { json, story: s })
+      return s
+    })
     for (const s of merged) {
       storyIndex.set(s.key, s)
       for (const c of s.coverage ?? []) if (!storyIndex.has(c.key)) storyIndex.set(c.key, { ...c, heat: 0.4, alsoOn: [], topics: s.topics })

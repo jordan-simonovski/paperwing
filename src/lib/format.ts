@@ -20,6 +20,14 @@ export function fullDate(ms: number): string {
   return dateFormat.format(ms)
 }
 
+let numberFormat: Intl.NumberFormat | undefined
+
+/** 12,345: like toLocaleString(), which builds a formatter on every call. */
+export function fullNumber(n: number): string {
+  numberFormat ??= new Intl.NumberFormat()
+  return numberFormat.format(n)
+}
+
 export function domainOf(url: string | null | undefined): string | undefined {
   if (!url) return undefined
   try {
