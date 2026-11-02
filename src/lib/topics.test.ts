@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { matchesTopic, searchTopics, TOPIC_BY_ID, topicsForStory } from './topics'
 import type { Story } from './types'
 
-const story = (title: string, extra: Partial<Story> = {}): Story => ({ key: 'x', source: 'hn', sourceLabel: 'Hacker News', title, url: null, discussionUrl: null, createdAt: 0, hasThread: true, ...extra })
+const story = (title: string, extra: Partial<Story> = {}): Story => ({
+  key: 'x',
+  source: 'hn',
+  sourceLabel: 'Hacker News',
+  title,
+  url: null,
+  discussionUrl: null,
+  createdAt: 0,
+  hasThread: true,
+  ...extra,
+})
 const topic = (id: string) => TOPIC_BY_ID.get(id)!
 
 describe('topic matching', () => {
@@ -21,7 +31,8 @@ describe('topic matching', () => {
 
   it('keeps engineering leadership distinct from other kinds of "manager"', () => {
     const lead = topic('leadership')
-    for (const t of ['Long live the engineering manager', 'What staff engineers actually do', 'Running better 1:1s', 'Our DORA metrics were lying', 'Staff+ is not a promotion']) expect(matchesTopic(lead, t), t).toBeTruthy()
+    for (const t of ['Long live the engineering manager', 'What staff engineers actually do', 'Running better 1:1s', 'Our DORA metrics were lying', 'Staff+ is not a promotion'])
+      expect(matchesTopic(lead, t), t).toBeTruthy()
     for (const t of ['A password manager for teams', 'npm is a package manager', 'Memory management in Rust', 'Meeting at 11:15 tomorrow']) expect(matchesTopic(lead, t), t).toBeUndefined()
   })
 

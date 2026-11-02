@@ -53,7 +53,9 @@ async function blueskyMentions(): Promise<Mention[]> {
 async function hnMentions(): Promise<Mention[]> {
   try {
     const since = Math.floor((Date.now() - 2 * 3_600_000) / 1000)
-    const res = await fetch(`https://hn.algolia.com/api/v1/search_by_date?tags=story&query=down%20outage&numericFilters=created_at_i>${since}&hitsPerPage=50&optionalWords=down%20outage`, { signal: AbortSignal.timeout(6000) })
+    const res = await fetch(`https://hn.algolia.com/api/v1/search_by_date?tags=story&query=down%20outage&numericFilters=created_at_i>${since}&hitsPerPage=50&optionalWords=down%20outage`, {
+      signal: AbortSignal.timeout(6000),
+    })
     const data = (await res.json()) as { hits: { objectID: string; title: string; created_at_i: number }[] }
     return data.hits.flatMap((h) => [0, 1, 2].map((i) => ({ text: h.title, author: `hn:${h.objectID}:${i}`, at: h.created_at_i * 1000, url: `https://news.ycombinator.com/item?id=${h.objectID}` })))
   } catch {

@@ -49,7 +49,11 @@ export function DiscussionBar({ story, alsoOn = [], coverage = [], onOpen }: { s
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem]">
         {places.map((s) => (
-          <button key={s.key} className={`inline-flex items-center gap-1.5 ${s.key === story.key ? 'font-bold text-ink' : 'text-ink-2 hover:text-ink'}`} onClick={() => s.key !== story.key && onOpen(s.key)}>
+          <button
+            key={s.key}
+            className={`inline-flex items-center gap-1.5 ${s.key === story.key ? 'font-bold text-ink' : 'text-ink-2 hover:text-ink'}`}
+            onClick={() => s.key !== story.key && onOpen(s.key)}
+          >
             <StoryIcon story={s} size={13} />
             {sourceLabel(s)} <span className="num">{compact(s.comments ?? 0)}</span>
           </button>

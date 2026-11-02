@@ -3,7 +3,19 @@ import { buildEdition } from './edition'
 import type { Ranked } from './rank'
 
 const now = Date.now()
-const r = (key: string, topics: string[], hoursAgo = 2): Ranked => ({ key, source: 'hn', sourceLabel: 'HN', title: key, url: null, discussionUrl: null, createdAt: now - hoursAgo * 3_600_000, hasThread: true, heat: 0.5, alsoOn: [], topics })
+const r = (key: string, topics: string[], hoursAgo = 2): Ranked => ({
+  key,
+  source: 'hn',
+  sourceLabel: 'HN',
+  title: key,
+  url: null,
+  discussionUrl: null,
+  createdAt: now - hoursAgo * 3_600_000,
+  hasThread: true,
+  heat: 0.5,
+  alsoOn: [],
+  topics,
+})
 
 describe('buildEdition', () => {
   // In hot order: the AI stories are hottest, so a plain top-N would be all AI.

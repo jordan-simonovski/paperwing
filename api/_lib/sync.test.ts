@@ -9,7 +9,8 @@ beforeAll(async () => {
   ;({ POST } = await import('../sync'))
 })
 
-const post = (path: string, body: unknown, headers: Record<string, string> = {}) => POST(new Request(`https://readout.test/api/sync${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }))
+const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+  POST(new Request(`https://readout.test/api/sync${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }))
 
 describe('sync inbox', () => {
   it('queues a shared link for every device to pull', async () => {

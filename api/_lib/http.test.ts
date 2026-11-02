@@ -15,7 +15,28 @@ describe('stripHtml', () => {
 
 describe('private address check', () => {
   it('blocks every way of writing a private or local address', () => {
-    for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255', '::1', '::', 'fe80::1', 'fc00::1', 'fd12::1', '::ffff:7f00:1', '::ffff:a9fe:a9fe', '::ffff:127.0.0.1', '::ffff:ac10:1', 'ff02::1', 'not an ip']) {
+    for (const ip of [
+      '127.0.0.1',
+      '10.1.2.3',
+      '172.16.0.1',
+      '192.168.1.1',
+      '169.254.169.254',
+      '100.64.0.1',
+      '0.0.0.0',
+      '224.0.0.1',
+      '255.255.255.255',
+      '::1',
+      '::',
+      'fe80::1',
+      'fc00::1',
+      'fd12::1',
+      '::ffff:7f00:1',
+      '::ffff:a9fe:a9fe',
+      '::ffff:127.0.0.1',
+      '::ffff:ac10:1',
+      'ff02::1',
+      'not an ip',
+    ]) {
       expect(isPrivateAddress(ip), ip).toBe(true)
     }
   })

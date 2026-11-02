@@ -27,7 +27,7 @@ export function useUnreadRelease(version = __BUILD__.version): boolean {
   const seen = useSyncExternalStore(
     (cb) => (listeners.add(cb), () => void listeners.delete(cb)),
     read,
-    () => undefined
+    () => undefined,
   )
   return isNewer(version, seen)
 }

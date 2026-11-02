@@ -39,7 +39,15 @@ export function MediaGallery({ media, href, compact }: Props) {
     const [m] = images
     return (
       <a className={`media-frame block w-fit max-w-full ${max}`} href={m.full ?? m.thumb} target="_blank" rel="noopener noreferrer">
-        <img src={m.thumb} alt={m.alt ?? ''} loading="lazy" decoding="async" className={`block h-auto max-w-full object-contain ${max}`} style={m.aspect ? { aspectRatio: m.aspect } : undefined} title={m.alt} />
+        <img
+          src={m.thumb}
+          alt={m.alt ?? ''}
+          loading="lazy"
+          decoding="async"
+          className={`block h-auto max-w-full object-contain ${max}`}
+          style={m.aspect ? { aspectRatio: m.aspect } : undefined}
+          title={m.alt}
+        />
       </a>
     )
   }

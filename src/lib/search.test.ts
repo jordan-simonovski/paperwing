@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest'
 import { searchLoaded } from './search'
 import type { Story } from './types'
 
-const story = (key: string, title: string, ageDays = 0, url: string | null = null): Story => ({ key, source: 'rss', sourceLabel: 'Some blog', title, url, discussionUrl: null, createdAt: Date.now() - ageDays * 86_400_000, hasThread: false })
+const story = (key: string, title: string, ageDays = 0, url: string | null = null): Story => ({
+  key,
+  source: 'rss',
+  sourceLabel: 'Some blog',
+  title,
+  url,
+  discussionUrl: null,
+  createdAt: Date.now() - ageDays * 86_400_000,
+  hasThread: false,
+})
 
 describe('searching loaded feeds', () => {
   const qc = new QueryClient()

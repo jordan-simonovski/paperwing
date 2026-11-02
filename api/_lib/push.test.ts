@@ -15,7 +15,18 @@ vi.mock('./outageScan.js', () => ({ outageReport: async () => ({ providers: [] }
 vi.mock('./statuspages.js', async (orig) => ({
   ...(await orig<typeof import('./statuspages.js')>()),
   statusIncidents: async () => [
-    { key: 'st-github-x1', source: 'status', sourceLabel: 'GitHub status', title: 'Actions down', url: null, discussionUrl: null, createdAt: 0, hasThread: true, weight: 450, text: '<p>Ongoing: investigating, critical impact.</p>' },
+    {
+      key: 'st-github-x1',
+      source: 'status',
+      sourceLabel: 'GitHub status',
+      title: 'Actions down',
+      url: null,
+      discussionUrl: null,
+      createdAt: 0,
+      hasThread: true,
+      weight: 450,
+      text: '<p>Ongoing: investigating, critical impact.</p>',
+    },
   ],
 }))
 

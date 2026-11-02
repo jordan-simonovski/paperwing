@@ -47,8 +47,7 @@ export const toB64url = (bytes: ArrayBuffer | Uint8Array) => {
   for (let i = 0; i < view.length; i += 0x8000) s += String.fromCharCode(...view.subarray(i, i + 0x8000))
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
-export const fromB64url = (s: string) =>
-  Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4)), (c) => c.charCodeAt(0))
+export const fromB64url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4)), (c) => c.charCodeAt(0))
 
 export const isSealed = (r: Pick<SyncRecord, 'key'>) => r.key.startsWith(SEALED)
 

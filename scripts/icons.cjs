@@ -49,7 +49,10 @@ const targets = [
   for (const [file, size, maskable, inset] of targets) {
     await page.setViewportSize({ width: size, height: size })
     await page.setContent(`<!doctype html><body style="margin:0;background:transparent">${icon(size, maskable, inset)}</body>`)
-    await page.locator('svg').first().screenshot({ path: path.resolve(__dirname, '../public', file), omitBackground: !maskable })
+    await page
+      .locator('svg')
+      .first()
+      .screenshot({ path: path.resolve(__dirname, '../public', file), omitBackground: !maskable })
     console.log('wrote', file)
   }
   await browser.close()

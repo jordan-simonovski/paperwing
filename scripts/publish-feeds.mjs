@@ -37,7 +37,9 @@ async function xrpc(method, { body, token, query, raw, contentType } = {}) {
 const status = await fetch(`${BASE}/api/atproto?route=status`)
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`status ${r.status}`))))
   .catch((e) => die(`Could not reach ${BASE}/api/atproto?route=status (${e.message}). Deploy first.`))
-const did = await fetch(`${BASE}/.well-known/did.json`).then((r) => r.json()).catch(() => null)
+const did = await fetch(`${BASE}/.well-known/did.json`)
+  .then((r) => r.json())
+  .catch(() => null)
 if (did?.id !== `did:web:${FEEDGEN_HOSTNAME}`) die(`${BASE}/.well-known/did.json should have id did:web:${FEEDGEN_HOSTNAME}, got ${did?.id}. Is PaperWing served at that address yet?`)
 
 if (args.includes('--list')) {
@@ -74,13 +76,22 @@ for (const rkey of chosen) {
       repo: session.did,
       collection: 'app.bsky.feed.generator',
       rkey,
-      record: { $type: 'app.bsky.feed.generator', did: `did:web:${FEEDGEN_HOSTNAME}`, displayName: f.displayName, description: f.description, ...(avatar ? { avatar } : {}), createdAt: new Date().toISOString() },
+      record: {
+        $type: 'app.bsky.feed.generator',
+        did: `did:web:${FEEDGEN_HOSTNAME}`,
+        displayName: f.displayName,
+        description: f.description,
+        ...(avatar ? { avatar } : {}),
+        createdAt: new Date().toISOString(),
+      },
     },
   })
   // Ask Bluesky's AppView whether it can reach and use the generator.
   const check = await xrpc('app.bsky.feed.getFeedGenerator', { token: session.accessJwt, query: { feed: uri } }).catch((e) => ({ error: e.message }))
   const ok = check.isOnline && check.isValid
-  console.log(`${ok ? 'Published' : 'Published, but Bluesky says it is not ready yet'}: ${f.displayName}  https://bsky.app/profile/${session.did}/feed/${rkey}${check.error ? `  (${check.error})` : ''}`)
+  console.log(
+    `${ok ? 'Published' : 'Published, but Bluesky says it is not ready yet'}: ${f.displayName}  https://bsky.app/profile/${session.did}/feed/${rkey}${check.error ? `  (${check.error})` : ''}`,
+  )
 }
 
 if (!process.env.BSKY_DID && !status.publisher) console.log(`\nSet BSKY_HANDLE=${session.handle} (or BSKY_DID=${session.did}) on the deployment so it only serves feeds published by you.`)

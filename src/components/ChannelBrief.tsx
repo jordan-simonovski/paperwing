@@ -21,7 +21,14 @@ export function ChannelBrief({ channel, stories, statuses, onOpen, now }: { chan
         .slice(0, 5),
     [stories],
   )
-  const moving = useMemo(() => [...stories].filter((s) => now - s.createdAt < 36 * 3_600_000 && !s.alsoOn.length && !s.coverage?.length).sort((a, b) => b.heat - a.heat).slice(0, 5), [stories, now])
+  const moving = useMemo(
+    () =>
+      [...stories]
+        .filter((s) => now - s.createdAt < 36 * 3_600_000 && !s.alsoOn.length && !s.coverage?.length)
+        .sort((a, b) => b.heat - a.heat)
+        .slice(0, 5),
+    [stories, now],
+  )
   const topicCounts = useMemo(() => {
     const counts = new Map<string, number>()
     for (const s of stories) for (const t of s.topics) if (t !== channel.id) counts.set(t, (counts.get(t) ?? 0) + 1)
@@ -32,9 +39,7 @@ export function ChannelBrief({ channel, stories, statuses, onOpen, now }: { chan
   return (
     <div className="h-full overflow-y-auto px-8 py-10">
       <div className="mx-auto max-w-[40rem]">
-        <h2 className="text-[1.375rem] font-bold leading-snug tracking-tight">
-          {stories.length ? `${stories.length} stories from ${working} ${working === 1 ? 'source' : 'sources'}` : 'Tuning in'}
-        </h2>
+        <h2 className="text-[1.375rem] font-bold leading-snug tracking-tight">{stories.length ? `${stories.length} stories from ${working} ${working === 1 ? 'source' : 'sources'}` : 'Tuning in'}</h2>
         <p className="mt-1 text-[0.9375rem] text-ink-2">Open a story to read it here, or start with where the conversation is.</p>
 
         {['sre', 'observability', 'cloud-native'].includes(channel.id) && (
@@ -52,7 +57,13 @@ export function ChannelBrief({ channel, stories, statuses, onOpen, now }: { chan
                   <button className="flex w-full items-start gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-sunk" onClick={() => onOpen(s.key)}>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[1rem] font-semibold leading-snug">{s.title}</span>
-                      <span className="mt-0.5 block text-[0.8125rem] text-ink-3">{[s, ...s.alsoOn, ...(s.coverage ?? [])].filter((x) => x.hasThread).map(sourceLabel).filter((v, i, a) => a.indexOf(v) === i).join(', ')}</span>
+                      <span className="mt-0.5 block text-[0.8125rem] text-ink-3">
+                        {[s, ...s.alsoOn, ...(s.coverage ?? [])]
+                          .filter((x) => x.hasThread)
+                          .map(sourceLabel)
+                          .filter((v, i, a) => a.indexOf(v) === i)
+                          .join(', ')}
+                      </span>
                     </span>
                     <span className="num flex-none text-right text-[1rem] font-bold">
                       {compact(total)}

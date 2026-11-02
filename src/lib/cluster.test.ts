@@ -8,13 +8,20 @@ const filler = Array.from({ length: 60 }, (_, i) => s(`Notes on subject${i} and 
 
 function grouped(titles: string[]) {
   const stories = [...titles.map((t) => s(t)), ...filler]
-  const groups = clusterEvents(stories, stories.map((_, i) => i))
+  const groups = clusterEvents(
+    stories,
+    stories.map((_, i) => i),
+  )
   return [...groups].map(([l, ms]) => [stories[l].title, ...ms.map((m) => stories[m].title)])
 }
 
 describe('words', () => {
   it('marks names in sentence case, but not in Title Case', () => {
-    expect(words('Anthropic sued for using 274 Elvis Presley songs').filter((w) => w.entity).map((w) => w.token)).toEqual(['274', 'elvis', 'presley'])
+    expect(
+      words('Anthropic sued for using 274 Elvis Presley songs')
+        .filter((w) => w.entity)
+        .map((w) => w.token),
+    ).toEqual(['274', 'elvis', 'presley'])
     expect(words('Owners Of Elvis Music Sue Over Copyright').filter((w) => w.entity)).toEqual([])
   })
   it('drops publication credits', () => {
@@ -24,7 +31,11 @@ describe('words', () => {
 
 describe('clusterEvents', () => {
   it('groups coverage of one event from different outlets', () => {
-    const g = grouped(['Owners of Elvis Presley’s Music Sue Anthropic for Copyright Infringement', 'Anthropic sued for allegedly using 274 Elvis Presley songs to train AI models', 'Some other thing entirely'])
+    const g = grouped([
+      'Owners of Elvis Presley’s Music Sue Anthropic for Copyright Infringement',
+      'Anthropic sued for allegedly using 274 Elvis Presley songs to train AI models',
+      'Some other thing entirely',
+    ])
     expect(g).toEqual([['Owners of Elvis Presley’s Music Sue Anthropic for Copyright Infringement', 'Anthropic sued for allegedly using 274 Elvis Presley songs to train AI models']])
   })
   it('keeps apart stories that only share ordinary words', () => {
@@ -33,6 +44,11 @@ describe('clusterEvents', () => {
   })
   it('ignores stories days apart', () => {
     const stories = [s('Python 3.15 released with free threading', 1), s('Python 3.15 free threading benchmarks', 80), ...filler]
-    expect(clusterEvents(stories, stories.map((_, i) => i)).size).toBe(0)
+    expect(
+      clusterEvents(
+        stories,
+        stories.map((_, i) => i),
+      ).size,
+    ).toBe(0)
   })
 })

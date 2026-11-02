@@ -42,7 +42,30 @@ const hostOf = (url?: string | null) => {
 }
 
 /** Names that end in s, which plural folding would break. */
-const KEEP_S = new Set(['kubernetes', 'postgres', 'redis', 'macos', 'ios', 'ipados', 'watchos', 'jenkins', 'rails', 'express', 'chaos', 'news', 'aws', 'dns', 'k8s', 'sass', 'mars', 'atlas', 'vitess', 'pandas', 'iris', 'nats'])
+const KEEP_S = new Set([
+  'kubernetes',
+  'postgres',
+  'redis',
+  'macos',
+  'ios',
+  'ipados',
+  'watchos',
+  'jenkins',
+  'rails',
+  'express',
+  'chaos',
+  'news',
+  'aws',
+  'dns',
+  'k8s',
+  'sass',
+  'mars',
+  'atlas',
+  'vitess',
+  'pandas',
+  'iris',
+  'nats',
+])
 
 /** Title words worth remembering: names, products and terms, not grammar. "Kubernetes", "gpt-6.1", "c++". */
 export function keywords(title: string): string[] {

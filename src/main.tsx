@@ -29,7 +29,7 @@ void splash.then(() => {
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: PERSIST_MAX_AGE, buster: PERSIST_BUSTER, dehydrateOptions }}>
         <App />
       </PersistQueryClientProvider>
-    </StrictMode>
+    </StrictMode>,
   )
   setupPWA()
   startSync()

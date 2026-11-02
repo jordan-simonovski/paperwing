@@ -153,7 +153,13 @@ export function SavedPage() {
       .filter((m) => (searching ? true : stateOf(m) === view))
       .filter((m) => !terms.length || (index && terms.every((t) => index.get(m.story.key)?.includes(t))))
       .sort((a, b) =>
-        sort === 'oldest' ? a.savedAt - b.savedAt : sort === 'shortest' ? (a.minutes ?? 999) - (b.minutes ?? 999) || b.savedAt - a.savedAt : view === 'archive' && !searching ? (b.archivedAt ?? 0) - (a.archivedAt ?? 0) : b.savedAt - a.savedAt,
+        sort === 'oldest'
+          ? a.savedAt - b.savedAt
+          : sort === 'shortest'
+            ? (a.minutes ?? 999) - (b.minutes ?? 999) || b.savedAt - a.savedAt
+            : view === 'archive' && !searching
+              ? (b.archivedAt ?? 0) - (a.archivedAt ?? 0)
+              : b.savedAt - a.savedAt,
       )
       .map((m) => ({
         ...m.story,
@@ -196,7 +202,9 @@ export function SavedPage() {
         <div className="grid h-full place-items-center p-10 text-center">
           <div className="max-w-sm">
             <p className="text-[1.375rem] font-bold">Read it later, with the conversation</p>
-            <p className="mt-2 text-[0.9375rem] text-ink-3">Saved stories keep their article, images and comments on this device. When people keep talking about them, here or somewhere new, the list tells you.</p>
+            <p className="mt-2 text-[0.9375rem] text-ink-3">
+              Saved stories keep their article, images and comments on this device. When people keep talking about them, here or somewhere new, the list tells you.
+            </p>
           </div>
         </div>
       }
@@ -251,7 +259,12 @@ export function SavedPage() {
                 </button>
               </div>
             )}
-            <select className="ml-auto h-8 rounded-full bg-sunk px-3 text-[0.8125rem] font-semibold text-ink-2" value={sort} onChange={(e) => setParam('sort', e.target.value === 'newest' ? undefined : e.target.value)} aria-label="Sort saved stories">
+            <select
+              className="ml-auto h-8 rounded-full bg-sunk px-3 text-[0.8125rem] font-semibold text-ink-2"
+              value={sort}
+              onChange={(e) => setParam('sort', e.target.value === 'newest' ? undefined : e.target.value)}
+              aria-label="Sort saved stories"
+            >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
               <option value="shortest">Shortest</option>

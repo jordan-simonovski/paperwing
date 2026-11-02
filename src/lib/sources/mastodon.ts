@@ -267,7 +267,8 @@ export async function mastodonThread(key: string): Promise<Thread> {
   const { instance, id } = parseKey(key)
   // A link can name any server, and whatever it answered would show as a post inside PaperWing.
   // So only yours and well-known ones.
-  if (instance !== server() && instance !== DEFAULT_INSTANCE && !KNOWN_INSTANCES.includes(instance)) throw new FetchError(`PaperWing doesn’t read posts from ${instance}. Open it on its own site.`, 400)
+  if (instance !== server() && instance !== DEFAULT_INSTANCE && !KNOWN_INSTANCES.includes(instance))
+    throw new FetchError(`PaperWing doesn’t read posts from ${instance}. Open it on its own site.`, 400)
   const [status, context] = await Promise.all([get<Status>(instance, `/api/v1/statuses/${id}`), get<{ descendants: Status[] }>(instance, `/api/v1/statuses/${id}/context`)])
   return { story: statusStory(instance, status), comments: mastodonComments(context.descendants, status.id, instance) }
 }

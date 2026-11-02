@@ -43,7 +43,8 @@ export function OutageBanner() {
               <span className="block text-[0.875rem] text-ink-2">
                 {p.recent > 0 && (
                   <>
-                    <span className="num">{p.recent}</span> {p.recent === 1 ? 'person' : 'people'} reporting problems in the last 30 minutes{Math.round(p.baseline) >= 1 ? `, up from about ${Math.round(p.baseline)}` : ''}.{' '}
+                    <span className="num">{p.recent}</span> {p.recent === 1 ? 'person' : 'people'} reporting problems in the last 30 minutes
+                    {Math.round(p.baseline) >= 1 ? `, up from about ${Math.round(p.baseline)}` : ''}.{' '}
                   </>
                 )}
                 {statusLine(p)}

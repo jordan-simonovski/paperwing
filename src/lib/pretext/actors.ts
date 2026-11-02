@@ -217,7 +217,9 @@ function bounce(c: ActorColors): Actor {
     draw(ctx) {
       const col = SCREENSAVER[colour]
       // The mark: Pip's head, all in the screensaver colour with its face cut out.
-      drawPip(ctx, head, PIP_VIEWBOX.head, x - (PIP_HEAD_BOUNDS.x - PIP_VIEWBOX.head[0]) * headScale, y - (PIP_HEAD_BOUNDS.y - PIP_VIEWBOX.head[1]) * headScale, headScale, pip, { mono: { colour: col, knockout: c.page } })
+      drawPip(ctx, head, PIP_VIEWBOX.head, x - (PIP_HEAD_BOUNDS.x - PIP_VIEWBOX.head[0]) * headScale, y - (PIP_HEAD_BOUNDS.y - PIP_VIEWBOX.head[1]) * headScale, headScale, pip, {
+        mono: { colour: col, knockout: c.page },
+      })
       ctx.fillStyle = col
       ctx.font = `800 ${SIZE}px ${c.markFont}`
       ctx.textBaseline = 'middle'

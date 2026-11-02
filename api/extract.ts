@@ -24,7 +24,8 @@ function absolutize(html: string, base: string): string {
   })
   document.querySelectorAll('source, picture source').forEach((el: Element) => el.remove())
   // Metering and sign-up nags that Readability keeps because they sit inside the article body.
-  const NAG = /(articles? left to read|before you need to register|register (for )?a free|create a free account|subscribe to (continue|keep) reading|sign up to (continue|keep) reading|already a (member|subscriber)\??\s*(log|sign) in)/i
+  const NAG =
+    /(articles? left to read|before you need to register|register (for )?a free|create a free account|subscribe to (continue|keep) reading|sign up to (continue|keep) reading|already a (member|subscriber)\??\s*(log|sign) in)/i
   document.querySelectorAll('p, div, aside, section').forEach((el: Element) => {
     const text = el.textContent ?? ''
     if (text.length < 240 && NAG.test(text)) el.remove()

@@ -21,7 +21,16 @@ const incident = (o: Partial<Incident> = {}): Incident => ({
 describe('status pages', () => {
   it('turns an incident into a story weighted by its impact', () => {
     const s = incidentStory(github, incident())
-    expect(s).toMatchObject({ key: 'st-github-abc123', source: 'status', sourceLabel: 'GitHub status', title: 'Incident with Actions', url: null, discussionUrl: 'https://www.githubstatus.com/incidents/abc123', weight: 100, site: 'github.com' })
+    expect(s).toMatchObject({
+      key: 'st-github-abc123',
+      source: 'status',
+      sourceLabel: 'GitHub status',
+      title: 'Incident with Actions',
+      url: null,
+      discussionUrl: 'https://www.githubstatus.com/incidents/abc123',
+      weight: 100,
+      site: 'github.com',
+    })
     expect(s.text).toContain('Resolved after 41 min')
     expect(s.text).toContain('Affects Actions')
     expect(s.tags).toContain('outage')

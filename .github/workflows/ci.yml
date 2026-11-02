@@ -20,6 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run lint
+      - run: npm run format:check
       - run: npm test
       # Pending changesets become "What's new": kind, bump and wording are checked (.changeset/README.md).
       - run: npm run check:changesets

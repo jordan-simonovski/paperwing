@@ -34,8 +34,14 @@ describe('the feed function', () => {
   })
 
   it('reads a publisher’s feed, following its redirect', async () => {
-    net.get('https://blog.example').intercept({ path: '/feed' }).reply(301, '', { headers: { location: 'https://www.blog.example/feed.xml' } })
-    net.get('https://www.blog.example').intercept({ path: '/feed.xml' }).reply(200, rssXml, { headers: { 'content-type': 'application/rss+xml' } })
+    net
+      .get('https://blog.example')
+      .intercept({ path: '/feed' })
+      .reply(301, '', { headers: { location: 'https://www.blog.example/feed.xml' } })
+    net
+      .get('https://www.blog.example')
+      .intercept({ path: '/feed.xml' })
+      .reply(200, rssXml, { headers: { 'content-type': 'application/rss+xml' } })
     const res = await call<{ title: string; url: string }[]>(GET, '/api/feed?src=rss&url=https://blog.example/feed&label=Blog')
     expect(res.status).toBe(200)
     expect(res.body[0]).toMatchObject({ title: 'Hello & welcome', url: 'https://blog.example/hello' })
@@ -72,14 +78,20 @@ describe('the feed function', () => {
     const asLink = await call(GET, '/api/feed?src=og&url=https://news.example/story')
     expect(asLink.status).toBe(204)
 
-    net.get('https://news.example').intercept({ path: '/story' }).reply(200, page, { headers: { 'content-type': 'text/html' } })
+    net
+      .get('https://news.example')
+      .intercept({ path: '/story' })
+      .reply(200, page, { headers: { 'content-type': 'text/html' } })
     const asImage = await call(GET, '/api/feed?src=og&url=https://news.example/story', { headers: { 'sec-fetch-dest': 'image' } })
     expect(asImage.status).toBe(302)
     expect(asImage.headers.get('location')).toBe('https://cdn.example/card.png')
   })
 
   it('serves a missing card picture as nothing at all, not an error', async () => {
-    net.get('https://news.example').intercept({ path: '/no-picture' }).reply(200, '<html></html>', { headers: { 'content-type': 'text/html' } })
+    net
+      .get('https://news.example')
+      .intercept({ path: '/no-picture' })
+      .reply(200, '<html></html>', { headers: { 'content-type': 'text/html' } })
     const res = await call(GET, '/api/feed?src=cardimage&url=https://news.example/no-picture')
     expect(res.status).toBe(204)
   })

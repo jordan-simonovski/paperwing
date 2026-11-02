@@ -177,7 +177,11 @@ export const useLibrary = create<Library>()((setState, getState) => {
       setState((s) => ({ pending: { ...s.pending, [key]: true } }))
       try {
         await del(key, tombstoneDb)
-        const [article, thread, elsewhere] = await Promise.allSettled([story.url ? fetchArticle(story.url) : Promise.reject(), story.hasThread ? fetchThread(key) : Promise.reject(), story.url ? findDiscussions(story.url) : Promise.reject()])
+        const [article, thread, elsewhere] = await Promise.allSettled([
+          story.url ? fetchArticle(story.url) : Promise.reject(),
+          story.hasThread ? fetchThread(key) : Promise.reject(),
+          story.url ? findDiscussions(story.url) : Promise.reject(),
+        ])
         const item: SavedItem = {
           ...base,
           // The baseline for "new since you saved": everywhere it's already being discussed.

@@ -94,4 +94,5 @@ export async function ensureSchedules(origin: string): Promise<boolean> {
 }
 
 /** The app's public address: what QStash should call and notification links should open. */
-export const publicOrigin = (requestUrl: string) => process.env.PUBLIC_ORIGIN ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : new URL(requestUrl).origin)
+export const publicOrigin = (requestUrl: string) =>
+  process.env.PUBLIC_ORIGIN ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : new URL(requestUrl).origin)

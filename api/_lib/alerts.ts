@@ -116,7 +116,12 @@ export function planAlerts(sub: SubRecord, world: World): { notices: Notice[]; s
       notices.push({ title: `${plural(f.n, 'new reply', 'new replies')}`, body: f.title, url: `/saved/${f.key}?view=watching&tab=discussion`, tag: 'replies' })
     } else if (fresh.length > 1) {
       const total = fresh.reduce((n, f) => n + f.n, 0)
-      notices.push({ title: `${plural(total, 'new reply', 'new replies')} in ${fresh.length} threads you watch`, body: fresh.map((f) => f.title).join(' · '), url: '/saved?view=watching', tag: 'replies' })
+      notices.push({
+        title: `${plural(total, 'new reply', 'new replies')} in ${fresh.length} threads you watch`,
+        body: fresh.map((f) => f.title).join(' · '),
+        url: '/saved?view=watching',
+        tag: 'replies',
+      })
     }
   }
 

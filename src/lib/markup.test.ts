@@ -3,7 +3,9 @@ import { markup } from './markup'
 
 describe('markup for plain-text comments', () => {
   it('turns HN quote paragraphs into a quote, and keeps the reply as text', () => {
-    expect(markup('&gt; The rocket launch was only achieved through effort<p>Robots: they&#x27;re just like us!')).toBe('<blockquote><p>The rocket launch was only achieved through effort</p></blockquote><p>Robots: they&#x27;re just like us!</p>')
+    expect(markup('&gt; The rocket launch was only achieved through effort<p>Robots: they&#x27;re just like us!')).toBe(
+      '<blockquote><p>The rocket launch was only achieved through effort</p></blockquote><p>Robots: they&#x27;re just like us!</p>',
+    )
   })
 
   it('joins quoted paragraphs, and list items written one per paragraph', () => {

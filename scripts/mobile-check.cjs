@@ -9,7 +9,11 @@ const OUT = process.env.OUT ?? os.tmpdir()
 ;(async () => {
   const browser = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {})
   let failed = false
-  for (const [name, dev, dark] of [['iphone-light', devices['iPhone 14'], false], ['iphone-dark', devices['iPhone 14'], true], ['pixel', devices['Pixel 7'], false]]) {
+  for (const [name, dev, dark] of [
+    ['iphone-light', devices['iPhone 14'], false],
+    ['iphone-dark', devices['iPhone 14'], true],
+    ['pixel', devices['Pixel 7'], false],
+  ]) {
     const ctx = await browser.newContext({ ...dev })
     if (dark) await ctx.addInitScript(() => localStorage.setItem('readout:prefs', JSON.stringify({ state: { theme: 'dark' }, version: 1 })))
     const page = await ctx.newPage()
@@ -19,7 +23,7 @@ const OUT = process.env.OUT ?? os.tmpdir()
       const r = await page.evaluate(() => ({
         rail: getComputedStyle(document.querySelector('.rail')).display,
         bottomNav: getComputedStyle(document.querySelector('.bottom-nav')).display,
-        firstContentTop: Math.round((document.querySelector('.row .row-title, h1')?.getBoundingClientRect().top) ?? -1),
+        firstContentTop: Math.round(document.querySelector('.row .row-title, h1')?.getBoundingClientRect().top ?? -1),
         overflow: document.documentElement.scrollWidth - innerWidth,
       }))
       if (path === '/t/for-you') {

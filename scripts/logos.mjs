@@ -4,7 +4,41 @@
 import { writeFileSync } from 'node:fs'
 import * as si from 'simple-icons'
 
-const USED = ['Arstechnica', 'Arxiv', 'Bluesky', 'Cloudflare', 'Cncf', 'Datadog', 'Deepmind', 'Devdotto', 'Duckdb', 'Flydotio', 'Github', 'Go', 'Google', 'Grafana', 'Huggingface', 'Infoq', 'Lemmy', 'Lobsters', 'Mastodon', 'Meta', 'Mozilla', 'Netflix', 'Nvidia', 'Opentelemetry', 'Planetscale', 'Postgresql', 'Prometheus', 'Rss', 'Rust', 'Stripe', 'Tailscale', 'Theregister', 'Ycombinator']
+const USED = [
+  'Arstechnica',
+  'Arxiv',
+  'Bluesky',
+  'Cloudflare',
+  'Cncf',
+  'Datadog',
+  'Deepmind',
+  'Devdotto',
+  'Duckdb',
+  'Flydotio',
+  'Github',
+  'Go',
+  'Google',
+  'Grafana',
+  'Huggingface',
+  'Infoq',
+  'Lemmy',
+  'Lobsters',
+  'Mastodon',
+  'Meta',
+  'Mozilla',
+  'Netflix',
+  'Nvidia',
+  'Opentelemetry',
+  'Planetscale',
+  'Postgresql',
+  'Prometheus',
+  'Rss',
+  'Rust',
+  'Stripe',
+  'Tailscale',
+  'Theregister',
+  'Ycombinator',
+]
 
 const lines = USED.map((name) => {
   const icon = si[`si${name}`]
