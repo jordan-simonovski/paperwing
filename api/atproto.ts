@@ -17,16 +17,20 @@ function servedHost(request: Request): string {
 }
 
 let publisher: Promise<string | undefined> | undefined
-/** The DID of the account the feeds are published under; their at:// URIs live in its repo. */
+/**
+ * The DID of the account the feeds are published under; their at:// URIs live in its repo.
+ * Undefined when no account is set; rejects when the handle can't be looked up right now, which
+ * isn't the same thing: answering "no feeds" then would be cached for hours.
+ */
 function publisherDid(): Promise<string | undefined> {
   if (process.env.BSKY_DID) return Promise.resolve(process.env.BSKY_DID)
   const handle = process.env.BSKY_HANDLE
   if (!handle) return Promise.resolve(undefined)
   publisher ??= fetchJson<{ did: string }>(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`)
     .then((r) => r.did)
-    .catch(() => {
+    .catch((err: unknown) => {
       publisher = undefined
-      return undefined
+      throw err
     })
   return publisher
 }
@@ -93,8 +97,9 @@ export async function GET(request: Request): Promise<Response> {
           return json({ feed: uris.slice(offset, offset + limit).map((post) => ({ post })), ...(next ? { cursor: next } : {}) }, 120)
         }
         if (!m || !BSKY_FEED_BY_RKEY.has(m[2])) return xrpcError('UnknownFeed', `Unknown feed ${feedUri}`)
-        // Feeds published by the configured account, or by @paperwing.io itself.
-        const owner = await publisherDid()
+        // Feeds published by the configured account, or by @paperwing.io itself. When the account
+        // can't be looked up just now, the feed is still served: readers shouldn't see a blip.
+        const owner = await publisherDid().catch(() => undefined)
         if (owner && m[1] !== owner && m[1] !== HANDLE_DID) return xrpcError('UnknownFeed', 'This generator only serves feeds published by its owner')
         const posts = await buildFeed(m[2])
         const page = posts.slice(offset, offset + limit)
