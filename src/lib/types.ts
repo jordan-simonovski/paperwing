@@ -68,6 +68,10 @@ export interface Story {
   ref?: { uri: string; cid: string }
   /** People you follow on Bluesky who shared this link (Following). */
   sharedBy?: string[]
+  /** What the person who shared it on PaperWing said about it (io.paperwing.share). */
+  shareNote?: string
+  /** The share record itself, so its author can take it back. */
+  shareUri?: string
   /** From your own Mastodon home timeline: someone you follow posted or boosted it. */
   followed?: boolean
   /** Engagement for a story with no votes to go on (a status page incident: its impact). */

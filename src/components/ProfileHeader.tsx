@@ -48,6 +48,7 @@ export function ProfileHeader({ actor }: { actor: string }) {
   }
   const stats = [
     plural(totals.listed, 'story', 'stories') + ' listed',
+    data.shares?.length ? `${data.shares.length} shared` : undefined,
     totals.votes ? plural(totals.votes, 'vote') : undefined,
     totals.comments ? plural(totals.comments, 'comment') : undefined,
     profile.followers ? `${compact(profile.followers)} followers on Bluesky` : undefined,

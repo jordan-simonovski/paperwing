@@ -135,6 +135,11 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </p>
             )}
             <FriendsLine story={s} className="mt-1.5" />
+            {s.shareNote && (
+              <p className="row-quote mt-1.5 line-clamp-3 text-[0.875rem] leading-snug text-ink-2">
+                <span className="font-semibold">{s.sharedBy?.[0] ? `@${s.sharedBy[0]}` : 'Shared'}:</span> {s.shareNote}
+              </p>
+            )}
             {s.sharedBy && s.sharedBy.length > 0 && (
               <p className="mt-1 text-[0.8125rem] text-ink-3">
                 Shared by{' '}

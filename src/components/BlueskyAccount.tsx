@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { canReadNotifications, canReadTimeline, canWrite, finishWithCode, signIn, signOut, useAtproto } from '../lib/atproto'
 import { MIX_NSID } from '../lib/mixSources'
 import { SUBMISSION_NSID } from '../lib/paperwing'
+import { SHARE_NSID } from '../lib/social'
 import { listOf } from '../lib/channels'
 import { toast } from '../lib/ui'
 
@@ -36,7 +37,11 @@ export function BlueskyAccount() {
             Sign out
           </button>
         </div>
-        {(canReadTimeline(scope) === false || canReadNotifications(scope) === false || canWrite(scope, MIX_NSID) === false || canWrite(scope, SUBMISSION_NSID) === false) && (
+        {(canReadTimeline(scope) === false ||
+          canReadNotifications(scope) === false ||
+          canWrite(scope, MIX_NSID) === false ||
+          canWrite(scope, SUBMISSION_NSID) === false ||
+          canWrite(scope, SHARE_NSID) === false) && (
           <div className="flex flex-wrap items-center gap-3 rounded-xl bg-sunk px-4 py-3">
             <p className="flex-1 text-[0.875rem] text-ink-2">
               This sign-in is from before{' '}
@@ -45,6 +50,7 @@ export function BlueskyAccount() {
                   canReadTimeline(scope) === false && 'Following (reading your timeline)',
                   canReadNotifications(scope) === false && 'Activity (your notifications)',
                   canWrite(scope, MIX_NSID) === false && 'publishing mixes',
+                  canWrite(scope, SHARE_NSID) === false && 'sharing, notes, blogrolls and boards',
                 ].filter((x): x is string => !!x),
               )}
               . Bluesky shows what’s asked before you approve.

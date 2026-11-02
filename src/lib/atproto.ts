@@ -193,7 +193,19 @@ export const createRecord = (collection: string, record: Record<string, unknown>
   session().then((s) => xrpc<StrongRef>('com.atproto.repo.createRecord', { repo: s.did, collection, record: { $type: collection, ...record } }))
 
 /** What PaperWing ever deletes: its own likes, votes, mixes, feeds and submissions. */
-const DELETABLE = new Set(['app.bsky.feed.like', 'fyi.frontpage.feed.vote', 'io.paperwing.mix', 'app.bsky.feed.generator', 'io.paperwing.submission'])
+const DELETABLE = new Set([
+  'app.bsky.feed.like',
+  'fyi.frontpage.feed.vote',
+  'io.paperwing.mix',
+  'app.bsky.feed.generator',
+  'io.paperwing.submission',
+  'io.paperwing.share',
+  'io.paperwing.blogroll',
+  'io.paperwing.note',
+  'io.paperwing.board',
+  'io.paperwing.boardhide',
+  'app.bsky.graph.listitem',
+])
 
 /** Deletes one of the signed-in account's own records, by its at:// URI. Anything else is refused. */
 export async function deleteRecord(uri: string) {

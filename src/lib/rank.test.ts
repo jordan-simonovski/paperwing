@@ -3,7 +3,19 @@ import { affinityFactor, canonicalUrl, engagement, merge } from './rank'
 import type { Story } from './types'
 
 const filters = { mutedWords: [], mutedDomains: [], hidden: {} }
-const s = (key: string, url: string | null, score: number, extra: Partial<Story> = {}): Story => ({ key, source: 'hn', sourceLabel: 'Hacker News', title: key, url, discussionUrl: null, score, comments: 0, createdAt: Date.now() - 3_600_000, hasThread: true, ...extra })
+const s = (key: string, url: string | null, score: number, extra: Partial<Story> = {}): Story => ({
+  key,
+  source: 'hn',
+  sourceLabel: 'Hacker News',
+  title: key,
+  url,
+  discussionUrl: null,
+  score,
+  comments: 0,
+  createdAt: Date.now() - 3_600_000,
+  hasThread: true,
+  ...extra,
+})
 
 describe('canonicalUrl', () => {
   it('strips tracking params, www and trailing slashes', () => {
@@ -15,15 +27,32 @@ describe('canonicalUrl', () => {
 })
 
 describe('merge', () => {
+  it('keeps who shared a link, and their note, whichever copy leads the row', () => {
+    const shared = s('ln-x', 'https://example.com/a', 0, { source: 'rss', hasThread: false, sharedBy: ['ann.example'], shareNote: 'Read this', followed: true })
+    const hn = s('hn-1', 'https://example.com/a', 300, { comments: 80 })
+    for (const batches of [
+      [[shared], [hn]],
+      [[hn], [shared]],
+    ]) {
+      const [row] = merge(batches, { sort: 'hot', filters: { mutedWords: [], mutedDomains: [], hidden: {} } })
+      expect([row.key, row.sharedBy, row.shareNote, row.followed]).toEqual(['hn-1', ['ann.example'], 'Read this', true])
+    }
+  })
   it('dedupes the same link across sources and keeps the hotter thread as primary', () => {
-    const out = merge([[s('hn-1', 'https://a.dev/x', 10), s('hn-2', 'https://b.dev', 500)], [s('lb-1', 'https://www.a.dev/x/', 900, { source: 'lobsters', sourceLabel: 'Lobsters' })]], { sort: 'hot', filters })
+    const out = merge([[s('hn-1', 'https://a.dev/x', 10), s('hn-2', 'https://b.dev', 500)], [s('lb-1', 'https://www.a.dev/x/', 900, { source: 'lobsters', sourceLabel: 'Lobsters' })]], {
+      sort: 'hot',
+      filters,
+    })
     expect(out).toHaveLength(2)
     const a = out.find((r) => r.url?.includes('a.dev'))!
     expect(a.key).toBe('lb-1')
     expect(a.alsoOn.map((x) => x.key)).toEqual(['hn-1'])
   })
   it('applies muted words and hidden keys', () => {
-    const out = merge([[s('hn-1', null, 1, { title: 'Crypto pump' }), s('hn-2', null, 1), s('hn-3', null, 1)]], { sort: 'new', filters: { mutedWords: ['crypto'], mutedDomains: [], hidden: { 'hn-3': 1 } } })
+    const out = merge([[s('hn-1', null, 1, { title: 'Crypto pump' }), s('hn-2', null, 1), s('hn-3', null, 1)]], {
+      sort: 'new',
+      filters: { mutedWords: ['crypto'], mutedDomains: [], hidden: { 'hn-3': 1 } },
+    })
     expect(out.map((r) => r.key)).toEqual(['hn-2'])
   })
   it('ranks on engagement, not on being new', () => {
@@ -67,7 +96,14 @@ describe('merge', () => {
     const out = merge(
       [
         [s('hn-1', 'https://nyt.com/elvis', 400, { comments: 200, title: 'Owners of Elvis Presley’s Music Sue Anthropic for Copyright Infringement' }), ...filler],
-        [s('bs-1', 'https://guardian.com/elvis', 30, { source: 'bluesky', sourceLabel: 'Bluesky', comments: 4, title: 'Anthropic sued for allegedly using 274 Elvis Presley songs to train AI models' })],
+        [
+          s('bs-1', 'https://guardian.com/elvis', 30, {
+            source: 'bluesky',
+            sourceLabel: 'Bluesky',
+            comments: 4,
+            title: 'Anthropic sued for allegedly using 274 Elvis Presley songs to train AI models',
+          }),
+        ],
       ],
       { sort: 'hot', filters },
     )

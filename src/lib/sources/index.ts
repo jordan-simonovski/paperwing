@@ -143,7 +143,7 @@ export async function fetchFeed(ref: FeedRef): Promise<Story[]> {
     case 'paperwing':
       return (await api('feed', { src: 'paperwing', sort: ref.sort, board: ref.board })) as Story[]
     case 'person':
-      return (await fetchPerson(ref.actor)).stories
+      return ((p) => [...p.stories, ...(p.shares ?? [])])(await fetchPerson(ref.actor))
   }
 }
 

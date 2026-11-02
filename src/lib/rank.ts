@@ -168,6 +168,10 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
       const link = s.url ? canonicalUrl(s.url) : undefined
       const existing = link ? byLink.get(link) : undefined
       if (existing) {
+        // Who shared it, and what they said, stays with the row whichever copy leads it.
+        const sharedBy = [...new Set([...(existing.sharedBy ?? []), ...(s.sharedBy ?? [])])]
+        const shareNote = existing.shareNote ?? s.shareNote
+        const followed = existing.followed || s.followed
         // Keep the hotter copy as primary so the row links to the liveliest discussion.
         if (heat > existing.heat && s.hasThread) {
           const { alsoOn, topics, ...old } = existing
@@ -175,6 +179,9 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         } else {
           existing.alsoOn.push(s)
         }
+        if (sharedBy.length) existing.sharedBy = sharedBy
+        if (shareNote) existing.shareNote = shareNote
+        if (followed) existing.followed = true
         // Discussion in several places adds up.
         const total = Math.min(CAP, engagementOf.get(existing)! + e)
         engagementOf.set(existing, total)

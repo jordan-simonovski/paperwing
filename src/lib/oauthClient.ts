@@ -1,5 +1,6 @@
 import { MIX_NSID } from './mixSources.js'
 import { SUBMISSION_NSID } from './paperwing.js'
+import { BLOGROLL_NSID, BOARD_HIDE_NSID, BOARD_NSID, NOTE_NSID, SHARE_NSID } from './social.js'
 
 // PaperWing's atproto OAuth client: the permissions it asks for, and the metadata sign-in servers
 // read from /oauth-client-metadata.json. That file is built per address (api/atproto.ts), so the app
@@ -21,6 +22,15 @@ export const SCOPE = [
   // Submitting to PaperWing: a record beside your Bluesky post (paperwing.ts), and the link card's picture.
   `repo:${SUBMISSION_NSID}?action=create`,
   'blob:image/*',
+  // PaperWing's social records (social.ts): shares with a note, your blogroll, margin notes, and
+  // community boards with their moderators' hides and a Bluesky moderation list of blocked accounts.
+  `repo:${SHARE_NSID}?action=create&action=delete`,
+  `repo:${BLOGROLL_NSID}?action=create&action=update&action=delete`,
+  `repo:${NOTE_NSID}?action=create&action=delete`,
+  `repo:${BOARD_NSID}?action=create&action=update&action=delete`,
+  `repo:${BOARD_HIDE_NSID}?action=create&action=delete`,
+  'repo:app.bsky.graph.list?action=create&action=update',
+  'repo:app.bsky.graph.listitem?action=create&action=delete',
 ].join(' ')
 
 /** The addresses PaperWing is served from; the first is home. */

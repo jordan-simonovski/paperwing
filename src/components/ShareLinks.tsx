@@ -1,5 +1,7 @@
-import { ChevronRight, Copy, Link2, Newspaper, Send, Share } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronRight, Copy, Link2, Loader2, MessageSquareQuote, Newspaper, Send, Share, Trash2 } from 'lucide-react'
 import { useAtproto } from '../lib/atproto'
+import { shareOnPaperWing, unshare } from '../lib/shares'
 import { useComposer } from '../lib/compose'
 import { domainOf } from '../lib/format'
 import { useHn } from '../lib/hnAccount'
@@ -25,6 +27,23 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
   const lemmy = useLemmyAccount((l) => !!l.jwt)
   const canPost = (signedIn || hn || md || lemmy) && !!(story.url || story.discussionUrl)
   const source = story.sourceLabel === 'PaperWing' ? 'Bluesky' : SOURCE_NAMES[story.source]
+  const me = useAtproto((a) => a.did)
+  const [noting, setNoting] = useState(false)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const mine = !!me && !!story.shareUri?.startsWith(`at://${me}/`)
+  const sharePW = async () => {
+    setBusy(true)
+    try {
+      const uri = await shareOnPaperWing(story, note)
+      onClose()
+      toast('Shared on your PaperWing profile', { action: { label: 'Undo', run: () => void unshare(uri).catch(() => {}) } })
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Couldn’t share it', { tone: 'error' })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // The phone's (or computer's) own share screen, with the link: Messages, WhatsApp, Mail, AirDrop…
   // Without one (most desktop browsers), the link is copied instead.
@@ -60,6 +79,32 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
           },
         ]
       : []),
+    ...(signedIn && story.url && !mine
+      ? [
+          {
+            icon: <MessageSquareQuote size={18} />,
+            title: 'Share on PaperWing',
+            detail: 'With a note, on your profile and for people who follow you',
+            run: () => setNoting(true),
+          },
+        ]
+      : []),
+    ...(mine
+      ? [
+          {
+            icon: <Trash2 size={18} />,
+            title: 'Remove from your shared items',
+            detail: 'Takes it off your profile and your followers’ feeds',
+            run: () => {
+              onClose()
+              void unshare(story.shareUri!).then(
+                () => toast('Removed from your shared items'),
+                (err: Error) => toast(err.message, { tone: 'error' }),
+              )
+            },
+          },
+        ]
+      : []),
     ...(canPost
       ? [
           {
@@ -82,8 +127,38 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
           <Link2 size={17} /> Share
         </h2>
         <p className="mt-0.5 line-clamp-2 text-[0.875rem] text-ink-3">{story.title}</p>
-        <p className="mt-2 text-[0.8125rem] text-ink-3">{native ? 'Tap a link to open your share screen, or copy it.' : 'Tap a link to copy it.'}</p>
-        <div className="mt-2.5 space-y-1.5">
+        {noting && (
+          <form
+            className="mt-3 space-y-2.5"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void sharePW()
+            }}
+          >
+            <textarea
+              className="input min-h-24 resize-y py-2.5 leading-relaxed"
+              placeholder="Why is it worth reading? (optional)"
+              value={note}
+              maxLength={1000}
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Your note"
+              autoFocus
+            />
+            <p className="text-[0.8125rem] text-ink-3">
+              It goes on your PaperWing profile and its RSS feed, and into For you for people who follow you here. It’s public, and it isn’t posted to Bluesky.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setNoting(false)}>
+                Back
+              </button>
+              <button className="btn btn-primary" disabled={busy}>
+                {busy ? <Loader2 size={15} className="spin" /> : <MessageSquareQuote size={15} />} Share
+              </button>
+            </div>
+          </form>
+        )}
+        {!noting && <p className="mt-2 text-[0.8125rem] text-ink-3">{native ? 'Tap a link to open your share screen, or copy it.' : 'Tap a link to copy it.'}</p>}
+        <div className={`mt-2.5 space-y-1.5 ${noting ? 'hidden' : ''}`}>
           {options.map((o) => (
             <div key={o.title} className="flex items-stretch gap-1.5">
               <button className="flex min-w-0 flex-1 items-center gap-3 rounded-xl bg-sunk px-3.5 py-3 text-left hover:bg-line" onClick={o.url && !native ? () => copy(o.url!) : o.run}>
