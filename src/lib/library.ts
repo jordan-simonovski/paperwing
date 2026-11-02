@@ -1,6 +1,7 @@
 import { createStore, del, entries, get, set, setMany } from 'idb-keyval'
 import { create } from 'zustand'
 import { fetchArticle, fetchThread, findDiscussions } from './sources'
+import { FetchError } from './sources/http'
 import type { Article, Comment, SourceKind, Story, Thread } from './types'
 
 export type SavedState = 'queue' | 'archive'
@@ -91,6 +92,9 @@ function mergeRefs(a: DiscussionRef[] = [], b: DiscussionRef[] = []): Discussion
   for (const d of b) if (!out.has(d.key) || d.comments > out.get(d.key)!.comments) out.set(d.key, d)
   return [...out.values()]
 }
+
+/** A failed download that could work later: no connection, or the server failing rather than the page. */
+const worthRetrying = (err: unknown) => !(err instanceof FetchError) || !err.status || err.status >= 500 || err.status === 429
 
 function meta(item: SavedItem): SavedMeta {
   const { article, thread, ...rest } = item
@@ -238,7 +242,7 @@ export const useLibrary = create<Library>()((setState, getState) => {
           // HN by URL finds new submissions of the same link too.
           if (item.story.url) for (const s of await findDiscussions(item.story.url).catch(() => [])) found.set(s.key, ref(s))
           // The story's own thread, re-fetched so the offline copy stays current.
-          let thread = item.thread
+          let thread: Thread | undefined
           if (item.story.hasThread && item.story.source !== 'hn') {
             const fresh = await fetchThread(item.story.key).catch(() => null)
             if (fresh) {
@@ -246,7 +250,10 @@ export const useLibrary = create<Library>()((setState, getState) => {
               found.set(item.story.key, { ...ref(item.story), comments: countComments(fresh.comments) })
             }
           }
-          await write({ ...item, thread, latest: { discussions: [...found.values()], checkedAt: Date.now() } })
+          // Re-read after the fetches: an archive, a removal or reading done meanwhile must stand.
+          const cur = await get<SavedItem>(m.story.key, db)
+          if (!cur) return
+          await write({ ...cur, thread: thread ?? cur.thread, latest: { discussions: [...found.values()], checkedAt: Date.now() } })
         }
         for (let i = 0; i < due.length; i += 3) await Promise.allSettled(due.slice(i, i + 3).map(check))
       } finally {
@@ -270,13 +277,17 @@ export const useLibrary = create<Library>()((setState, getState) => {
             item.story.hasThread ? fetchThread(item.story.key) : Promise.reject(),
             item.story.url ? findDiscussions(item.story.url) : Promise.reject(),
           ])
+          // Re-read after the fetches: an edit or a removal made meanwhile must stand.
+          const cur = await get<SavedItem>(m.story.key, db)
+          if (!cur) return
           const next: SavedItem = {
-            ...item,
-            hollow: undefined,
+            ...cur,
+            // Stays hollow when the article could come next time (offline, a server error), so it's tried again.
+            hollow: article.status === 'rejected' && cur.story.url && worthRetrying(article.reason) ? true : undefined,
             // You haven't looked at an imported link's discussions yet, so today's are the baseline.
-            seen: mergeRefs(item.seen, elsewhere.status === 'fulfilled' ? elsewhere.value.map(ref) : []),
-            article: article.status === 'fulfilled' ? article.value : item.article,
-            thread: thread.status === 'fulfilled' && thread.value ? thread.value : item.thread,
+            seen: mergeRefs(cur.seen, elsewhere.status === 'fulfilled' ? elsewhere.value.map(ref) : []),
+            article: article.status === 'fulfilled' ? article.value : cur.article,
+            thread: thread.status === 'fulfilled' && thread.value ? thread.value : cur.thread,
           }
           next.minutes = readingMinutes(next.article)
           if (next.story.title === next.story.url && next.article?.title) next.story = { ...next.story, title: next.article.title }
@@ -305,6 +316,8 @@ export const useLibrary = create<Library>()((setState, getState) => {
       for (const c of changes) {
         const mine = local[c.key]
         if (mine && mine.updatedAt >= c.updatedAt) continue
+        // Removed here after this change was made, and the removal may not have gone up yet.
+        if (!mine && ((await get<number>(c.key, tombstoneDb)) ?? 0) >= c.updatedAt) continue
         if (!c.item) {
           if (mine) removals.push(c.key)
           await set(c.key, c.updatedAt, tombstoneDb)
