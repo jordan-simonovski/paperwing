@@ -187,7 +187,8 @@ export const linkKey = (url: string): string => storyKey({ kind: 'ln', url })
 
 const NAMED: Record<string, string> = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', mdash: '—', ndash: '–', hellip: '…' }
 
-function decodeEntities(s: string): string {
+/** Named, decimal and hex character references, once. Feeds and pages often double-encode: call it twice for those. */
+export function decodeEntities(s: string): string {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
     if (e[0] === '#') {
       const cp = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1))

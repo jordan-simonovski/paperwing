@@ -37,13 +37,13 @@ export function verifyQStash(request: Request, body = '', now = Date.now()): boo
   const seconds = now / 1000
   if (claims.iss !== 'Upstash' || (claims.exp ?? 0) < seconds || (claims.nbf ?? 0) > seconds + 5) return false
   // The signature is for one destination; a copied header can't be replayed against another
-  // endpoint. Compared by path and query, since proxies can present the host differently.
+  // endpoint, so one without a destination is refused. Compared by path and query, since proxies can present the host differently.
   const where = (u: string) => {
     const x = new URL(u)
     return `${x.pathname}${x.search}`
   }
   try {
-    if (claims.sub && where(claims.sub) !== where(request.url)) return false
+    if (!claims.sub || where(claims.sub) !== where(request.url)) return false
   } catch {
     return false
   }

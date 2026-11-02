@@ -77,6 +77,17 @@ describe('the service worker', () => {
     expect(runtime).not.toContain('https://paperwing.test/api/extract?url=https://example.com/0')
   })
 
+  // A feed screen asks for a favicon per site: in the API cache they'd push out the feeds and
+  // articles it exists to keep. They carry long cache headers, so the browser's own cache has them.
+  it('leaves icons and preview images to the browser cache', async () => {
+    const worker = startWorker()
+    await worker.get('/api/feed?src=lobsters')
+    for (let i = 0; i < 250; i++) await worker.get(`/api/feed?src=icon&d=site${i}.example`)
+    await worker.get('/api/feed?src=og&url=https://example.com/a')
+    const runtime = [...worker.stores.get('readout-runtime')!.entries.keys()]
+    expect(runtime).toEqual(['https://paperwing.test/api/feed?src=lobsters'])
+  })
+
   it('answers from what it kept when the device is offline', async () => {
     const worker = startWorker()
     await worker.get('/api/feed?src=lobsters')

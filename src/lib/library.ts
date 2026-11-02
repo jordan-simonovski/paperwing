@@ -51,6 +51,18 @@ const db = createStore('readout-library', 'items')
 // Deletions are remembered so sync can tell "removed here" from "never seen here".
 const tombstoneDb = createStore('readout-library-tombstones', 'keys')
 const IMAGE_CACHE = 'readout-images'
+/**
+ * Chrome counts each cross-origin (opaque) image as megabytes against the site's quota, and a full
+ * quota can evict all of the site's storage, this library included. Oldest images go first.
+ * ponytail: a ceiling, not cleanup on unsave; prune per item if offline figures go missing.
+ */
+const IMAGE_KEEP = 400
+
+/** Deletes all but the `n` most recently written entries (Cache Storage lists them oldest first). */
+export async function keepNewest(cache: Pick<Cache, 'keys' | 'delete'>, n: number) {
+  const keys = await cache.keys()
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - n)).map((k) => cache.delete(k)))
+}
 
 /**
  * Puts article images in a Cache the service worker reads from, so saved articles keep their
@@ -63,6 +75,7 @@ async function cacheImages(html: string, story?: Story) {
   const srcs = [...own, ...[...doc.querySelectorAll('img[src]')].map((i) => i.getAttribute('src'))].filter((s): s is string => !!s && s.startsWith('http')).slice(0, 48)
   const cache = await caches.open(IMAGE_CACHE)
   await Promise.allSettled(srcs.map(async (src) => cache.put(src, await fetch(src, { mode: 'no-cors', referrerPolicy: 'no-referrer' }))))
+  await keepNewest(cache, IMAGE_KEEP)
 }
 
 export const readingMinutes = (a?: Article) => (a?.length ? Math.max(1, Math.round(a.length / 5 / 230)) : undefined)

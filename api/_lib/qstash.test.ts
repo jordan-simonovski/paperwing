@@ -33,6 +33,8 @@ describe('QStash signatures', () => {
     expect(verifyQStash(req(sign('current-key', { ...good, iss: 'Other' })))).toBe(false)
     expect(verifyQStash(req(sign('current-key', good), 'https://readout.example/api/push'))).toBe(false)
     expect(verifyQStash(new Request(url))).toBe(false)
+    // A token that names no destination could be replayed against any endpoint.
+    expect(verifyQStash(req(sign('current-key', { ...good, sub: undefined })))).toBe(false)
   })
 })
 

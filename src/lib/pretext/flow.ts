@@ -224,6 +224,3 @@ export function flowInto({ to, from, duration = 560, delay = 0, done }: FlowOpti
     })
   return true
 }
-
-/** Waits for the app's fonts, so pretext measures with the faces the page draws with. */
-export const fontsReady = () => (document.fonts?.ready ?? Promise.resolve()).then(() => undefined)

@@ -136,6 +136,9 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(cacheFirst(request, SHELL))
       return
     }
+    // Icons and preview images carry long cache headers: the browser's HTTP cache keeps them, and
+    // here one per site would push the feeds and articles out of the offline cache.
+    if (url.pathname === '/api/feed' && /^(icon|og)$/.test(url.searchParams.get('src') || '')) return
     if (url.pathname.startsWith('/api/')) {
       event.respondWith(networkFirst(request, RUNTIME, 12000, RUNTIME_KEEP))
       return
