@@ -312,6 +312,21 @@
   .btn-primary:hover {
     background: var(--ink-2);
   }
+  /* The phone's one action: post a link. Filled, so it reads as "make something" among the icons. */
+  .post-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-right: 0.25rem;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--ground);
+    transition: transform var(--dur-micro);
+  }
+  .post-btn:active {
+    transform: scale(0.94);
+  }
   .icon-btn {
     display: inline-grid;
     place-items: center;
@@ -1996,12 +2011,14 @@
      their density: the target grows invisibly past the edges instead. */
   @media (pointer: coarse) {
     .icon-btn,
+    .post-btn,
     .pill-icon,
     .votes button,
     .seg > button {
       position: relative;
     }
     .icon-btn::before,
+    .post-btn::before,
     .pill-icon::before,
     .votes button::before,
     .seg > button::before {

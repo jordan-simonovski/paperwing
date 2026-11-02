@@ -793,10 +793,14 @@ export function compileTerm(term: string): RegExp {
   return termPattern(term).re
 }
 
+/** A term that matches `text` exactly as written: whatever someone typed, none of it is term syntax. */
+export const literalTerm = (text: string) => text.replace(/[.*+?^${}()|[\]\\/=]/g, '\\$&')
+
 function termPattern(term: string): { re: RegExp; body: string; caseSensitive: boolean } {
   const caseSensitive = term.startsWith('=')
   let body = caseSensitive ? term.slice(1) : term
-  const prefix = body.endsWith('*')
+  // A trailing "*" means "and any ending"; an escaped one ("\*") is a star.
+  const prefix = /(?<!\\)\*$/.test(body)
   if (prefix) body = body.slice(0, -1)
   // Terms containing a backslash are treated as pre-escaped regex.
   const src = `${(body.includes('\\') ? body : escape(body)).replace(/ /g, '[\\s-]+')}${prefix ? '[\\w-]*' : ''}`
@@ -813,8 +817,13 @@ function patternsFor(topic: Pick<Topic, 'id' | 'terms'>): RegExp[] {
   if (!list) {
     const groups: [string[], string[]] = [[], []]
     for (const term of topic.terms) {
-      const { body, caseSensitive } = termPattern(term)
-      groups[caseSensitive ? 1 : 0].push(`(?:${body})`)
+      // A term that won't compile is dropped rather than taking every topic (and every feed) down with it.
+      try {
+        const { body, caseSensitive } = termPattern(term)
+        groups[caseSensitive ? 1 : 0].push(`(?:${body})`)
+      } catch {
+        continue
+      }
     }
     list = groups.flatMap((alts, i) => (alts.length ? [new RegExp(`(?<![\\w])(?:${alts.join('|')})(?![\\w])`, i === 0 ? 'i' : '')] : []))
     compiled.set(key, list)

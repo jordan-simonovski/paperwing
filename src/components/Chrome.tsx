@@ -1,6 +1,6 @@
 import { profilePath, useMe } from '../lib/people'
 import { Avatar } from './Avatar'
-import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Menu as MenuIcon, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X } from 'lucide-react'
+import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Link2, Menu as MenuIcon, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
 import { bskyFeedChannel, findTopic, followsTech, sourceChannels } from '../lib/channels'
@@ -13,6 +13,7 @@ import { isWatching, useWatch } from '../lib/watch'
 import { usePWA } from '../lib/pwa'
 import { usePrefs } from '../lib/store'
 import { useUI } from '../lib/ui'
+import { postLink } from '../lib/compose'
 import { Sheet } from './Sheet'
 import { SourceChannelIcon, SourceIcon } from './SourceIcon'
 import { Pip } from './Pip'
@@ -233,6 +234,7 @@ export function Rail() {
             <span className="rail-label">Install app</span>
           </button>
         )}
+        <PostLinkButton />
         <RailLink to="/activity" icon={<Bell size={16} />}>
           <span className="flex w-full items-center justify-between">
             Activity
@@ -294,11 +296,29 @@ function useAutoHideBar(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref])
 }
 
+/** "Post a link", where the sidebar and the phone's menu keep the things you do rather than read. */
+function PostLinkButton({ onPost }: { onPost?: () => void }) {
+  return (
+    <button
+      className="rail-link w-full"
+      onClick={() => {
+        onPost?.()
+        postLink()
+      }}
+      title="Post a link"
+    >
+      <span className="rail-glyph">
+        <Link2 size={16} />
+      </span>
+      <span className="rail-label">Post a link</span>
+    </button>
+  )
+}
+
 export function MobileBar() {
   const unread = useUnread()
   const ref = useRef<HTMLDivElement>(null)
   const setDrawer = useUI((s) => s.setDrawer)
-  const me = useMe()
   useAutoHideBar(ref)
   return (
     <div ref={ref} className="mobile-bar flex items-center justify-between px-4 min-[900px]:hidden">
@@ -314,11 +334,10 @@ export function MobileBar() {
       </div>
       <div className="flex items-center gap-1">
         <OfflineBadge />
-        {me && (
-          <NavLink to={profilePath(me.handle)} className="icon-btn" aria-label="Your profile" title={`@${me.handle}`}>
-            <Avatar avatar={me.avatar} handle={me.handle} size={24} />
-          </NavLink>
-        )}
+        {/* Posting is a tap away on every screen: phones have no command bar to type a link into. */}
+        <button className="post-btn" onClick={() => postLink()} aria-label="Post a link" title="Post a link">
+          <Plus size={20} strokeWidth={2.4} />
+        </button>
         <NavLink to="/activity" className="icon-btn relative" aria-label={unread ? `Activity, ${unread} new` : 'Activity'}>
           <Bell size={18} />
           {unread > 0 && <span className="count-badge absolute -right-0.5 -top-0.5">{unread > 9 ? '9+' : unread}</span>}
@@ -326,7 +345,6 @@ export function MobileBar() {
         <NavLink to="/settings" className="icon-btn" aria-label="Settings">
           <Settings size={18} />
         </NavLink>
-        <ThemeToggle />
       </div>
     </div>
   )
@@ -340,13 +358,17 @@ export function Drawer() {
   const close = useCallback(() => setDrawer(false), [setDrawer])
   const freshReplies = useFreshReplies()
   const openPalette = useUI((s) => s.setPalette)
+  const me = useMe()
   return (
     <Sheet open={open} onClose={close} side="left" label="Menu">
       <div className="mb-4 flex items-center justify-between pl-2.5">
         <Wordmark />
-        <button className="icon-btn" onClick={close} aria-label="Close menu">
-          <X size={18} />
-        </button>
+        <span className="flex items-center gap-1">
+          <ThemeToggle />
+          <button className="icon-btn" onClick={close} aria-label="Close menu">
+            <X size={18} />
+          </button>
+        </span>
       </div>
       <button
         onClick={() => {
@@ -360,6 +382,12 @@ export function Drawer() {
       </button>
       <RailLinks drawer />
       <div className="mt-5 border-t border-line pt-3">
+        <PostLinkButton onPost={close} />
+        {me && (
+          <RailLink to={profilePath(me.handle)} icon={<Avatar avatar={me.avatar} handle={me.handle} size={16} />}>
+            Your profile
+          </RailLink>
+        )}
         <RailLink to="/activity" icon={<Bell size={16} />}>
           <span className="inline-flex items-center gap-2">Activity {unread > 0 && <span className="num count-badge">{unread > 99 ? '99+' : unread}</span>}</span>
         </RailLink>

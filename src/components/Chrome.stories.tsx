@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor } from 'storybook/test'
+import { useComposer } from '../lib/compose'
 import { usePrefs } from '../lib/store'
 import { toast, useUI } from '../lib/ui'
 import { NOW, signedInWithBluesky, story } from '../test/fixtures'
@@ -66,6 +67,9 @@ export const TopBarOnAPhone: Story = {
   parameters: { app: { prefs: follows, ...signedInWithBluesky([{ kind: 'mention', actor: 'paperwing.io', text: 'Welcome aboard' }]) } },
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('link', { name: 'Activity, 1 new' })).toBeVisible()
+    // Phones have no command bar: posting is in the top bar.
+    await userEvent.click(canvas.getByRole('button', { name: 'Post a link' }))
+    await expect(useComposer.getState().target).toMatchObject({ kind: 'post-link' })
     await userEvent.click(canvas.getByRole('button', { name: 'Menu' }))
     await expect(useUI.getState().drawer).toBe(true)
   },
@@ -78,8 +82,22 @@ export const DrawerOpen: Story = {
   play: async ({ canvas }) => {
     const close = await canvas.findByRole('button', { name: 'Close menu' })
     await expect(canvas.getByRole('dialog', { name: 'Menu' })).toBeVisible()
+    // The menu deals its rows in, so wait for them to land.
+    await waitFor(() => expect(canvas.getByRole('button', { name: 'Toggle dark mode' })).toBeVisible())
     await userEvent.click(close)
     await expect(useUI.getState().drawer).toBe(false)
+  },
+}
+
+/** "Post a link" in the menu closes it and opens the post sheet. */
+export const PostFromTheMenu: Story = {
+  render: () => <Drawer />,
+  ...phone,
+  parameters: { app: { prefs: follows, ui: { drawer: true } } },
+  play: async ({ canvas }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Post a link' }))
+    await expect(useUI.getState().drawer).toBe(false)
+    await expect(useComposer.getState().target).toMatchObject({ kind: 'post-link' })
   },
 }
 

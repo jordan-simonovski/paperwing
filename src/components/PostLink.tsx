@@ -1,6 +1,6 @@
-import { ArrowRight, Link2, Loader2 } from 'lucide-react'
+import { ArrowRight, ClipboardPaste, Link2, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { linkFrom, useComposer } from '../lib/compose'
 import { keys } from '../lib/query'
 import { linkKey, storyFromKey } from '../lib/sources'
@@ -13,6 +13,7 @@ import { Sheet } from './Sheet'
  * lists it on PaperWing and anywhere else you're signed in.
  */
 export function PostLink({ url: given, title: givenTitle, board, onClose }: { url?: string; title?: string; board?: string; onClose: () => void }) {
+  const linkId = useId()
   const [input, setInput] = useState(given ?? '')
   const [title, setTitle] = useState(givenTitle ?? '')
   const [edited, setEdited] = useState(!!givenTitle)
@@ -33,6 +34,16 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
   // yet, so a changed link never goes out under the old one's title. Your own title always wins.
   const found = settled === link ? card.data?.title?.trim() : undefined
   const shown = edited ? title : (found ?? '')
+
+  const canPaste = typeof navigator !== 'undefined' && !!navigator.clipboard?.readText
+  const paste = async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim()
+      if (text) setInput(text)
+    } catch {
+      // Refused or empty: the field is still there to paste into by hand.
+    }
+  }
 
   const next = () => {
     if (!link || !shown.trim()) return
@@ -55,10 +66,30 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
           <Link2 size={17} /> Post a link
         </h2>
         <p className="text-[0.875rem] text-ink-3">Anything worth reading, whether or not PaperWing has found it. Next, choose where it goes: PaperWing, a board, or your other networks.</p>
-        <label className="block space-y-1">
-          <span className="text-[0.8125rem] font-semibold text-ink-2">Link</span>
-          <input className="input" type="url" inputMode="url" placeholder="https://" value={input} autoFocus={!given} onChange={(e) => setInput(e.target.value)} aria-invalid={!!input && !link} />
-        </label>
+        <div className="space-y-1">
+          <label htmlFor={linkId} className="block text-[0.8125rem] font-semibold text-ink-2">
+            Link
+          </label>
+          <div className="flex gap-2">
+            <input
+              id={linkId}
+              className="input min-w-0 flex-1"
+              type="url"
+              inputMode="url"
+              placeholder="https://"
+              value={input}
+              autoFocus={!given}
+              onChange={(e) => setInput(e.target.value)}
+              aria-invalid={!!input && !link}
+            />
+            {/* On a phone the link is on the clipboard already, and long-press paste is fiddly. */}
+            {!input && canPaste && (
+              <button type="button" className="btn flex-none" onClick={() => void paste()}>
+                <ClipboardPaste size={15} /> Paste
+              </button>
+            )}
+          </div>
+        </div>
         {input && !link && <p className="text-[0.8125rem] text-signal">That doesn’t look like a web link yet.</p>}
         <label className="block space-y-1">
           <span className="flex items-center gap-2 text-[0.8125rem] font-semibold text-ink-2">

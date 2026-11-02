@@ -64,3 +64,21 @@ export const ChangingTheLink: Story = {
     await waitFor(() => expect(page().getByLabelText(/Title/)).toHaveValue('On reading fast'))
   },
 }
+
+/** On a phone the link is usually on the clipboard: one tap puts it in, and the title follows. */
+export const PasteFromTheClipboard: Story = {
+  beforeEach: () => {
+    const had = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => '  https://blog.example/slow \n' } })
+    return () => {
+      if (had) Object.defineProperty(navigator, 'clipboard', had)
+      else delete (navigator as { clipboard?: unknown }).clipboard
+    }
+  },
+  play: async () => {
+    await userEvent.click(page().getByRole('button', { name: 'Paste' }))
+    await expect(page().getByLabelText('Link')).toHaveValue('https://blog.example/slow')
+    await waitFor(() => expect(page().getByLabelText(/Title/)).toHaveValue('On reading slowly'))
+    await expect(page().queryByRole('button', { name: 'Paste' })).toBeNull()
+  },
+}

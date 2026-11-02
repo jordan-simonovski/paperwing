@@ -53,6 +53,18 @@
       ]
     },
     {
+      "name": "Post a link",
+      "short_name": "Post",
+      "description": "Post a link to PaperWing",
+      "url": "/share?post=1",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "For you",
       "short_name": "For you",
       "url": "/t/for-you",

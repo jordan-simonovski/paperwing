@@ -6,8 +6,9 @@ const LINK = 'https://blog.example/slow'
 test.use({ stubs: { feeds: { paperwing: [MELTING] }, cards: { [LINK]: { title: 'On reading slowly' } } } })
 
 test('posting a link PaperWing hasn’t found: the address, its own title, then where it goes', async ({ page }) => {
-  await gotoFeed(page, 'paperwing')
-  await page.getByRole('button', { name: 'Post a link' }).click()
+  // From any page: the top bar on a phone, the sidebar on a desktop.
+  await gotoFeed(page, 'for-you')
+  await page.getByRole('button', { name: 'Post a link' }).filter({ visible: true }).first().click()
 
   const post = page.getByRole('dialog', { name: 'Post a link' })
   // Typed the way people type addresses: no https://.

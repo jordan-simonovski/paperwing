@@ -1,7 +1,7 @@
 import type { FollowedPerson } from './people'
 import { channelId, parseChannelId } from './channelId'
 import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
-import { isTechTopic, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
+import { isTechTopic, literalTerm, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
 import { mixFeedRefs } from './mixes'
 import { sourceLabel, type MixSource } from './mixSources'
 import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
@@ -65,7 +65,8 @@ export function interestTopic(i: Interest): Topic {
     hue: hueFor(i.id),
     cluster: 'code',
     blurb: `Your interest, built from a search for “${i.query}”`,
-    terms: [words.length > 1 ? i.query : words[0]],
+    // What you typed, as written: "*NSYNC" or "C++" is text to find, not a pattern.
+    terms: [literalTerm(words.length > 1 ? i.query : words[0])],
     related: searchTopics(i.query)
       .slice(0, 3)
       .map((h) => h.topic.id),
