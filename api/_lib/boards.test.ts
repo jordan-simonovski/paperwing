@@ -133,4 +133,11 @@ describe('community boards', () => {
       .mockRejectedValueOnce(new Error('Upstream 400 for public.api.bsky.app'))
     await expect(boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).rejects.toThrow()
   })
+
+  it('a block list longer than it will read fails the board, rather than letting the rest in', async () => {
+    vi.mocked(fetchJson).mockResolvedValue({ items: [{ subject: { did: 'did:plc:x' } }], cursor: 'more' })
+    await expect(boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).rejects.toThrow(/More than/)
+    vi.mocked(fetchJson).mockReset()
+    vi.mocked(fetchJson).mockImplementation(async () => ({ items: [{ subject: { did: BOB } }] }))
+  })
 })

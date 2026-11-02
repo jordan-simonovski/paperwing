@@ -34,7 +34,7 @@ export async function readBoard(did: string, rkey: string): Promise<BoardView> {
   return { ...board, uri, owner: did, ownerHandle: names.get(did), moderatorHandles: Object.fromEntries(board.moderators.flatMap((m) => (names.get(m) ? [[m, names.get(m)!]] : []))) }
 }
 
-/** The accounts on a Bluesky moderation list, up to a thousand. */
+/** The accounts on a Bluesky moderation list, up to a thousand; a longer one fails rather than half-read. */
 async function listMembers(list: string): Promise<Set<string>> {
   const out = new Set<string>()
   let cursor: string | undefined
@@ -50,9 +50,10 @@ async function listMembers(list: string): Promise<Set<string>> {
     })
     for (const i of res.items) out.add(i.subject.did)
     cursor = res.cursor
-    if (!cursor) break
+    if (!cursor) return out
   }
-  return out
+  // Part of a block list would let the rest in.
+  throw new Error(`More than 1000 accounts on ${list}`)
 }
 
 /**
