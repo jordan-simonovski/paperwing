@@ -9,7 +9,11 @@ base_branch=origin/main
 pushed=""
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ "$local_sha" = "$zero" ] && continue # deleting a branch
-  case "$remote_ref" in refs/heads/changeset-release/*) continue ;; esac
+  case "$remote_ref" in
+  refs/heads/changeset-release/*) continue ;; # the Release pull request's branch
+  refs/heads/*) ;;
+  *) continue ;; # tags and other refs carry no new code to check
+  esac
   pushed="$pushed $local_sha"
   base=$(git merge-base "$local_sha" "$base_branch" 2>/dev/null || echo "")
   [ -z "$base" ] && continue
@@ -28,6 +32,11 @@ for sha in $pushed; do
 done
 if ! git diff --quiet HEAD; then
   echo "pre-push: uncommitted changes would be checked instead of what you're pushing. Commit or stash them first." >&2
+  exit 1
+fi
+# ponytail: the roots the build, lint and tests read; widen it when a new one appears.
+if [ -n "$(git ls-files --others --exclude-standard -- src api sw e2e scripts public .changeset .storybook index.html)" ]; then
+  echo "pre-push: untracked files would be checked but not pushed. Add them, or stash them with git stash -u." >&2
   exit 1
 fi
 

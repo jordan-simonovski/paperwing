@@ -47,3 +47,32 @@ describe('the changeset rule', () => {
   it('passes changes readers never get: tests, stories, tooling', () => expect(changesetCheck(['src/lib/rank.test.ts', 'src/components/Row.stories.tsx', 'scripts/x.mjs'])).toBe(0))
   it('passes a release, which consumes the changesets', () => expect(changesetCheck(['src/lib/rank.ts', 'CHANGELOG.md'])).toBe(0))
 })
+
+// pre-push runs the checks on the checkout, so it refuses when that isn't exactly what's pushed.
+// Each case here stops before the npm checks run.
+function prePush({ ref = 'refs/heads/topic', sha = 'HEAD', dirty = false, untracked = '' } = {}) {
+  const repo = mkdtempSync(join(tmpdir(), 'push-'))
+  const git = (...args) => spawnSync('git', ['-c', 'user.email=t@example.com', '-c', 'user.name=t', '-c', 'core.hooksPath=/dev/null', ...args], { cwd: repo, encoding: 'utf8' })
+  git('init', '-q')
+  mkdirSync(join(repo, 'scripts/changelog'), { recursive: true })
+  writeFileSync(join(repo, 'scripts/changelog/require.sh'), 'exit 0\n')
+  writeFileSync(join(repo, 'README'), 'one')
+  git('add', '.')
+  git('commit', '-qm', 'one')
+  writeFileSync(join(repo, 'README'), 'two')
+  git('commit', '-qam', 'two')
+  if (dirty) writeFileSync(join(repo, 'README'), 'three')
+  if (untracked) {
+    mkdirSync(join(repo, dirname(untracked)), { recursive: true })
+    writeFileSync(join(repo, untracked), 'x')
+  }
+  const local = git('rev-parse', sha).stdout.trim()
+  return spawnSync('sh', [resolve('.githooks/pre-push')], { cwd: repo, input: `${ref} ${local} ${ref} ${'0'.repeat(40)}\n`, encoding: 'utf8' })
+}
+
+describe('the pre-push hook', () => {
+  it('refuses to vouch for a commit other than the checkout', () => expect(prePush({ sha: 'HEAD~1' }).stderr).toMatch(/pushing another one/))
+  it('refuses with uncommitted changes', () => expect(prePush({ dirty: true }).stderr).toMatch(/uncommitted changes/))
+  it('refuses with untracked files the checks would read', () => expect(prePush({ untracked: 'src/lib/new.ts' }).stderr).toMatch(/untracked/))
+  it('leaves tags alone', () => expect(prePush({ ref: 'refs/tags/v1', sha: 'HEAD~1' }).status).toBe(0))
+})

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Exits 1 when <base>..<head> changes the app but adds no changeset. The pre-push hook and CI both
 # run this, so a pull request from a checkout without hooks still can't skip "What's new".
+set -e
 base=$1
 head=$2
 files=$(git diff --name-only "$base" "$head")
