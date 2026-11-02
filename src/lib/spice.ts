@@ -32,17 +32,32 @@ function flush() {
   if (batch.length) void fetchGrades(batch, 0)
 }
 
+/**
+ * After a failed ask (the server busy, a moment offline), its stories may be asked about again,
+ * after a pause: rows ask on every render, and a server that's struggling shouldn't hear from
+ * each one.
+ */
+function askAgainLater(batch: [string, number][]) {
+  window.setTimeout(() => {
+    for (const [k, n] of batch) if (asked.get(k) === n) asked.delete(k)
+  }, RETRIES[0])
+}
+
 async function fetchGrades(batch: [string, number][], attempt: number) {
   try {
     const res = await fetch(`/api/spice?keys=${batch.map(([k, n]) => `${k}~${n}`).join(',')}`)
-    if (!res.ok) return
+    if (!res.ok) {
+      askAgainLater(batch)
+      return
+    }
     const data = (await res.json()) as SpiceResponse
     useSpiceStore.setState((s) => ({ enabled: data.enabled, grades: { ...s.grades, ...data.grades } }))
     // Ask again about the ones being graded now (and anything left out this time).
     const again = batch.filter(([k]) => data.pending.includes(k))
     if (again.length && attempt < RETRIES.length) window.setTimeout(() => void fetchGrades(again, attempt + 1), RETRIES[attempt])
   } catch {
-    /* offline: rows just show no chillies */
+    // Offline: rows show no chillies for now.
+    askAgainLater(batch)
   }
 }
 
