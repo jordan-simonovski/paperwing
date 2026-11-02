@@ -43,7 +43,7 @@ export const Unavailable: Story = { args: { quote: { author: 'someone.bsky.socia
 
 export const OpensInTheReader: Story = {
   play: async ({ args, canvas }) => {
-    await userEvent.click(canvas.getByRole('link', { name: 'Quoted post by Anil Dash' }))
+    await userEvent.click(canvas.getByRole('link', { name: /Anil Dash/ }))
     await expect(args.onOpen).toHaveBeenCalledWith('bs-quoted')
   },
 }

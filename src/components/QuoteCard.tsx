@@ -23,7 +23,7 @@ export function QuoteCard({ quote, onOpen }: { quote: Quote; onOpen?: (key: stri
     host = undefined
   }
   return (
-    <div className="quote-card" role="link" tabIndex={0} onClick={open} onKeyDown={(e) => e.key === 'Enter' && open(e)} aria-label={`Quoted post by ${quote.name ?? quote.author}`}>
+    <div className="quote-card" role="link" tabIndex={0} onClick={open} onKeyDown={(e) => e.key === 'Enter' && open(e)}>
       <p className="flex min-w-0 items-baseline gap-1.5 text-[0.8125rem]">
         {quote.name && <span className="truncate font-semibold text-ink">{quote.name}</span>}
         <span className="truncate text-ink-3">@{quote.author}</span>

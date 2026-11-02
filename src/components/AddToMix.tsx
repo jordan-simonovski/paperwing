@@ -38,7 +38,7 @@ export function AddToMix({
           setOpen(true)
         }}
         title={`Add ${label} to a mix`}
-        aria-label={`Add ${label} to a mix`}
+        aria-label={iconOnly ? `Add ${label} to a mix` : `${inSome ? 'In a mix' : 'Add to mix'}: ${label}`}
       >
         <Layers size={13} />
         {!iconOnly && <span className={textClassName}>{inSome ? 'In a mix' : 'Add to mix'}</span>}

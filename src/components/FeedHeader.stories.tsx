@@ -73,7 +73,7 @@ export const FilterSheetOnAPhone: Story = {
   globals: { viewport: { value: 'mobile2', isRotated: false } },
   play: async ({ args, canvas, canvasElement }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Filter' }))
-    const sheet = within(canvasElement.ownerDocument.body).getByRole('dialog', { name: 'Filter stories' })
+    const sheet = await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Filter stories' })
     await waitFor(() => expect(sheet).toBeVisible())
     await userEvent.click(within(sheet).getByRole('button', { name: /Blogs/ }))
     await expect(args.onSourceFilter).toHaveBeenCalledWith('rss')

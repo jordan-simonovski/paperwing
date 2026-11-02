@@ -4,7 +4,7 @@ import { lemmySignIn, lemmySignOut, lemmySubscriptions, TotpRequired, useLemmyAc
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
 
-const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none'
+const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3'
 
 /** Brings your Lemmy subscriptions into PaperWing's joined communities. */
 async function importSubscriptions() {

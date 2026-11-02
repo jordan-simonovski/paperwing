@@ -75,7 +75,7 @@ export function StatusPagesSettings() {
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
-          className="h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none"
+          className="h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3"
           aria-label="Status page address"
         />
         <button className="btn" type="submit" disabled={busy || !draft.trim()}>

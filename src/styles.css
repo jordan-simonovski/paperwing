@@ -383,8 +383,8 @@
   .input::placeholder {
     color: var(--ink-3);
   }
+  /* Keeps the :focus-visible ring: the border change alone is too faint to see (WCAG 2.4.7). */
   .input:focus {
-    outline: none;
     border-color: var(--line-strong);
   }
   kbd,

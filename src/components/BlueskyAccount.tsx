@@ -8,7 +8,7 @@ import { SHARE_NSID } from '../lib/social'
 import { listOf } from '../lib/channels'
 import { toast } from '../lib/ui'
 
-const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none'
+const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3'
 
 /** Settings: sign in with a Bluesky (atproto) account, for replying and liking, and Frontpage. */
 export function BlueskyAccount() {

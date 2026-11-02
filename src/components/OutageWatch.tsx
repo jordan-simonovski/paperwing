@@ -47,11 +47,12 @@ export function OutageBanner() {
                     {Math.round(p.baseline) >= 1 ? `, up from about ${Math.round(p.baseline)}` : ''}.{' '}
                   </>
                 )}
-                {statusLine(p)}
               </span>
             </span>
             <ChevronDown size={16} className={`mt-1 flex-none transition-transform ${open === p.id ? 'rotate-180' : ''}`} />
           </button>
+          {/* Outside the button: a link inside one can't be reached or opened on its own. */}
+          {p.status && <p className="ml-[30px] text-[0.875rem] text-ink-2">{statusLine(p)}</p>}
           {open === p.id && p.samples.length > 0 && (
             <ul className="mt-2 space-y-1.5 border-t border-[var(--line)] pt-2 text-[0.875rem]">
               {p.samples.map((s) => (

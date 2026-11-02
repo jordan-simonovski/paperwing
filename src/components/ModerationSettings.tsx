@@ -39,13 +39,7 @@ export function Labelers() {
                   <span className="min-w-0 flex-1 text-[0.875rem]">{d.name}</span>
                   <div className="seg" role="radiogroup" aria-label={d.name}>
                     {SETTINGS.map(([v, label]) => (
-                      <button
-                        key={v}
-                        role="radio"
-                        aria-checked={d.setting === v}
-                        aria-pressed={d.setting === v}
-                        onClick={() => set({ labelers: labelers.map((x) => (x.did === l.did ? withSetting(x, val, v) : x)) })}
-                      >
+                      <button key={v} role="radio" aria-checked={d.setting === v} onClick={() => set({ labelers: labelers.map((x) => (x.did === l.did ? withSetting(x, val, v) : x)) })}>
                         {label}
                       </button>
                     ))}

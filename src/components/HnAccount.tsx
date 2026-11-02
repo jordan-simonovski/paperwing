@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { hnSignIn, hnSignOut, useHn } from '../lib/hnAccount'
 import { toast } from '../lib/ui'
 
-const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none'
+const input = 'h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 text-[0.9375rem] placeholder:text-ink-3'
 
 /** Settings: sign in to Hacker News, for upvoting and commenting from PaperWing. */
 export function HnAccount() {

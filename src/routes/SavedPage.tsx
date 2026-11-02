@@ -228,7 +228,7 @@ export function SavedPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search the text of everything you've saved"
-                  className="h-10 w-full rounded-full bg-ground pl-10 pr-10 text-[0.9375rem] placeholder:text-ink-3 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+                  className="h-10 w-full rounded-full bg-ground pl-10 pr-10 text-[0.9375rem] placeholder:text-ink-3 [&::-webkit-search-cancel-button]:hidden"
                   aria-label="Search saved stories"
                 />
                 {query && (

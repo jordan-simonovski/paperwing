@@ -49,7 +49,7 @@ export function SummarySettings() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="sk-ant-…"
-            className="h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 font-mono text-[0.875rem] placeholder:text-ink-3 focus:outline-none"
+            className="h-10 min-w-0 flex-1 rounded-full bg-sunk px-4 font-mono text-[0.875rem] placeholder:text-ink-3"
             aria-label="Your Anthropic API key"
           />
           <button className="btn" type="submit">
