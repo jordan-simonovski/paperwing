@@ -24,8 +24,8 @@ body:
   - type: input
     id: build
     attributes:
-      label: Build
-      description: Shown at the bottom of Settings, About.
+      label: Version
+      description: Shown at the bottom of Settings, About (for example "0.2.0 (built 2026-11-02)").
   - type: input
     id: device
     attributes:

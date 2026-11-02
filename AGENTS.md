@@ -20,6 +20,12 @@ Before committing:
 
 Before opening a pull request:
 
+- Add a changeset for every change people can notice, written for them (`release-notes` skill,
+  `.changeset/README.md`), or an empty one (`npx changeset add --empty`) when there's nothing to notice.
+  `npm run check:changesets` passes. Releasing is deploying: production only builds when the Release
+  pull request merges, so anything that must reach production needs a real changeset. Never hand-edit
+  `CHANGELOG.md` or `src/generated/changelog.json`.
+
 - Run `/ce-code-review` and resolve what it raises. Use the pinned repo-local adapter in
   `.agents/skills/ce-code-review/SKILL.md` (Codex: `$ce-code-review`); see
   `docs/engineering/compound-code-review.md`. Verify the assets first (`python3 scripts/compound-review/verify.py`),

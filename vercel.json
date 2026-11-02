@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
+  "ignoreCommand": "sh scripts/vercel-ignore.sh",
   "rewrites": [
     {
       "source": "/oauth-client-metadata.json",

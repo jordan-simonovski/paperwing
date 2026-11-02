@@ -1,0 +1,36 @@
+name: Release
+
+# Keeps a "Release" pull request open whenever changesets are waiting on main. It runs
+# `npm run release`: consumes the changesets, bumps the version, rewrites CHANGELOG.md and the app's
+# "What's new". Merging it is the release, and the only production deploy (scripts/vercel-ignore.sh).
+#
+# Needs the repository setting "Allow GitHub Actions to create and approve pull requests"
+# (Settings, Actions, General, Workflow permissions).
+on:
+  push:
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-pr:
+    name: Release pull request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: changesets/action@v1
+        with:
+          version: npm run release
+          title: Release
+          commit: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

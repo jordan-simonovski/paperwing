@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useUnreadRelease } from '../lib/whatsNew'
 import {
   Bell,
   Bookmark,
@@ -964,11 +965,19 @@ const SECTIONS: SettingsSection[] = [
   { id: 'app', title: 'App and data', blurb: 'Install, storage, diagnostics and about', icon: <Smartphone size={17} />, Page: AppSettings },
 ]
 
-const BuildInfo = () => (
-  <p className="num text-[0.8125rem] text-ink-3">
-    Build {__BUILD__.commit} · {fullDate(Date.parse(__BUILD__.at))}
-  </p>
-)
+/** The version you're on, when it was built, and what's in it (marked while you haven't looked). */
+function BuildInfo() {
+  const unread = useUnreadRelease()
+  return (
+    <p className="text-[0.8125rem] text-ink-3">
+      <span className="num">Version {__BUILD__.version}</span> · {fullDate(Date.parse(__BUILD__.at))} ·{' '}
+      <Link to="/whats-new" className="font-semibold text-ink-2 underline-offset-2 hover:text-ink hover:underline">
+        What’s new
+      </Link>
+      {unread && <span className="ml-1.5 inline-block size-2 rounded-full bg-signal align-middle" aria-label="New release" />}
+    </p>
+  )
+}
 
 /** PaperWing's own Bluesky account: news of the app, and where to say hello. */
 const BLUESKY = 'https://bsky.app/profile/paperwing.io'
@@ -981,7 +990,7 @@ const bugReportUrl = () => {
   const installed = window.matchMedia('(display-mode: standalone)').matches
   const params = new URLSearchParams({
     template: 'bug_report.yml',
-    build: `${__BUILD__.commit} (${__BUILD__.at.slice(0, 10)})`,
+    build: `${__BUILD__.version} (built ${__BUILD__.at.slice(0, 10)})`,
     device: `${installed ? 'Installed app' : 'Browser'}, ${navigator.userAgent}`,
   })
   return `${REPO}/issues/new?${params}`

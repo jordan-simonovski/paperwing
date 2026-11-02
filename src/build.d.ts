@@ -1,1 +1,1 @@
-declare const __BUILD__: { commit: string; at: string }
+declare const __BUILD__: { version: string; at: string }

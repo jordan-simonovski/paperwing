@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto'
-import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -65,19 +64,11 @@ function serviceWorker(): Plugin {
   }
 }
 
-// Shown in Settings, so you can tell which build an installed app is running.
-const commit = (
-  process.env.VERCEL_GIT_COMMIT_SHA ||
-  (() => {
-    try {
-      return execSync('git rev-parse HEAD').toString()
-    } catch {
-      return 'dev'
-    }
-  })()
-).slice(0, 7)
+// Shown in Settings and on bug reports: the released version (package.json, bumped by
+// `npm run release`) and when this build was made.
+const appVersion = (JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }).version
 
 export default defineConfig({
-  define: { __BUILD__: JSON.stringify({ commit, at: new Date().toISOString() }) },
+  define: { __BUILD__: JSON.stringify({ version: appVersion, at: new Date().toISOString() }) },
   plugins: [react(), tailwindcss(), vercelApiDev(), serviceWorker()],
 })

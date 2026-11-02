@@ -10,6 +10,9 @@ see LICENSE in this folder), copied unmodified at commit 4ae2317.
 - `tdd`: the red → green loop, and what makes a test worth keeping.
 - `domain-modeling`, `grilling`: used by the architecture review to pin down terms and decisions.
 
+`release-notes` is PaperWing's own: how to write changesets (kinds, wording, bumps) and how a
+release becomes "What's new" and a production deploy.
+
 `ce-code-review` is different: a pointer to the pinned Compound Engineering review
 (EveryInc/compound-engineering-plugin, MIT), whose assets live byte-for-byte in
 `.compound-engineering/vendor/` with their own licence. See

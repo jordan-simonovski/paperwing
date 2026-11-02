@@ -21,6 +21,8 @@ jobs:
       - run: npm run build
       - run: npm run lint
       - run: npm test
+      # Pending changesets become "What's new": kind, bump and wording are checked (.changeset/README.md).
+      - run: npm run check:changesets
       # Every Storybook story renders in Chromium as a test.
       - run: npx playwright install --with-deps chromium
       - run: npm run test:stories

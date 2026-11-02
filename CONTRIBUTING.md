@@ -48,6 +48,7 @@ npx prettier --no-semi --single-quote --print-width 200 --write <files>
 
 Then:
 
+- Add a changeset for anything people can notice (`npx changeset`): it becomes an item in What's new. See [Releases](#releases).
 - Keep each pull request to one change, and say what it changes and why. Screenshots help for anything you can see, ideally on a phone too.
 - Add or update tests for logic you change (`*.test.ts` next to the code, run with Vitest).
 - Add or update a story for UI you change (`*.stories.tsx` next to the component). See [Stories](#stories).
@@ -92,6 +93,15 @@ export const SignedIn: Story = {
 ```
 
 Build data with the helpers in `src/test/fixtures.ts` (`story()`, `ranked()`, `NOW`), use real public links, and keep images local (`/icon-512.png` or a data URI) so stories never touch the network. If a component can't be shown without reaching into the app, that's usually a sign it wants its data passed in as props.
+
+## Releases
+
+Every change people can notice comes with a changeset in `.changeset/`, written for readers and
+starting with its kind: `highlight`, `breaking`, `new`, `improved` or `fix` (`.changeset/README.md`
+has the rules; `npm run check:changesets` checks them). CI keeps a **Release** pull request open
+while changesets are waiting. Merging it bumps the version, rewrites `CHANGELOG.md` and the app's
+What's new, and is the only production deploy: Vercel skips production builds for other commits
+(`scripts/vercel-ignore.sh`). Put `[deploy]` in a commit message to force one.
 
 ## Things to keep in mind
 
