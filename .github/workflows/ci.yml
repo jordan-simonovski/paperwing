@@ -21,3 +21,6 @@ jobs:
       - run: npm run build
       - run: npm run lint
       - run: npm test
+      # Every Storybook story renders in Chromium as a test.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:stories

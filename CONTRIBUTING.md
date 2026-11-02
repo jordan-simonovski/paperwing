@@ -15,7 +15,8 @@ You need Node.js 22 or newer.
 
 ```sh
 npm install
-npm run dev     # the app on http://localhost:5173, with the /api functions mounted as middleware
+npm run dev        # the app on http://localhost:5173, with the /api functions mounted as middleware
+npm run storybook  # every piece of the UI on its own, on http://localhost:6006
 ```
 
 That's enough for almost everything: feeds, threads, reading, saving, Explore. No accounts or keys are needed.
@@ -33,12 +34,13 @@ Never commit `.env.local`, keys, tokens or app passwords.
 Run the same checks CI runs:
 
 ```sh
-npm run build   # type-checks (tsc -b) and builds
+npm run build          # type-checks (tsc -b) and builds
 npm run lint
-npm test
+npm test               # unit tests, in Node
+npm run test:stories   # every Storybook story, rendered in Chromium (npx playwright install chromium once)
 ```
 
-All three must pass. Formatting is Prettier with no semicolons, single quotes and a 200-character line:
+All four must pass. Formatting is Prettier with no semicolons, single quotes and a 200-character line:
 
 ```sh
 npx prettier --no-semi --single-quote --print-width 200 --write <files>
@@ -48,6 +50,7 @@ Then:
 
 - Keep each pull request to one change, and say what it changes and why. Screenshots help for anything you can see, ideally on a phone too.
 - Add or update tests for logic you change (`*.test.ts` next to the code, run with Vitest).
+- Add or update a story for UI you change (`*.stories.tsx` next to the component). See [Stories](#stories).
 - Check the app at phone width as well as desktop: most people read PaperWing on a phone.
 
 ## How the code is laid out
@@ -62,8 +65,31 @@ Then:
 | `api/_lib/` | Server code shared by the endpoints: fetching, feeds, sync, push, atproto |
 | `sw/` | The service worker template (offline reading, push) |
 | `scripts/` | Icon rendering, Bluesky feed publishing, mobile checks |
+| `.storybook/` | Storybook config and the harness every story renders in |
+| `src/test/` | Fixtures shared by tests and stories |
+| `.claude/skills/` | Design references for coding agents (deep modules, seams, TDD) |
 
 The README explains each feature in more depth.
+
+## Stories
+
+Every component has stories beside it (`StoryRow.stories.tsx` next to `StoryRow.tsx`), and every story is also a test: `npm run test:stories` renders each one in Chromium, runs its `play` function and checks it for accessibility problems.
+
+A story renders from nothing but its own parameters. `.storybook/harness.tsx` resets every store to its defaults, empties the query cache and answers no network request unless the story says so:
+
+```tsx
+export const SignedIn: Story = {
+  parameters: {
+    app: {
+      atproto: { did: 'did:plc:…', handle: 'reader.example' }, // any store, by name
+      queries: [[['friends'], { … }]],                          // seeded into the query cache
+      fetch: { '/api/feed?src=og': { image: '/icon-512.png' } }, // URL substring → JSON body
+    },
+  },
+}
+```
+
+Build data with the helpers in `src/test/fixtures.ts` (`story()`, `ranked()`, `NOW`), use real public links, and keep images local (`/icon-512.png` or a data URI) so stories never touch the network. If a component can't be shown without reaching into the app, that's usually a sign it wants its data passed in as props.
 
 ## Things to keep in mind
 
