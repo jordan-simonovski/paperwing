@@ -24,4 +24,15 @@ describe('webmentions', () => {
       [2, 'like', 'other.example', undefined],
     ])
   })
+
+  it('keeps an author’s photo and link only when they are web links', () => {
+    const [good, hostile] = toWebmentions({
+      children: [
+        { 'wm-id': 1, 'wm-property': 'in-reply-to', url: 'https://blog.example/reply', author: { name: 'Ann', photo: 'https://blog.example/me.jpg', url: 'https://blog.example/' } },
+        { 'wm-id': 2, 'wm-property': 'in-reply-to', url: 'https://bad.example/reply', author: { name: 'Mallory', photo: 'javascript:alert(1)', url: 'ms-msdt:/id' } },
+      ],
+    })
+    expect([good.photo, good.authorUrl]).toEqual(['https://blog.example/me.jpg', 'https://blog.example/'])
+    expect([hostile.author, hostile.photo, hostile.authorUrl]).toEqual(['Mallory', undefined, undefined])
+  })
 })
