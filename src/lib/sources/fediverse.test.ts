@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { normalizeInstance } from '../mastodon'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { normalizeInstance, useMastodon } from '../mastodon'
 import { lemmyComments, lemmyStory } from './lemmy'
-import { cleanHtml, mastodonComments, parseKey, quoteOf, statusStory, type Status } from './mastodon'
+import { cleanHtml, mastodonComments, mastodonThread, parseKey, quoteOf, statusStory, type Status } from './mastodon'
 import { quotedPost } from '../bskyPost'
 
 const lemmyComment = (id: number, path: string, childCount = 0) => ({
@@ -79,6 +79,35 @@ describe('mastodon', () => {
   })
   it('accepts a server however it is typed', () => {
     for (const s of ['hachyderm.io', 'https://hachyderm.io/@me', '@me@hachyderm.io', 'me@Hachyderm.io ']) expect(normalizeInstance(s)).toBe('hachyderm.io')
+  })
+})
+
+describe('opening a Mastodon thread from a link', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useMastodon.setState({ instance: useMastodon.getInitialState().instance })
+  })
+  const answer = () => {
+    const fetch = vi.fn(async (url: string) => Response.json(String(url).endsWith('/context') ? { descendants: [] } : status({ id: '42' })))
+    vi.stubGlobal('fetch', fetch)
+    return fetch
+  }
+
+  it('reads from your own server, the default one and well-known ones', async () => {
+    useMastodon.setState({ instance: 'my-server.social' })
+    for (const instance of ['my-server.social', 'hachyderm.io', 'mastodon.social', 'fosstodon.org']) {
+      const fetch = answer()
+      const thread = await mastodonThread(`md-${instance}-42`)
+      expect(thread.story.key).toBe(`md-${instance}-42`)
+      expect(fetch.mock.calls.map(([url]) => new URL(url).host)).toEqual([instance, instance])
+    }
+  })
+
+  it('never asks an unknown server a link names', async () => {
+    useMastodon.setState({ instance: 'my-server.social' })
+    const fetch = answer()
+    await expect(mastodonThread('md-evil.example-42')).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/doesn’t read posts from evil\.example/) })
+    expect(fetch).not.toHaveBeenCalled()
   })
 })
 
