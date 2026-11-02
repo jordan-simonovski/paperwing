@@ -33,6 +33,9 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 import { useMediaQuery } from '../lib/hooks'
 import { download, exportJson, exportMarkdown, parseImport, toSavedItems } from '../lib/importExport'
 import { buildOpml, parseOpml } from '../lib/opml'
+import { unpublishBlogroll } from '../lib/blogroll'
+import { useAtproto } from '../lib/atproto'
+import { profilePath } from '../lib/people'
 import { BlogSuggestions, FeedFinder } from '../components/FollowBlogs'
 import { BlueskyAccount } from '../components/BlueskyAccount'
 import { SourceIcon } from '../components/SourceIcon'
@@ -625,6 +628,38 @@ function NotificationsPage() {
   )
 }
 
+/** Your feeds as a public blogroll on your PaperWing profile: off unless you turn it on. */
+function BlogrollToggle() {
+  const on = usePrefs((p) => p.blogrollPublic)
+  const set = usePrefs((p) => p.set)
+  const handle = useAtproto((a) => a.handle)
+  if (!handle) return <p className="pt-1 text-[0.8125rem] text-ink-3">Sign in with Bluesky to show these on your PaperWing profile as a blogroll.</p>
+  return (
+    <div className="pt-1">
+      <Toggle
+        checked={on}
+        label="Show these on my profile as a blogroll"
+        onChange={(v) => {
+          set({ blogrollPublic: v })
+          if (!v)
+            void unpublishBlogroll().then(
+              () => toast('Your blogroll is off your profile'),
+              () => {},
+            )
+          else toast('Your blogroll will be on your profile in a moment')
+        }}
+      />
+      <p className="mt-1 text-[0.8125rem] text-ink-3">
+        Public, on{' '}
+        <Link to={profilePath(handle)} className="underline underline-offset-2">
+          your profile
+        </Link>
+        , so others can find blogs through you. It updates as you follow and unfollow.
+      </p>
+    </div>
+  )
+}
+
 /** Moving feeds in and out with OPML, the format every feed reader speaks. */
 function OpmlTools() {
   const p = usePrefs()
@@ -716,6 +751,7 @@ function SourcesSettings() {
         ))}
         <FeedFinder />
         <OpmlTools />
+        <BlogrollToggle />
       </Section>
       <Section title="Releases you follow" hint="New versions show up in Releases, alongside the projects your topics already track. Paste owner/name or a GitHub link.">
         <ChipList

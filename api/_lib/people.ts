@@ -1,11 +1,11 @@
 import { cleanMix, MIX_NSID } from '../../src/lib/mixSources.js'
 import { cleanSubmission, SUBMISSION_NSID } from '../../src/lib/paperwing.js'
-import { cleanShare, SHARE_NSID } from '../../src/lib/social.js'
+import { BLOGROLL_NSID, cleanBlogroll, cleanShare, SHARE_NSID } from '../../src/lib/social.js'
 import type { Story } from '../../src/lib/types.js'
 import type { Person, PersonProfile } from '../../src/lib/people.js'
 import { posts } from './atlinks.js'
 import { postTime, toStory } from './bsky.js'
-import { listRecords } from './frontpage.js'
+import { getRecord, listRecords } from './frontpage.js'
 import { fetchJson, linkKey } from './http.js'
 
 // A person on PaperWing: their Bluesky profile, the stories they've listed on PaperWing, and the
@@ -33,7 +33,14 @@ export async function person(actor: string): Promise<Person> {
     : { did: p.did, handle: p.handle, name: p.displayName?.trim() || undefined, avatar: p.avatar, bio: p.description?.trim() || undefined, followers: p.followersCount }
   if (hidden) return { profile, stories: [], mixes: [], shares: [], totals: { listed: 0, votes: 0, comments: 0 } }
 
-  const [subs, mixRecords, shareRecords] = await Promise.all([listRecords<unknown>(p.did, SUBMISSION_NSID, 60), listRecords<unknown>(p.did, MIX_NSID, 25), listRecords<unknown>(p.did, SHARE_NSID, 60)])
+  const [subs, mixRecords, shareRecords, roll] = await Promise.all([
+    listRecords<unknown>(p.did, SUBMISSION_NSID, 60),
+    listRecords<unknown>(p.did, MIX_NSID, 25),
+    listRecords<unknown>(p.did, SHARE_NSID, 60),
+    // Their blogroll, if they've published one.
+    getRecord<unknown>(`at://${p.did}/${BLOGROLL_NSID}/self`).catch(() => undefined),
+  ])
+  const blogroll = roll ? cleanBlogroll(roll.value) : undefined
   // Only their own posts count: a submission pointing at someone else's post isn't theirs to list.
   const listed = new Map<string, string | undefined>()
   for (const r of subs) {
@@ -84,6 +91,7 @@ export async function person(actor: string): Promise<Person> {
     stories,
     mixes,
     shares,
+    ...(blogroll ? { blogroll: blogroll.feeds } : {}),
     totals: { listed: stories.length, votes: stories.reduce((n, s) => n + (s.score ?? 0), 0), comments: stories.reduce((n, s) => n + (s.comments ?? 0), 0) },
   }
 }

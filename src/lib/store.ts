@@ -96,6 +96,8 @@ interface Prefs {
   followedMixes: FollowedMix[]
   /** People you follow on PaperWing: their listings come into For you. */
   people: FollowedPerson[]
+  /** Your feeds shown on your PaperWing profile as a blogroll (io.paperwing.blogroll). */
+  blogrollPublic: boolean
   interests: Interest[]
   mutedWords: string[]
   mutedDomains: string[]
@@ -130,6 +132,7 @@ export const SYNCED_PREFS = [
   'mixes',
   'followedMixes',
   'people',
+  'blogrollPublic',
   'mutedWords',
   'mutedDomains',
   'labelers',
@@ -164,6 +167,7 @@ export const usePrefs = create<Prefs>()(
       mixes: [],
       followedMixes: [],
       people: [],
+      blogrollPublic: false,
       interests: [],
       mutedWords: [],
       mutedDomains: [],

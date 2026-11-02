@@ -30,6 +30,8 @@ export interface Person {
   mixes: PersonMix[]
   /** What they've shared with a note (io.paperwing.share), newest first. */
   shares?: (Story & { note?: string })[]
+  /** The blogs they read, if they publish their blogroll. */
+  blogroll?: { url: string; label: string; site?: string }[]
   /** Likes and replies across their listings: the votes and comments they've drawn. */
   totals: { listed: number; votes: number; comments: number }
 }

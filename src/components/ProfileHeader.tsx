@@ -5,6 +5,7 @@ import { compact, plural } from '../lib/format'
 import { profilePath, usePerson } from '../lib/people'
 import { usePrefs } from '../lib/store'
 import { homeOrigin, share, toast } from '../lib/ui'
+import { Blogroll } from './Blogroll'
 import { RssButton } from './RssButton'
 import { SourceIcon } from './SourceIcon'
 
@@ -99,6 +100,7 @@ export function ProfileHeader({ actor }: { actor: string }) {
             front page.
           </p>
         )}
+        {data.blogroll && data.blogroll.length > 0 && <Blogroll feeds={data.blogroll} who={profile.name ?? `@${profile.handle}`} mine={mine} />}
         {mixes.length > 0 && (
           <div className="mt-4">
             <p className="text-[0.8125rem] font-semibold text-ink-3">Mixes</p>

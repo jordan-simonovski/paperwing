@@ -9,11 +9,13 @@ import { isTyping, useUI } from '../lib/ui'
 import { Composer } from '../components/Composer'
 import { MoveHome } from '../components/MoveHome'
 import { useMediaQuery } from '../lib/hooks'
+import { useBlogrollPublisher } from '../lib/blogroll'
 
 export function Root() {
   const { theme, textSize, density, set, welcomed } = usePrefs()
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const { pathname } = useLocation()
+  useBlogrollPublisher()
 
   useEffect(() => {
     const el = document.documentElement
