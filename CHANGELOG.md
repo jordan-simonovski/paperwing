@@ -1,5 +1,18 @@
 # What's new
 
+## 0.4.0
+
+_Released 2 November 2026_
+
+### Highlights
+
+- **Papers: new research, shared by the people who did it.** Follow Papers to see preprints and papers that researchers post on Bluesky, alongside Retraction Watch, eLife and The Scholarly Kitchen. Any story in your feeds that links to arXiv, bioRxiv, medRxiv, OSF or a DOI is picked up by Papers too, wherever it was posted.
+
+### New
+
+- **3D printing and electronics.** A new Making section has 3D printing and Electronics topics, with Hackaday, Prusa, Hackster.io and CNX Software, plus the 3D printing and electronics crowds on Lemmy, Bluesky and Mastodon.
+- **Science by field.** Physics, Maths, Chemistry, Biology, Ecology, Earth sciences, Brain and mind, and Archaeology are now topics of their own under Science, each with its own publishers, Bluesky feeds and Mastodon hashtags.
+
 ## 0.3.0
 
 _Released 2 November 2026_
