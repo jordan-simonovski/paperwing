@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { lemmyComment, lemmyFollow, lemmyInbox, lemmyPost, lemmySignIn, lemmyVote, TotpRequired, useLemmyAccount } from './lemmyAccount'
+import { lemmyComment, lemmyFollow, lemmyInbox, lemmyPost, lemmySignIn, lemmySignOut, lemmyVote, TotpRequired, useLemmyAccount } from './lemmyAccount'
 
 type Call = { url: string; method: string; body?: Record<string, unknown>; auth?: string | null }
 let calls: Call[] = []
@@ -47,6 +47,20 @@ describe('Lemmy account', () => {
     expect(useLemmyAccount.getState().votes['https://programming.dev/post/1']).toBe(1)
     expect(await lemmyComment('https://programming.dev/post/1', 'Good point', 'https://programming.dev/comment/9')).toBe('https://lemmy.world/comment/100')
     expect(calls.find((c) => c.url.endsWith('/comment') && c.method === 'POST')?.body).toEqual({ content: 'Good point', post_id: 5, parent_id: 77 })
+  })
+
+  it('looks a post up again on the new server after switching servers', async () => {
+    // Each server numbers posts its own way: lemmy.world's 5 is some other post on lemmy.ml.
+    const post = 'https://beehaw.org/post/3'
+    useLemmyAccount.setState({ instance: 'lemmy.world', user: 'jordan', jwt: 'tok' })
+    server({ resolve_object: () => reply({ post: { post: { id: 5, ap_id: post } } }), 'post/like': () => reply({}), 'user/logout': () => reply({}) })
+    await lemmyVote(post, 'post')
+    lemmySignOut()
+    useLemmyAccount.setState({ instance: 'lemmy.ml', user: 'jordan', jwt: 'tok2' })
+    server({ resolve_object: () => reply({ post: { post: { id: 801, ap_id: post } } }), 'post/like': () => reply({}) })
+    calls = []
+    await lemmyVote(post, 'post')
+    expect(calls.find((c) => c.url.endsWith('post/like'))).toMatchObject({ url: 'https://lemmy.ml/api/v3/post/like', body: { post_id: 801, score: 1 } })
   })
 
   it('takes a vote back when the server refuses it', async () => {

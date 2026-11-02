@@ -102,14 +102,16 @@ interface Resolved {
   post?: { post: { id: number; ap_id: string } }
   comment?: { comment: { id: number; ap_id: string; post_id: number } }
 }
+/** Lookups by server and address: ids are that server's own, so signing in elsewhere looks again. */
 const resolved = new Map<string, Resolved>()
 
 /** A post or comment on your server, by its address anywhere. */
 async function resolve(apId: string): Promise<Resolved> {
-  const hit = resolved.get(apId)
+  const key = `${useLemmyAccount.getState().instance} ${apId}`
+  const hit = resolved.get(key)
   if (hit) return hit
   const r = await call<Resolved>(`resolve_object?q=${encodeURIComponent(apId)}`)
-  resolved.set(apId, r)
+  resolved.set(key, r)
   return r
 }
 
