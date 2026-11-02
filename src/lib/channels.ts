@@ -504,3 +504,18 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
   }
   return undefined
 }
+
+/**
+ * The public RSS feed mirroring a channel, where there is one (api/rss.ts): PaperWing's front page
+ * and boards, topics, published mixes and people. Personal channels (For you, your own sources) have
+ * none: they're built from your choices on your device.
+ */
+export function rssPath(channelId: string): string | undefined {
+  if (channelId === 'paperwing') return '/rss/front'
+  if (channelId.startsWith('paperwing:')) return `/rss/board/${channelId.slice(10)}`
+  if (TOPIC_BY_ID.has(channelId)) return `/rss/topic/${channelId}`
+  if (channelId.startsWith('u:')) return `/rss/u/${encodeURIComponent(channelId.slice(2))}`
+  const mix = /^mix:(did:[a-z0-9:._%-]+):([a-z2-7]{13})$/.exec(channelId)
+  if (mix) return `/rss/mix/${mix[1]}/${mix[2]}`
+  return undefined
+}

@@ -1,7 +1,8 @@
+import { RssButton } from './RssButton'
 import { ProfileHeader } from './ProfileHeader'
 import { AlertTriangle, Check, Loader2, Plus, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { findTopic, listOf, type Channel } from '../lib/channels'
+import { findTopic, listOf, rssPath, type Channel } from '../lib/channels'
 import { topicIcon } from '../lib/topicIcons'
 import type { FeedStatus } from '../lib/hooks'
 import { kindOf, type Ranked, type SortMode, type StoryKind } from '../lib/rank'
@@ -148,6 +149,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                   {joinedIt ? 'Joined' : 'Join'}
                 </button>
               )}
+              {rssPath(channel.id) && <RssButton path={rssPath(channel.id)!} />}
               {channel.action && (
                 <Link className="btn h-8 flex-none px-3.5 text-[0.8125rem]" to={channel.action.to}>
                   {channel.action.label}

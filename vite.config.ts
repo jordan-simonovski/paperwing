@@ -16,6 +16,7 @@ function vercelApiDev(): Plugin {
       server.middlewares.use(async (req, res, next) => {
         // Same rewrites as vercel.json: the Bluesky feed generator's well-known and xrpc paths.
         if (req.url?.startsWith('/.well-known/did.json')) req.url = '/api/atproto?route=did'
+        else if (req.url === '/rss' || req.url?.startsWith('/rss/')) req.url = `/api/rss?path=${encodeURIComponent(req.url.slice(4).replace(/^\//, ''))}`
         else if (req.url?.startsWith('/xrpc/')) {
           const [path, qs = ''] = req.url.slice('/xrpc/'.length).split('?')
           req.url = `/api/atproto?route=${path}${qs ? `&${qs}` : ''}`

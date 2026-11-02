@@ -32,6 +32,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router'
 import { useMediaQuery } from '../lib/hooks'
 import { download, exportJson, exportMarkdown, parseImport, toSavedItems } from '../lib/importExport'
+import { buildOpml, parseOpml } from '../lib/opml'
 import { BlogSuggestions, FeedFinder } from '../components/FollowBlogs'
 import { BlueskyAccount } from '../components/BlueskyAccount'
 import { SourceIcon } from '../components/SourceIcon'
@@ -54,7 +55,8 @@ import { pushAvailable, pushInfo, usePush } from '../lib/push'
 import { STATUS_PAGES } from '../lib/statusPageList'
 import { SummarySettings } from '../components/SummarySettings'
 import { formatCode, isCode, newSyncCode, normalizeCode, syncAvailable, syncNow, useSync } from '../lib/sync'
-import { fullDate, timeAgo } from '../lib/format'
+import { fullDate, plural, timeAgo } from '../lib/format'
+import { TOPIC_BY_ID } from '../lib/topics'
 import { isIOS, usePWA } from '../lib/pwa'
 import { queryClient } from '../lib/query'
 import { useActivity, usePrefs } from '../lib/store'
@@ -623,6 +625,50 @@ function NotificationsPage() {
   )
 }
 
+/** Moving feeds in and out with OPML, the format every feed reader speaks. */
+function OpmlTools() {
+  const p = usePrefs()
+  const input = useRef<HTMLInputElement>(null)
+  const importFile = async (file: File) => {
+    const found = parseOpml(await file.text())
+    const have = new Set(p.customFeeds.map((f) => f.url))
+    const added = found.filter((f) => !have.has(f.url))
+    if (!found.length) return toast('No feeds found in that file', { tone: 'error' })
+    p.set({ customFeeds: [...p.customFeeds, ...added] })
+    toast(added.length ? `Following ${plural(added.length, 'new feed')}. They're in Blogs.` : 'You already follow all of those')
+  }
+  const exportFile = () => {
+    const topicFeeds = p.followed.flatMap((id) => {
+      const t = TOPIC_BY_ID.get(id)
+      const feeds = (t?.feeds ?? []).flatMap((f) => (f.kind === 'rss' ? [{ url: f.url, label: f.label }] : []))
+      return t && feeds.length ? [{ name: t.label, feeds }] : []
+    })
+    download('paperwing-feeds.opml', buildOpml('PaperWing feeds', [{ name: 'Your feeds', feeds: p.customFeeds }, ...topicFeeds]), 'text/x-opml')
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-1">
+      <input
+        ref={input}
+        type="file"
+        accept=".opml,.xml,text/xml,text/x-opml"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void importFile(file)
+          e.target.value = ''
+        }}
+      />
+      <button className="btn h-9 text-[0.8125rem]" onClick={() => input.current?.click()}>
+        <Upload size={14} /> Import OPML
+      </button>
+      <button className="btn h-9 text-[0.8125rem]" onClick={exportFile}>
+        <Download size={14} /> Export OPML
+      </button>
+      <span className="text-[0.8125rem] text-ink-3">Bring feeds from another reader, or take yours (and your topics’ publishers) anywhere.</span>
+    </div>
+  )
+}
+
 function SourcesSettings() {
   const p = usePrefs()
   return (
@@ -669,6 +715,7 @@ function SourcesSettings() {
           </div>
         ))}
         <FeedFinder />
+        <OpmlTools />
       </Section>
       <Section title="Releases you follow" hint="New versions show up in Releases, alongside the projects your topics already track. Paste owner/name or a GitHub link.">
         <ChipList

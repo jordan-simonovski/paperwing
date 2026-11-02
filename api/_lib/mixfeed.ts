@@ -30,7 +30,7 @@ export async function readMix(uri: string): Promise<{ mix: MixRecord; did: strin
 const APPVIEW = 'https://public.api.bsky.app'
 
 /** Recent link stories from a mix's non-Bluesky sources: a few from each, newest first. */
-async function linkStories(sources: MixSource[]): Promise<Story[]> {
+export async function linkStories(sources: MixSource[]): Promise<Story[]> {
   const jobs: (() => Promise<Story[]>)[] = []
   for (const s of sources) {
     if (s.kind === 'rss') jobs.push(() => rss(s.url, s.label))

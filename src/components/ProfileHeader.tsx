@@ -5,6 +5,7 @@ import { compact, plural } from '../lib/format'
 import { profilePath, usePerson } from '../lib/people'
 import { usePrefs } from '../lib/store'
 import { homeOrigin, share, toast } from '../lib/ui'
+import { RssButton } from './RssButton'
 import { SourceIcon } from './SourceIcon'
 
 /**
@@ -89,6 +90,7 @@ export function ProfileHeader({ actor }: { actor: string }) {
           <button className="btn h-9 text-[0.8125rem]" onClick={() => void share(`${profile.name ?? `@${profile.handle}`} on PaperWing`, `${homeOrigin()}${profilePath(profile.handle)}`)}>
             <Share2 size={14} /> Share
           </button>
+          <RssButton path={`/rss/u/${encodeURIComponent(profile.handle)}`} label="RSS" className="btn h-9 text-[0.8125rem]" />
         </div>
         {mine && (
           <p className="mt-3 text-[0.8125rem] leading-relaxed text-ink-3">

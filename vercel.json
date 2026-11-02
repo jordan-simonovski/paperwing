@@ -19,6 +19,14 @@
       "destination": "/api/atproto?route=:nsid"
     },
     {
+      "source": "/rss",
+      "destination": "/api/rss?path="
+    },
+    {
+      "source": "/rss/:path*",
+      "destination": "/api/rss?path=:path*"
+    },
+    {
       "source": "/t/:channel/:item",
       "has": [
         {
