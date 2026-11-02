@@ -25,8 +25,10 @@ const SUBS = 'rd:push:subs'
 const STATE = 'rd:push:state'
 /** When PaperWing was last opened on each device, written only by the device (registering, opening the app). */
 const SEEN = 'rd:push:seen'
-/** How many alert runs there have been (this month): what each run takes from long lists. */
+/** How many alert runs there have been (this month): which stretch of a long list of followed pages a run reads. */
 const TURN = 'rd:push:turn'
+/** The device the last alert run didn't get to (when it ran out of time): the next one starts there. */
+const NEXT = 'rd:push:next'
 const ALERTS_AT = 'rd:push:alerts-at'
 const SCHEDULED_AT = 'rd:push:scheduled-at'
 const VAPID = 'rd:push:vapid'
@@ -145,14 +147,15 @@ async function send(sub: SubRecord, payload: string, ttl: number): Promise<Sent>
   }
 }
 
-/** Runs `fn` over `items`, `limit` at a time, starting no new one after `until`. */
-async function eachUntil<T>(items: T[], limit: number, until: number, fn: (t: T) => Promise<void>): Promise<void> {
+/** Runs `fn` over `items`, `limit` at a time, starting no new one after `until`. Returns how many it started. */
+async function eachUntil<T>(items: T[], limit: number, until: number, fn: (t: T) => Promise<void>): Promise<number> {
   let next = 0
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length) }, async () => {
       while (next < items.length && Date.now() < until) await fn(items[next++]).catch(() => {})
     }),
   )
+  return next
 }
 
 /** What the alert run told a device, or nothing when the record can't be read (it starts again). */
@@ -230,8 +233,14 @@ async function alerts(origin: string): Promise<Response> {
   const store = kv()
   const now = Date.now()
   const until = now + RUN_BUDGET
-  // Which run this is: what each run takes from long lists (pages, devices) starts where the last left off.
-  const turn = (await store.bump(TURN, 30 * 86_400).catch(() => 1)) - 1
+  // Which run this is (for followed pages), and where the last one stopped sending (for devices).
+  const [turn, resume] = await Promise.all([
+    store.bump(TURN, 30 * 86_400).then(
+      (n) => n - 1,
+      () => 0,
+    ),
+    store.get(NEXT).catch(() => null),
+  ])
   const { all: everyone, orphans } = await devices()
 
   // Devices nobody has opened PaperWing on in a long while go. One from before `seenAt` was kept
@@ -242,11 +251,11 @@ async function alerts(origin: string): Promise<Response> {
       .filter(({ field, sub, state }) => !sub.seenAt && !state?.firstSeenAt && !stale.includes(field))
       .map(({ field, state }) => [field, JSON.stringify({ ...emptyState(), ...state, firstSeenAt: now })]),
   )
-  // Starting somewhere else each run: when a run runs out of time, it isn't always the same devices that wait.
-  const subs = rotate(
-    everyone.filter((d) => !stale.includes(d.field) && d.sub.alerts),
-    turn * SEND_AT_ONCE,
-  )
+  // In a steady order (by device), so the list of followed pages built from it stays the same between runs.
+  const subs = everyone.filter((d) => !stale.includes(d.field) && d.sub.alerts).sort((a, b) => (a.field < b.field ? -1 : 1))
+  // Sending starts where the last run stopped, so when a run runs out of time the same devices don't wait every time.
+  const from = resume ? subs.findIndex((d) => d.field >= resume) : 0
+  const order = rotate(subs, Math.max(0, from))
 
   const isBuiltIn = (p: string) => STATUS_PAGES.some((x) => x.id === p)
   const wantedPages = new Set(subs.flatMap(({ sub }) => sub.alerts!.incidents))
@@ -287,7 +296,7 @@ async function alerts(origin: string): Promise<Response> {
   let sent = 0
   let later = 0
   const gone: string[] = []
-  await eachUntil(subs, SEND_AT_ONCE, until, async ({ field, sub, state: held }) => {
+  const started = await eachUntil(order, SEND_AT_ONCE, until, async ({ field, sub, state: held }) => {
     const before: AlertState = { ...emptyState(), ...held, firstSeenAt: held?.firstSeenAt ?? now }
     // The app was opened since the badge was last counted: it starts again from nothing.
     if ((sub.seenAt ?? 0) > (before.badgeFrom ?? 0)) Object.assign(before, { unseen: 0, badgeFrom: sub.seenAt })
@@ -313,7 +322,11 @@ async function alerts(origin: string): Promise<Response> {
     STATE,
     [...told].filter(([f]) => present.has(f) && !gone.includes(f) && !stillStale.includes(f)),
   )
-  await forget([...gone, ...stillStale, ...orphans])
+  await forget([...gone, ...stillStale])
+  // Records left without their device: only those, never a registration (one may have come back during the run).
+  if (orphans.length) await Promise.all([store.hdel(STATE, orphans), store.hdel(SEEN, orphans)])
+  // Where the next run starts sending: the first device this one didn't reach, if any.
+  await store.set(NEXT, started < order.length ? order[started].field : '', 7 * 86_400)
   await store.set(ALERTS_AT, String(Date.now()), 7 * 86_400)
   return json(
     { devices: subs.length, sent, later, removed: gone.length + stillStale.length, incidents: world.incidents.length, threads: counts.size, spikes: spikes.filter((s) => s.level === 'spike').length },

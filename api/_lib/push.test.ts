@@ -326,9 +326,13 @@ describe('alert run, around the edges', () => {
       await run()
       const reached = new Set(sent.map((s) => s.endpoint))
       expect(reached.size).toBeLessThan(60)
-      deliver = async () => {}
+      // Next run starts with the ones this one didn't reach.
+      const order: string[] = []
+      deliver = async (endpoint) => void order.push(endpoint)
       await run()
       expect(new Set(sent.map((s) => s.endpoint)).size).toBe(60)
+      const waiting = 60 - reached.size
+      expect(order.slice(0, waiting).every((e) => !reached.has(e))).toBe(true)
     } finally {
       vi.useRealTimers()
     }
@@ -395,5 +399,25 @@ describe('alert run, around the edges', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('reads every followed page in turn when the device count doesn’t divide evenly into a run', async () => {
+    await reset()
+    for (let n = 0; n < 30; n++) await from(400 + n, { subscription: device(400 + n), alerts: { ...incidentsOnly, incidents: Array.from({ length: 10 }, (_, i) => `t${n}-${i}.example.com`) } })
+    for (let i = 0; i < 3; i++) await run()
+    expect(new Set(askedHosts.flat()).size).toBe(300)
+  })
+
+  it('clearing leftover records never touches a device’s registration', async () => {
+    await reset()
+    const { kv } = await kvMod()
+    const f = await fieldOf(device(17).endpoint)
+    // A leftover "what it was told" record, and the device registering again while a run is on.
+    await kv().hset('rd:push:state', [[f, JSON.stringify({ unseen: 0, incidents: [], replies: {}, outages: {} })]])
+    deliver = async () => {}
+    const running = run()
+    await from(17, { subscription: device(17), alerts: incidentsOnly })
+    await running
+    expect(Object.keys(await kv().hgetall('rd:push:subs'))).toEqual([f])
   })
 })
