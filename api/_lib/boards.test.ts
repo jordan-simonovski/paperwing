@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { memoryStore } from '../_test/harness.js'
 import type { PostView } from './bsky.js'
 
 const OWNER = 'did:plc:oooooooooooooooooooooooo'
@@ -28,9 +29,13 @@ const records: Record<string, unknown> = {
   [`at://${STRANGER}/io.paperwing.boardhide/1`]: { board: BOARD, subject: post(ANN, 'aaaaaaaaaaaaa'), createdAt: '2026-11-01T00:00:00Z' },
 }
 
+/** Records whose server isn't answering just now. */
+const unreachable = new Set<string>()
+
 vi.mock('./frontpage.js', () => ({
   getRecord: vi.fn(async (uri: string) => {
     if (!(uri in records)) throw new Error('gone')
+    if (unreachable.has(uri)) throw new Error('PDS timed out')
     return { uri, cid: 'c', value: records[uri] }
   }),
   handles: vi.fn(async () => new Map([[OWNER, 'owner.example']])),
@@ -62,8 +67,14 @@ vi.mock('./paperwing.js', () => ({
 vi.mock('./http.js', () => ({ fetchJson: vi.fn(async () => ({ items: [{ subject: { did: BOB } }] })) }))
 
 const { boardFront } = await import('./boards.js')
+const { linking } = await import('./atlinks.js')
+const { fetchJson } = await import('./http.js')
 
 describe('community boards', () => {
+  // Boards are kept in the store for a minute: what's asked after a failure must not be what the failure built.
+  memoryStore()
+  afterEach(() => unreachable.clear())
+
   it('lists its own listings, minus what its moderators hid and the accounts it keeps out', async () => {
     const { board, stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
     expect(board.name).toBe('Home Cooking')
@@ -71,5 +82,20 @@ describe('community boards', () => {
     // her third was for another board, and Bob is on the board's block list.
     expect(stories.map((s) => s.title)).toEqual(['aaaaaaaaaaaaa'])
     expect(stories[0].sourceLabel).toBe('Home Cooking')
+  })
+
+  // When a moderation input can't be read, the board isn't served (or kept) without it: hidden
+  // listings and kept-out accounts would come back, for everyone, for as long as it's cached.
+  const moderationDown: [string, () => unknown][] = [
+    ['the list of hides', () => vi.mocked(linking).mockRejectedValueOnce(new Error('Constellation is down'))],
+    ["a moderator's hide", () => unreachable.add(`at://${MOD}/io.paperwing.boardhide/1`)],
+    ['the block list', () => vi.mocked(fetchJson).mockRejectedValueOnce(new Error('AppView is down'))],
+  ]
+  it.each(moderationDown)("fails, rather than showing what's kept off, when %s can't be read", async (_, breakIt) => {
+    breakIt()
+    await expect(boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).rejects.toThrow()
+    unreachable.clear()
+    const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
+    expect(stories.map((s) => s.title)).toEqual(['aaaaaaaaaaaaa'])
   })
 })

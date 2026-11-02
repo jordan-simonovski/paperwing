@@ -50,26 +50,34 @@ async function listMembers(list: string): Promise<Set<string>> {
   return out
 }
 
-/** Listings a board's moderators have hidden: hides by anyone else don't count. */
+/**
+ * Listings a board's moderators have hidden: hides by anyone else don't count. Throws when the
+ * hides, or any one of them, can't be read: an empty set would put what was hidden back.
+ */
 async function hiddenOn(board: BoardView): Promise<Set<string>> {
-  const uris = await linking(board.uri, BOARD_HIDE_NSID, '.board', 200).catch(() => [])
+  const uris = await linking(board.uri, BOARD_HIDE_NSID, '.board', 200)
   const mods = new Set([board.owner, ...board.moderators])
   const records = await pool(
     uris.filter((u) => mods.has(u.split('/')[2])),
     10,
-    (u) => getRecord<unknown>(u).catch(() => undefined),
+    (u) => getRecord<unknown>(u),
   )
-  return new Set(records.flatMap((r) => (r ? (cleanBoardHide(r.value)?.board === board.uri ? [cleanBoardHide(r.value)!.subject] : []) : [])))
+  if (records.some((r) => !r)) throw new Error("Couldn't read this board's moderation")
+  return new Set(records.flatMap((r) => (cleanBoardHide(r!.value)?.board === board.uri ? [cleanBoardHide(r!.value)!.subject] : [])))
 }
 
-/** A community board and its listings, ranked like the front page, with its moderation applied. Cached a minute. */
+/**
+ * A community board and its listings, ranked like the front page, with its moderation applied.
+ * Cached a minute. When its hides or block list can't be read it throws, so a board is never
+ * served or cached without its moderation.
+ */
 export async function boardFront(did: string, rkey: string, sort: PaperwingSort): Promise<{ board: BoardView; stories: Story[] }> {
   return cachedInKv(`rd:board:${did}:${rkey}:${sort}`, 60, async () => {
     const board = await readBoard(did, rkey)
     const [uris, hidden, kept] = await Promise.all([
       submissions(communityUrl(did, rkey), '.boardUrl', 200),
       hiddenOn(board),
-      board.blockList ? listMembers(board.blockList).catch(() => new Set<string>()) : Promise.resolve(new Set<string>()),
+      board.blockList ? listMembers(board.blockList) : Promise.resolve(new Set<string>()),
     ])
     const records = await pool(uris, 10, (u) => getRecord<unknown>(u).catch(() => undefined))
     const off = blocked()
