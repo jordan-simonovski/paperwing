@@ -36,6 +36,7 @@ import {
   siTheregister,
   siYcombinator,
 } from '../lib/logos'
+import { feedMark } from '../lib/sources/kinds'
 import type { FeedRef } from '../lib/topics'
 import { Pip } from './Pip'
 import type { SourceKind, Story } from '../lib/types'
@@ -180,35 +181,14 @@ export function StoryIcon({ story, size, mono }: { story: Pick<Story, 'source' |
 
 /** The logo for a feed before any of its stories have loaded. */
 export function FeedIcon({ feed, size = 14 }: { feed: FeedRef; size?: number }) {
-  if (feed.kind === 'status') return <Activity size={size} aria-hidden />
-  if (feed.kind === 'paperwing')
-    return (
-      <span className="inline-block flex-none" style={{ width: size, height: size }}>
-        <Pip variant="head" className="block size-full" />
-      </span>
-    )
-  if (feed.kind === 'frontpage') return <SourceIcon source="frontpage" site="frontpage.fyi" size={size} />
-  if (feed.kind === 'bskyFeed') return <SourceIcon source="bluesky" size={size} />
-  const source: SourceKind =
-    feed.kind === 'hn' || feed.kind === 'hnSearch'
-      ? 'hn'
-      : feed.kind === 'lobsters'
-        ? 'lobsters'
-        : feed.kind === 'devto'
-          ? 'devto'
-          : feed.kind === 'arxiv'
-            ? 'arxiv'
-            : feed.kind === 'hf'
-              ? 'hf'
-              : feed.kind === 'github'
-                ? 'github'
-                : feed.kind === 'releases'
-                  ? 'release'
-                  : feed.kind === 'bluesky' || feed.kind === 'lemmy' || feed.kind === 'mastodon'
-                    ? feed.kind
-                    : 'rss'
-  const site = feed.kind === 'rss' ? hostOf(feed.url)?.replace(/^(feeds?|rss|blog)\./, '') : undefined
-  return <SourceIcon source={source} site={site} size={size} />
+  const mark = feedMark(feed)
+  if ('source' in mark) return <SourceIcon source={mark.source} site={mark.site} size={size} />
+  if (mark.own === 'status') return <Activity size={size} aria-hidden />
+  return (
+    <span className="inline-block flex-none" style={{ width: size, height: size }}>
+      <Pip variant="head" className="block size-full" />
+    </span>
+  )
 }
 
 /** PaperWing's own mark at icon size: Pip's head. */

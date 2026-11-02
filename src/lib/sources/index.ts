@@ -1,112 +1,18 @@
-import { fetchPerson } from '../people'
-import { fetchBoard } from '../boards'
-import type { FeedRef } from '../topics'
 import type { Article, Story, Thread } from '../types'
-import { devtoTag, devtoThread } from './devto'
-import { hnByUrl, hnList, hnSearch, hnThread } from './hn'
+import { devtoThread } from './devto'
+import { hnByUrl, hnThread } from './hn'
 import { api, getJson, urlFromLinkKey } from './http'
-import { blueskyCustomFeed, blueskyFeed, blueskyFollowing, blueskyThread } from './bluesky'
-import { lemmyByUrl, lemmyFeed, lemmyThread } from './lemmy'
+import { blueskyThread } from './bluesky'
+import { lemmyByUrl, lemmyThread } from './lemmy'
 import { parseLemmyKey } from '../lemmyKey'
 import { parseStoryKey } from '../storyKey'
 import { useLemmyAccount } from '../lemmyAccount'
-import { mastodonHome, mastodonTags, mastodonThread, mastodonTrends } from './mastodon'
+import { mastodonThread } from './mastodon'
 
 export { linkKey, urlFromLinkKey } from './http'
+export { FEED_KINDS, feedBrand, feedId, feedLabel, feedMark, fetchFeed, newestOf, type FeedMark, type FeedOwner } from './kinds'
 export { hnSearch } from './hn'
 export { blueskyEnabled } from './bluesky'
-
-export function feedLabel(ref: FeedRef): string {
-  switch (ref.kind) {
-    case 'hn':
-      return ref.list === 'top' ? 'Hacker News' : `HN ${ref.list}`
-    case 'hnSearch':
-      return 'HN search'
-    case 'lobsters':
-      return ref.path.startsWith('t/')
-        ? `Lobsters ${ref.path
-            .slice(2)
-            .split(',')
-            .map((t) => `#${t}`)
-            .join(' ')}`
-        : 'Lobsters'
-    case 'devto':
-      return `dev.to #${ref.tag}`
-    case 'rss':
-      return ref.label
-    case 'arxiv':
-      return 'arXiv'
-    case 'hf':
-      return 'HF Papers'
-    case 'github':
-      return 'GitHub'
-    case 'bluesky':
-      return ref.feed === 'tech' ? 'Bluesky' : ref.feed === 'following' ? 'Bluesky following' : `Bluesky ${ref.feed}`
-    case 'releases':
-      return `Releases (${ref.repos.length} projects)`
-    case 'lemmy':
-      return `Lemmy c/${ref.community.split('@')[0]}`
-    case 'status':
-      return ref.active ? 'Status pages, ongoing' : 'Status pages'
-    case 'frontpage':
-      return ref.feed === 'hot' ? 'Frontpage' : `Frontpage ${ref.feed}`
-    case 'bskyFeed':
-      return ref.name
-    case 'news':
-      return `News: ${ref.q}`
-    case 'paperwing':
-      return ref.board ? 'PaperWing board' : 'PaperWing'
-    case 'person':
-      return ref.label ?? `@${ref.actor}`
-    case 'board':
-      return ref.name ?? 'Community board'
-    case 'mastodon':
-      return ref.feed === 'tags' ? `Mastodon ${(ref.tags ?? []).map((t) => `#${t}`).join(' ')}` : ref.feed === 'home' ? 'Mastodon following' : 'Mastodon trending'
-  }
-}
-
-export async function fetchFeed(ref: FeedRef): Promise<Story[]> {
-  switch (ref.kind) {
-    case 'hn':
-      return hnList(ref.list)
-    case 'hnSearch':
-      return hnSearch(ref.query, { anyWord: ref.anyWord, days: ref.anyWord ? 7 : 30, minPoints: ref.anyWord ? 5 : 2, limit: 100 })
-    case 'devto':
-      return devtoTag(ref.tag)
-    case 'lobsters':
-      return (await api('feed', { src: 'lobsters', path: ref.path })) as Story[]
-    case 'rss':
-      return (await api('feed', { src: 'rss', url: ref.url, label: ref.label })) as Story[]
-    case 'arxiv':
-      return (await api('feed', { src: 'arxiv', q: ref.q })) as Story[]
-    case 'hf':
-      return (await api('feed', { src: 'hf' })) as Story[]
-    case 'github':
-      return (await api('feed', { src: 'github', q: ref.q })) as Story[]
-    case 'bluesky':
-      return ref.feed === 'following' ? blueskyFollowing() : blueskyFeed(ref.feed)
-    case 'releases':
-      return (await api('feed', { src: 'releases', repos: ref.repos.join(',') })) as Story[]
-    case 'lemmy':
-      return lemmyFeed(ref.community, ref.sort, ref.via)
-    case 'status':
-      return (await api('feed', { src: 'status', providers: ref.providers?.join(','), active: ref.active ? '1' : undefined, hosts: ref.hosts?.length ? ref.hosts.join(',') : undefined })) as Story[]
-    case 'mastodon':
-      return ref.feed === 'tags' ? mastodonTags(ref.tags ?? []) : ref.feed === 'home' ? mastodonHome() : mastodonTrends()
-    case 'frontpage':
-      return (await api('feed', { src: 'frontpage', feed: ref.feed })) as Story[]
-    case 'bskyFeed':
-      return blueskyCustomFeed(ref.uri)
-    case 'news':
-      return (await api('feed', { src: 'news', q: ref.q })) as Story[]
-    case 'paperwing':
-      return (await api('feed', { src: 'paperwing', sort: ref.sort, board: ref.board })) as Story[]
-    case 'person':
-      return ((p) => [...p.stories, ...(p.shares ?? [])])(await fetchPerson(ref.actor))
-    case 'board':
-      return (await fetchBoard(ref.did, ref.rkey, ref.sort)).stories
-  }
-}
 
 export async function fetchThread(key: string): Promise<Thread | null> {
   const p = parseStoryKey(key)

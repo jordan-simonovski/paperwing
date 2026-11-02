@@ -130,7 +130,7 @@ What's new, and is the only production deploy: Vercel skips production builds fo
 ## Adding a source or a topic
 
 - A **topic** is an entry in `src/lib/topics.ts` (or a pack in `src/lib/packs.ts`): a label, the words that match it, and the feeds behind it.
-- A **source** needs a module in `src/lib/sources/`, a `FeedRef` kind in `src/lib/topics.ts`, and cases in `feedId`, `feedLabel` and `fetchFeed` in `src/lib/sources/index.ts`. If the source doesn't allow browsers to call it directly, its fetch goes in `api/_lib/` and gets an entry in `SOURCES` in `api/feed.ts` (what it needs from the query string, and how long its answer may be cached). Add a reference engagement level in `src/lib/rank.ts` so its stories rank fairly against the others.
+- A **source** needs a module in `src/lib/sources/`, a `FeedRef` kind in `src/lib/topics.ts`, and an entry in `FEED_KINDS` in `src/lib/sources/kinds.ts` (its cache id, name, logo, fetch and Latest). TypeScript won't build until both the table and the samples in `kinds.test.ts` have it. If the source doesn't allow browsers to call it directly, its fetch goes in `api/_lib/` and gets an entry in `SOURCES` in `api/feed.ts` (what it needs from the query string, and how long its answer may be cached). Add a reference engagement level in `src/lib/rank.ts` so its stories rank fairly against the others.
 
 ## Code of conduct
 

@@ -1,9 +1,8 @@
 import { allTopics, findTopic, resolveChannel, type Channel } from './channels'
-import { DEFAULT_INSTANCE } from './mastodon'
 import { moderateStory, type Labeler, type WarningMode } from './moderation'
 import type { FollowedPerson } from './people'
 import { merge, type Ranked, type SortMode } from './rank'
-import { feedLabel } from './sources'
+import { feedId, feedLabel, newestOf } from './sources'
 import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
 import { matchesTopic, storyText, type FeedRef, type Topic } from './topics'
 import type { Story } from './types'
@@ -100,7 +99,7 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
   const latest = opts.sort === 'new' && !channel.native
   const feeds = channel.feeds
     .filter((f) => opts.blueskyEnabled || f.kind !== 'bluesky')
-    .map((f) => (latest ? newest(f) : f))
+    .map((f) => (latest ? newestOf(f) : f))
     .map((ref) => ({ ref, id: feedId(ref, reader), label: feedLabel(ref) }))
   return { channel, feeds, sort: opts.sort }
 }
@@ -136,65 +135,4 @@ export function rankStories(reader: Reader, batches: Story[][], opts: { sort: So
     affinity,
     votes,
   })
-}
-
-/** The same source, newest first: Latest is a true timeline and doesn't miss what hasn't caught on yet. */
-function newest(ref: FeedRef): FeedRef {
-  switch (ref.kind) {
-    case 'hn':
-      return ref.list === 'top' || ref.list === 'best' ? { ...ref, list: 'new' } : ref
-    case 'lobsters':
-      return ref.path === 'hottest' || ref.path === 'active' ? { ...ref, path: 'newest' } : ref
-    case 'frontpage':
-    case 'paperwing':
-      return 'feed' in ref ? { ...ref, feed: 'new' } : { ...ref, sort: 'new' }
-    case 'lemmy':
-      return { ...ref, sort: 'New' }
-    default:
-      return ref
-  }
-}
-
-/** A feed's cache id. Per account where the feed is: switching accounts or servers never shows the last one's. */
-function feedId(ref: FeedRef, reader: Pick<Reader, 'bluesky' | 'mastodon'>): string {
-  switch (ref.kind) {
-    case 'hn':
-      return `hn:${ref.list}`
-    case 'hnSearch':
-      return `hns:${ref.query}`
-    case 'frontpage':
-      return `fp:${ref.feed}`
-    case 'news':
-      return `nw:${ref.q}`
-    case 'paperwing':
-      return `pw:${ref.sort}:${ref.board ?? ''}`
-    case 'person':
-      return `pp:${ref.actor}`
-    case 'board':
-      return `cb:${ref.did}:${ref.rkey}:${ref.sort}`
-    case 'bskyFeed':
-      return `bsf:${ref.uri}`
-    case 'lobsters':
-      return `lb:${ref.path}`
-    case 'devto':
-      return `dv:${ref.tag}`
-    case 'rss':
-      return `rss:${ref.url}`
-    case 'arxiv':
-      return `ax:${ref.q}`
-    case 'hf':
-      return 'hf'
-    case 'github':
-      return `gh:${ref.q}`
-    case 'bluesky':
-      return ref.feed === 'following' ? `bs:following:${reader.bluesky?.did ?? ''}` : `bs:${ref.feed}`
-    case 'releases':
-      return `rel:${ref.repos.join(',')}`
-    case 'lemmy':
-      return `lm:${ref.community}:${ref.sort ?? 'Hot'}${ref.via ? `@${ref.via}` : ''}`
-    case 'status':
-      return `st:${ref.providers?.join(',') ?? 'all'}:${ref.active ? 'active' : 'week'}:${ref.hosts?.join(',') ?? ''}`
-    case 'mastodon':
-      return `md:${reader.mastodon?.instance ?? DEFAULT_INSTANCE}:${ref.feed}:${ref.tags?.join(',') ?? ''}`
-  }
 }

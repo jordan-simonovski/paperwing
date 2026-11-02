@@ -6,7 +6,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { planChannel } from '../lib/channelFeed'
 import { keys } from '../lib/query'
 import { readReader } from '../lib/reader'
-import { feedLabel } from '../lib/sources'
+import { feedBrand } from '../lib/sources'
 import { usePrefs } from '../lib/store'
 import { topicIcon } from '../lib/topicIcons'
 import { TOPIC_BY_ID, type FeedRef, type Topic } from '../lib/topics'
@@ -24,11 +24,10 @@ function sourcesOf(t: Topic): { key: string; feed: FeedRef; name: string }[] {
   const seen = new Set<string>()
   const out: { key: string; feed: FeedRef; name: string }[] = []
   for (const f of topicFeeds(t)) {
-    const key = f.kind === 'rss' ? f.url : f.kind === 'hnSearch' ? 'hn' : f.kind
-    if (seen.has(key)) continue
-    seen.add(key)
-    const name = f.kind === 'hnSearch' ? 'Hacker News' : f.kind === 'lemmy' ? 'Lemmy' : f.kind === 'mastodon' ? 'Mastodon' : f.kind === 'bskyFeed' || f.kind === 'bluesky' ? 'Bluesky' : feedLabel(f)
-    out.push({ key, feed: f, name })
+    const name = feedBrand(f)
+    if (seen.has(name)) continue
+    seen.add(name)
+    out.push({ key: name, feed: f, name })
   }
   // Publishers first: they're what people recognise.
   return out.sort((a, b) => Number(b.feed.kind === 'rss') - Number(a.feed.kind === 'rss'))
