@@ -23,6 +23,10 @@ const SUBJECT = process.env.VAPID_SUBJECT ?? 'mailto:readout@example.com'
 const SUBS = 'rd:push:subs'
 /** What the alert run has told each device, written only by the alert run. */
 const STATE = 'rd:push:state'
+/** When PaperWing was last opened on each device, written only by the device (registering, opening the app). */
+const SEEN = 'rd:push:seen'
+/** How many alert runs there have been (this month): what each run takes from long lists. */
+const TURN = 'rd:push:turn'
 const ALERTS_AT = 'rd:push:alerts-at'
 const SCHEDULED_AT = 'rd:push:scheduled-at'
 const VAPID = 'rd:push:vapid'
@@ -151,23 +155,38 @@ async function eachUntil<T>(items: T[], limit: number, until: number, fn: (t: T)
   )
 }
 
-/** Every device, with what the alert run has told it (from its own key, or where it lived before). */
-async function devices(): Promise<{ field: string; sub: SubRecord; state?: AlertState }[]> {
+/** What the alert run told a device, or nothing when the record can't be read (it starts again). */
+const parseState = (raw: string | undefined): AlertState | undefined => {
+  if (!raw) return undefined
+  try {
+    return JSON.parse(raw) as AlertState
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Every device, with when PaperWing was last opened on it and what the alert run has told it
+ * (from its own key, or where it lived before), and any records left without their device.
+ */
+async function devices(): Promise<{ all: { field: string; sub: SubRecord; state?: AlertState }[]; orphans: string[] }> {
   const store = kv()
-  const [subs, states] = await Promise.all([store.hgetall(SUBS), store.hgetall(STATE)])
-  return Object.entries(subs).flatMap(([field, raw]) => {
+  const [subs, states, seen] = await Promise.all([store.hgetall(SUBS), store.hgetall(STATE), store.hgetall(SEEN)])
+  const all = Object.entries(subs).flatMap(([field, raw]) => {
     const sub = parse(raw)
     if (!sub) return []
-    const held = states[field] ? (JSON.parse(states[field]) as AlertState) : sub.state
-    return [{ field, sub, state: held }]
+    const opened = Math.max(sub.seenAt ?? 0, Number(seen[field]) || 0) || undefined
+    return [{ field, sub: { ...sub, seenAt: opened }, state: field in states ? parseState(states[field]) : sub.state }]
   })
+  const orphans = [...new Set([...Object.keys(states), ...Object.keys(seen)])].filter((f) => !(f in subs))
+  return { all, orphans }
 }
 
 /** The icon badge: notifications since the app was last opened (opening it starts again from nothing). */
 const badgeOf = (sub: SubRecord, state: AlertState | undefined) => (!state || (sub.seenAt ?? 0) > (state.badgeFrom ?? 0) ? 0 : state.unseen)
 
 async function edition(origin: string): Promise<Response> {
-  const all = await devices()
+  const { all } = await devices()
   const lead = await leadHeadline()
   const notice: Notice = { title: 'Your PaperWing edition is ready', body: lead ? `Leading today: ${lead}` : 'The best of your topics since yesterday.', url: '/today', tag: 'edition' }
   let sent = 0
@@ -183,22 +202,27 @@ async function edition(origin: string): Promise<Response> {
   return json({ sent, removed: gone.length }, 0)
 }
 
-/** Forgets devices: their registration and what they were told. */
+/** Forgets devices: their registration, when they were opened, and what they were told. */
 async function forget(fields: string[]) {
   if (!fields.length) return
-  await Promise.all([kv().hdel(SUBS, fields), kv().hdel(STATE, fields)])
+  await Promise.all([kv().hdel(SUBS, fields), kv().hdel(STATE, fields), kv().hdel(SEEN, fields)])
+}
+
+/** `items` starting at the `turn`th: each run starts somewhere else. */
+const rotate = <T>(items: T[], turn: number): T[] => {
+  if (!items.length) return items
+  const start = turn % items.length
+  return [...items.slice(start), ...items.slice(0, start)]
 }
 
 /**
  * The custom status pages to check this run: taken from each device in turn (so one device's
- * pages can't crowd out another's), and past PAGES_PER_RUN, a different stretch each run.
+ * pages can't crowd out another's), and past PAGES_PER_RUN, the next stretch each run.
  */
-function pagesThisRun(lists: string[][], now: number): string[] {
+function pagesThisRun(lists: string[][], turn: number): string[] {
   const all: string[] = []
   for (let i = 0; lists.some((l) => i < l.length); i++) for (const l of lists) if (i < l.length && !all.includes(l[i])) all.push(l[i])
-  if (all.length <= PAGES_PER_RUN) return all
-  const start = (Math.floor(now / 300_000) * PAGES_PER_RUN) % all.length
-  return [...all.slice(start), ...all.slice(0, start)].slice(0, PAGES_PER_RUN)
+  return all.length <= PAGES_PER_RUN ? all : rotate(all, turn * PAGES_PER_RUN).slice(0, PAGES_PER_RUN)
 }
 
 /** One alert run: read the world once for everyone, then tell each device what's new for it. */
@@ -206,19 +230,30 @@ async function alerts(origin: string): Promise<Response> {
   const store = kv()
   const now = Date.now()
   const until = now + RUN_BUDGET
-  const everyone = await devices()
+  // Which run this is: what each run takes from long lists (pages, devices) starts where the last left off.
+  const turn = (await store.bump(TURN, 30 * 86_400).catch(() => 1)) - 1
+  const { all: everyone, orphans } = await devices()
 
   // Devices nobody has opened PaperWing on in a long while go. One from before `seenAt` was kept
-  // counts from when this run first knew it.
+  // counts from when a run first knew it, which is noted for every such device, alerts or not.
   const stale = everyone.filter(({ sub, state }) => (sub.seenAt ?? state?.firstSeenAt ?? now) < now - FORGET_AFTER).map((d) => d.field)
-  const subs = everyone.filter((d) => !stale.includes(d.field) && d.sub.alerts)
+  const told = new Map<string, string>(
+    everyone
+      .filter(({ field, sub, state }) => !sub.seenAt && !state?.firstSeenAt && !stale.includes(field))
+      .map(({ field, state }) => [field, JSON.stringify({ ...emptyState(), ...state, firstSeenAt: now })]),
+  )
+  // Starting somewhere else each run: when a run runs out of time, it isn't always the same devices that wait.
+  const subs = rotate(
+    everyone.filter((d) => !stale.includes(d.field) && d.sub.alerts),
+    turn * SEND_AT_ONCE,
+  )
 
   const isBuiltIn = (p: string) => STATUS_PAGES.some((x) => x.id === p)
   const wantedPages = new Set(subs.flatMap(({ sub }) => sub.alerts!.incidents))
   const builtIn = [...wantedPages].filter(isBuiltIn)
   const hosts = pagesThisRun(
     subs.map(({ sub }) => sub.alerts!.incidents.filter((p) => !isBuiltIn(p))),
-    now,
+    turn,
   )
   // Threads to count, taken in turns from each device, so one device watching hundreds can't
   // crowd out everyone else's.
@@ -252,7 +287,6 @@ async function alerts(origin: string): Promise<Response> {
   let sent = 0
   let later = 0
   const gone: string[] = []
-  const told: [string, string][] = []
   await eachUntil(subs, SEND_AT_ONCE, until, async ({ field, sub, state: held }) => {
     const before: AlertState = { ...emptyState(), ...held, firstSeenAt: held?.firstSeenAt ?? now }
     // The app was opened since the badge was last counted: it starts again from nothing.
@@ -266,23 +300,23 @@ async function alerts(origin: string): Promise<Response> {
       if (outcome === 'retry') return void later++
       sent++
     }
-    if (JSON.stringify(state) !== JSON.stringify(held)) told.push([field, JSON.stringify(state)])
+    if (JSON.stringify(state) !== JSON.stringify(held)) told.set(field, JSON.stringify(state))
   })
-  // Only for devices still registered: one turned off during the run stays off.
-  const still = told.length
-    ? await store.hmget(
-        SUBS,
-        told.map(([f]) => f),
-      )
-    : []
+
+  // Read again before writing: a device turned off during the run stays off, and one opened during it isn't stale.
+  const fields = [...new Set([...told.keys(), ...stale])]
+  const [nowSubs, nowSeen] = fields.length ? await Promise.all([store.hmget(SUBS, fields), store.hmget(SEEN, fields)]) : [[], []]
+  const present = new Set(fields.filter((_, i) => nowSubs[i] !== null))
+  const opened = new Map(fields.map((f, i) => [f, Math.max(parse(nowSubs[i] ?? '')?.seenAt ?? 0, Number(nowSeen[i]) || 0)]))
+  const stillStale = stale.filter((f) => !opened.get(f) || opened.get(f)! < now - FORGET_AFTER)
   await store.hset(
     STATE,
-    told.filter((_, i) => still[i] !== null && !gone.includes(told[i][0])),
+    [...told].filter(([f]) => present.has(f) && !gone.includes(f) && !stillStale.includes(f)),
   )
-  await forget([...gone, ...stale])
+  await forget([...gone, ...stillStale, ...orphans])
   await store.set(ALERTS_AT, String(Date.now()), 7 * 86_400)
   return json(
-    { devices: subs.length, sent, later, removed: gone.length + stale.length, incidents: world.incidents.length, threads: counts.size, spikes: spikes.filter((s) => s.level === 'spike').length },
+    { devices: subs.length, sent, later, removed: gone.length + stillStale.length, incidents: world.incidents.length, threads: counts.size, spikes: spikes.filter((s) => s.level === 'spike').length },
     0,
   )
 }
@@ -355,9 +389,6 @@ const validPrefs = (a: unknown): AlertPrefs | undefined => {
   }
 }
 
-/** Preferences that ask for nothing at all: such a device is never sent anything, so isn't kept. */
-const asksForNothing = (a: AlertPrefs | undefined) => !!a && !a.edition && !a.replies && !a.outages && !a.incidents.length
-
 export async function POST(request: Request): Promise<Response> {
   if (!configured()) return fail('Push is not set up', 501)
   const body = await readJson<{ subscription?: SubRecord; alerts?: unknown; remove?: string; seen?: string; test?: string }>(request)
@@ -369,12 +400,11 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (body.test) return sendTest(body.test, publicOrigin(request.url))
   if (body.seen) {
-    // The app is open: the device is in use, and its badge starts again from nothing (the alert
-    // run counts from here).
+    // The app is open: the device is in use, and its badge starts again from nothing (the alert run
+    // counts from here). Its own key, so this can't undo a settings change made at the same moment.
     const field = id(body.seen)
     const [raw] = await store.hmget(SUBS, [field])
-    const sub = raw ? parse(raw) : undefined
-    if (sub) await store.hset(SUBS, [[field, JSON.stringify({ ...sub, seenAt: Date.now() })]])
+    if (raw) await store.hset(SEEN, [[field, String(Date.now())]])
     return json({ ok: true }, 0)
   }
   const sub = body.subscription
@@ -387,10 +417,6 @@ export async function POST(request: Request): Promise<Response> {
   }
   const held = raw ? parse(raw) : undefined
   const alerts = body.alerts === undefined ? held?.alerts : validPrefs(body.alerts)
-  if (asksForNothing(alerts)) {
-    await forget([field])
-    return json({ ok: true }, 0)
-  }
   if (!raw && (await store.hlen(SUBS)) >= MAX_SUBS) return fail('Too many devices are registered here', 429)
   // It registers at launch, so this is the device in use. (State from before it had its own key
   // rides along until the alert run has moved it.)

@@ -142,6 +142,7 @@ describe('alert run, around the edges', () => {
       }),
     )
   const incidentsOnly = { edition: false, replies: false, outages: false, incidents: ['github'], watched: [] }
+  const fieldOf = async (endpoint: string) => (await import('node:crypto')).createHash('sha256').update(endpoint).digest('hex').slice(0, 32)
 
   it('keeps an alert the push service couldn’t take just now, and sends it on the next run', async () => {
     await reset()
@@ -154,6 +155,18 @@ describe('alert run, around the edges', () => {
     deliver = async () => {}
     await run()
     expect(sent.map((s) => s.payload.notification.title)).toEqual(['GitHub: Actions down'])
+  })
+
+  it('so is the push service asking to slow down (429)', async () => {
+    await reset()
+    await from(16, { subscription: device(16), alerts: incidentsOnly })
+    deliver = async () => {
+      throw Object.assign(new Error('Too Many Requests'), { statusCode: 429 })
+    }
+    await run()
+    deliver = async () => {}
+    await run()
+    expect(sent).toHaveLength(1)
   })
 
   it('a timeout is a hiccup too, not a delivery', async () => {
@@ -197,22 +210,31 @@ describe('alert run, around the edges', () => {
     const subs = await kv().hgetall('rd:push:subs')
     expect(Object.values(subs).map((r) => JSON.parse(r).endpoint)).toEqual([device(4).endpoint])
     expect(JSON.parse(Object.values(subs)[0]).alerts.outages).toBe(true)
+    // Nothing of the device that turned off is kept, not even what it was told.
+    expect(Object.keys(await kv().hgetall('rd:push:state'))).toEqual([await fieldOf(device(4).endpoint)])
   })
 
-  it('the badge starts again when the app opens, even if that happens mid-run', async () => {
+  it('the badge starts again from nothing once the app has been opened', async () => {
     await reset()
-    await from(6, { subscription: device(6), alerts: incidentsOnly })
-    await run()
-    expect(sent.at(-1)?.payload.notification.app_badge).toBe('1')
-    await post({ seen: device(6).endpoint })
-    counts = new Map()
-    // A new incident later: counted from nothing again.
-    const { kv } = await kvMod()
-    const [field] = Object.keys(await kv().hgetall('rd:push:state'))
-    const state = JSON.parse((await kv().hmget('rd:push:state', [field]))[0]!)
-    await kv().hset('rd:push:state', [[field, JSON.stringify({ ...state, incidents: [] })]])
-    await run()
-    expect(sent.at(-1)?.payload.notification.app_badge).toBe('1')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      await from(6, { subscription: device(6), alerts: incidentsOnly })
+      await run()
+      expect(sent.at(-1)?.payload.notification.app_badge).toBe('1')
+      // Opened a moment later (it registers at launch, two seconds before it can say it's open).
+      vi.setSystemTime(Date.now() + 5_000)
+      await post({ seen: device(6).endpoint })
+      counts = new Map()
+      // A new incident later: counted from nothing again.
+      const { kv } = await kvMod()
+      const [field] = Object.keys(await kv().hgetall('rd:push:state'))
+      const state = JSON.parse((await kv().hmget('rd:push:state', [field]))[0]!)
+      await kv().hset('rd:push:state', [[field, JSON.stringify({ ...state, incidents: [] })]])
+      await run()
+      expect(sent.at(-1)?.payload.notification.app_badge).toBe('1')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('every device’s status pages get checked, however many other devices follow', async () => {
@@ -250,11 +272,14 @@ describe('alert run, around the edges', () => {
     }
   })
 
-  it('doesn’t keep a device that asks for nothing', async () => {
+  it('keeps a device whose settings ask for nothing (turning one back on isn’t a new device), and sends it nothing', async () => {
     await reset()
     await from(10, { subscription: device(10), alerts: { edition: false, replies: false, outages: false, incidents: [], watched: [] } })
-    const { kv } = await kvMod()
-    expect(await kv().hgetall('rd:push:subs')).toEqual({})
+    await run()
+    expect(sent).toHaveLength(0)
+    expect((await from(10, { subscription: device(10), alerts: incidentsOnly })).status).toBe(200)
+    await run()
+    expect(sent).toHaveLength(1)
   })
 
   it('a device from before alert state had its own place keeps what it was told: no repeats', async () => {
@@ -268,5 +293,107 @@ describe('alert run, around the edges', () => {
     await run()
     expect(sent).toHaveLength(0)
     expect(Object.keys(await kv().hgetall('rd:push:state'))).toEqual([field])
+  })
+
+  it('what a device was told goes with it: a record left without its device is cleared on the next run', async () => {
+    await reset()
+    const { kv } = await kvMod()
+    await kv().hset('rd:push:state', [['f'.repeat(32), JSON.stringify({ unseen: 2, incidents: ['st-x'], replies: {}, outages: {} })]])
+    await run()
+    expect(await kv().hgetall('rd:push:state')).toEqual({})
+  })
+
+  it('one unreadable record doesn’t stop the run for everyone', async () => {
+    await reset()
+    const { kv } = await kvMod()
+    await from(12, { subscription: device(12), alerts: incidentsOnly })
+    await kv().hset('rd:push:state', [[await fieldOf(device(12).endpoint), '{not json']])
+    expect((await run()).status).toBe(200)
+    expect(sent).toHaveLength(1)
+  })
+
+  it('devices a run had no time for are first in line next run', async () => {
+    await reset()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      for (let n = 0; n < 60; n++) await from(200 + n, { subscription: device(200 + n), alerts: incidentsOnly })
+      // The first send takes the whole budget: the run starts no more after it.
+      let first = true
+      deliver = async () => {
+        if (first) vi.setSystemTime(Date.now() + 41_000)
+        first = false
+      }
+      await run()
+      const reached = new Set(sent.map((s) => s.endpoint))
+      expect(reached.size).toBeLessThan(60)
+      deliver = async () => {}
+      await run()
+      expect(new Set(sent.map((s) => s.endpoint)).size).toBe(60)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reads every followed status page in turn, however many there are', async () => {
+    await reset()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      for (let n = 0; n < 25; n++) await from(300 + n, { subscription: device(300 + n), alerts: { ...incidentsOnly, incidents: Array.from({ length: 10 }, (_, i) => `s${n}-${i}.example.com`) } })
+      for (let i = 0; i < 4; i++) {
+        await run()
+        vi.setSystemTime(Date.now() + 300_000)
+      }
+      const perRun = askedHosts.length / 4
+      expect(perRun).toBeGreaterThan(0)
+      expect(new Set(askedHosts.flat()).size).toBe(250)
+      for (const batch of askedHosts) expect(batch.length).toBeLessThanOrEqual(25)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('forgets an old device that never said when it was last opened, sixty days after first knowing it', async () => {
+    await reset()
+    const { kv } = await kvMod()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      // From before alerts and before seenAt: the edition only, nothing else on record.
+      const legacy = device(13)
+      await kv().hset('rd:push:subs', [[await fieldOf(legacy.endpoint), JSON.stringify(legacy)]])
+      await run()
+      vi.setSystemTime(Date.now() + 59 * 86_400_000)
+      await run()
+      expect(Object.keys(await kv().hgetall('rd:push:subs'))).toHaveLength(1)
+      vi.setSystemTime(Date.now() + 2 * 86_400_000)
+      await run()
+      expect(await kv().hgetall('rd:push:subs')).toEqual({})
+      expect(await kv().hgetall('rd:push:state')).toEqual({})
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a device opened again while a run is deciding to forget it is kept', async () => {
+    await reset()
+    const { kv } = await kvMod()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      await from(14, { subscription: device(14), alerts: incidentsOnly })
+      await from(15, { subscription: device(15), alerts: incidentsOnly })
+      vi.setSystemTime(Date.now() + 61 * 86_400_000)
+      // Device 15 is opened while the run is sending to the others.
+      deliver = async (endpoint) => {
+        if (endpoint === device(14).endpoint) await from(15, { seen: device(15).endpoint })
+      }
+      await kv().hset('rd:push:subs', [[await fieldOf(device(14).endpoint), JSON.stringify({ ...device(14), alerts: incidentsOnly, seenAt: Date.now() })]])
+      await run()
+      expect(
+        Object.values(await kv().hgetall('rd:push:subs'))
+          .map((r) => JSON.parse(r).endpoint)
+          .sort(),
+      ).toEqual([device(14).endpoint, device(15).endpoint].sort())
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

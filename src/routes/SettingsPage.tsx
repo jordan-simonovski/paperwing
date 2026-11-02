@@ -121,8 +121,13 @@ function NotificationSettings() {
       </button>
     )
   const pages = [...STATUS_PAGES.map((p) => ({ id: p.id, name: p.name })), ...statusPages.map((p) => ({ id: p.host, name: p.name }))]
-  const picked = new Set(alerts.incidents)
-  const full = alertPages.full(alerts.incidents)
+  // A page you've stopped following doesn't count, and goes from your alerts the next time you pick.
+  const current = alertPages.of(
+    alerts.incidents,
+    pages.map((p) => p.id),
+  )
+  const picked = new Set(current)
+  const full = alertPages.full(current)
   const builtIn = new Set(STATUS_PAGES.map((p) => p.id))
   const minutes = alertsAt ? Math.round((Date.now() - alertsAt) / 60_000) : undefined
   return (
@@ -139,7 +144,7 @@ function NotificationSettings() {
               className={`chip h-8 px-3 ${picked.has(p.id) ? 'on' : ''}`}
               aria-pressed={picked.has(p.id)}
               disabled={full && !picked.has(p.id) && !builtIn.has(p.id)}
-              onClick={() => setAlerts({ incidents: picked.has(p.id) ? alerts.incidents.filter((x) => x !== p.id) : [...alerts.incidents, p.id] })}
+              onClick={() => setAlerts({ incidents: picked.has(p.id) ? current.filter((x) => x !== p.id) : [...current, p.id] })}
             >
               {picked.has(p.id) && <Check size={13} />}
               {p.name}

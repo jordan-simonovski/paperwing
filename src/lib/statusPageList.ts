@@ -46,4 +46,6 @@ const isBuiltIn = (id: string) => STATUS_PAGES.some((p) => p.id === id)
 export const alertPages = Object.assign((ids: string[]) => [...ids.filter(isBuiltIn), ...ids.filter((id) => !isBuiltIn(id)).slice(0, MAX_ALERT_PAGES)], {
   /** Whether that's as many of your own as alerts take. */
   full: (ids: string[]) => ids.filter((id) => !isBuiltIn(id)).length >= MAX_ALERT_PAGES,
+  /** The picked pages that are still there to pick (built in, or a page you still follow). */
+  of: (picked: string[], available: string[]) => picked.filter((id) => available.includes(id)),
 })

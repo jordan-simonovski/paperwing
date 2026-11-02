@@ -13,4 +13,11 @@ describe('status pages for alerts', () => {
     expect(alertPages.full(followed.slice(0, 9))).toBe(false)
     expect(alertPages.full([...builtIn, ...followed.slice(0, 10)])).toBe(true)
   })
+
+  it('counts only pages you still follow: one you stopped following doesn’t take a place', () => {
+    const stillFollowed = followed.slice(0, 9)
+    const picked = [...followed.slice(0, 10)]
+    expect(alertPages.full(alertPages.of(picked, [...builtIn, ...stillFollowed]))).toBe(false)
+    expect(alertPages.of(picked, stillFollowed)).toEqual(stillFollowed)
+  })
 })
