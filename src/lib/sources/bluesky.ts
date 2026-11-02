@@ -1,3 +1,4 @@
+import { parseStoryKey } from '../storyKey'
 import type { Comment, Story, Thread } from '../types'
 import { markup } from '../markup'
 import { api, getJson } from './http'
@@ -22,8 +23,8 @@ export async function blueskyFeed(feed: string): Promise<Story[]> {
 }
 
 const uriFromKey = (key: string) => {
-  const b64 = key.slice(3).replace(/-/g, '+').replace(/_/g, '/')
-  return new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)))
+  const p = parseStoryKey(key)
+  return p?.kind === 'bs' ? p.uri : ''
 }
 
 interface PostView {

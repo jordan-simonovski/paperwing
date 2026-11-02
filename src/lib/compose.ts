@@ -10,6 +10,7 @@ import { hnComment, hnSubmit, useHn } from './hnAccount'
 import { lemmyComment, lemmyPost, useLemmyAccount } from './lemmyAccount'
 import type { QueryClient } from '@tanstack/react-query'
 import { keys } from './query'
+import { keyId } from './storyKey'
 import type { Comment, Story, Thread } from './types'
 
 // Writing from PaperWing to the open network, as the signed-in account (atproto.ts): replies and
@@ -103,7 +104,7 @@ export async function send(qc: QueryClient, target: ComposeTarget, text: string)
       url: `https://news.ycombinator.com/item?id=${target.parent}`,
       children: [],
     })
-    return `https://news.ycombinator.com/item?id=${target.threadKey.slice(3)}`
+    return `https://news.ycombinator.com/item?id=${keyId(target.threadKey, 'hn')}`
   }
 
   const handle = useAtproto.getState().handle ?? 'you'

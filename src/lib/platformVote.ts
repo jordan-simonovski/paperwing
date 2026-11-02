@@ -1,3 +1,4 @@
+import { keyId, parseStoryKey } from './storyKey'
 import { useAtproto } from './atproto'
 import { react, useReactions } from './compose'
 import { hnVote, useHn } from './hnAccount'
@@ -17,9 +18,16 @@ export interface PlatformVote {
   toggle: () => Promise<unknown>
 }
 
+/** A Mastodon story read through this server (only those carry its ids). */
+const isFrom = (key: string, instance: string) => {
+  const p = parseStoryKey(key)
+  return p?.kind === 'md' && p.instance === instance
+}
+
 export function usePlatformVote(s: Story): PlatformVote | undefined {
   const hnUser = useHn((h) => h.user)
-  const hnOn = useHn((h) => s.source === 'hn' && !!h.votes[s.key.slice(3)])
+  const hnId = keyId(s.key, 'hn')
+  const hnOn = useHn((h) => !!hnId && !!h.votes[hnId])
   const atDid = useAtproto((a) => a.did)
   const atHandle = useAtproto((a) => a.handle)
   const reacted = useReactions((r) => !!s.ref && !!r.made[s.ref.uri])
@@ -29,7 +37,7 @@ export function usePlatformVote(s: Story): PlatformVote | undefined {
   const lmUser = useLemmyAccount((l) => (l.jwt ? l.user : undefined))
   const lmOn = useLemmyAccount((l) => !!s.discussionUrl && !!l.votes[s.discussionUrl])
 
-  if (s.source === 'hn' && hnUser && s.author !== hnUser) return { on: hnOn, label: 'Upvote on Hacker News', toggle: () => hnVote(s.key.slice(3)) }
+  if (s.source === 'hn' && hnId && hnUser && s.author !== hnUser) return { on: hnOn, label: 'Upvote on Hacker News', toggle: () => hnVote(hnId) }
   if ((s.source === 'bluesky' || s.source === 'frontpage') && atDid && s.ref && s.ref.uri.split('/')[2] !== atDid && s.author !== atHandle) {
     const kind = s.source === 'bluesky' ? 'like' : 'vote'
     return {
@@ -38,7 +46,7 @@ export function usePlatformVote(s: Story): PlatformVote | undefined {
       toggle: () => react(kind, s.ref!),
     }
   }
-  if (s.source === 'mastodon' && mdOk && s.key.startsWith(`md-${mdInstance}-`)) return { on: mdOn, label: 'Favourite on Mastodon', toggle: () => favourite(s.key, !mdOn) }
+  if (s.source === 'mastodon' && mdOk && isFrom(s.key, mdInstance)) return { on: mdOn, label: 'Favourite on Mastodon', toggle: () => favourite(s.key, !mdOn) }
   if (s.source === 'lemmy' && lmUser && s.discussionUrl && !s.author?.startsWith(`${lmUser}@`) && s.author !== lmUser)
     return { on: lmOn, label: 'Upvote on Lemmy', toggle: () => lemmyVote(s.discussionUrl!, 'post') }
   return undefined

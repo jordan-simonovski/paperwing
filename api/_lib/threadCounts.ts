@@ -1,26 +1,24 @@
+import { parseStoryKey } from '../../src/lib/storyKey.js'
 import { parseLemmyKey } from '../../src/lib/lemmyKey.js'
 import { assertPublicUrl, fetchJson } from './http.js'
 
 // How many comments a thread has right now, by its story key, for reply alerts on watched
 // threads. One small request per thread; sources without a count (blogs, status pages) have none.
 
-const fromB64 = (s: string) => Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-
 export const countable = (key: string) => /^(hn|lb|dv|bs|lm|md)-/.test(key)
 
 export async function commentCount(key: string): Promise<number | undefined> {
-  const id = key.slice(3)
+  const p = parseStoryKey(key)
   const opts = { timeoutMs: 5000 }
-  switch (key.slice(0, 2)) {
+  switch (p?.kind) {
     case 'hn':
-      return (await fetchJson<{ descendants?: number }>(`https://hacker-news.firebaseio.com/v0/item/${encodeURIComponent(id)}.json`, opts)).descendants
+      return (await fetchJson<{ descendants?: number }>(`https://hacker-news.firebaseio.com/v0/item/${encodeURIComponent(p.id)}.json`, opts)).descendants
     case 'lb':
-      return (await fetchJson<{ comment_count?: number }>(`https://lobste.rs/s/${encodeURIComponent(id)}.json`, opts)).comment_count
+      return (await fetchJson<{ comment_count?: number }>(`https://lobste.rs/s/${encodeURIComponent(p.id)}.json`, opts)).comment_count
     case 'dv':
-      return (await fetchJson<{ comments_count?: number }>(`https://dev.to/api/articles/${encodeURIComponent(id)}`, opts)).comments_count
+      return (await fetchJson<{ comments_count?: number }>(`https://dev.to/api/articles/${encodeURIComponent(p.id)}`, opts)).comments_count
     case 'bs': {
-      const uri = fromB64(id)
-      if (!uri.startsWith('at://')) return undefined
+      const uri = p.uri
       const { posts } = await fetchJson<{ posts: { replyCount?: number }[] }>(`https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts?uris=${encodeURIComponent(uri)}`, opts)
       return posts[0]?.replyCount
     }
@@ -30,9 +28,8 @@ export async function commentCount(key: string): Promise<number | undefined> {
     }
     case 'md': {
       // md-<server>-<status id>: the server is whoever the reader signed in to, so check it's public.
-      const at = id.lastIndexOf('-')
-      const host = id.slice(0, at)
-      const status = id.slice(at + 1)
+      const host = p.instance
+      const status = p.id
       if (!/^[a-z0-9.-]+$/.test(host) || !/^\w+$/.test(status)) return undefined
       await assertPublicUrl(`https://${host}/`)
       return (await fetchJson<{ replies_count?: number }>(`https://${host}/api/v1/statuses/${status}`, { ...opts, redirect: 'error' })).replies_count

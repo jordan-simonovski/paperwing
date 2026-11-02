@@ -3,6 +3,7 @@ import dns from 'node:dns'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import ipaddr from 'ipaddr.js'
+import { storyKey } from '../../src/lib/storyKey.js'
 import { Agent, EnvHttpProxyAgent, fetch as undiciFetch, type Dispatcher, type Response as UndiciResponse } from 'undici'
 
 export const UA = 'Mozilla/5.0 (compatible; PaperWing/0.1; +https://github.com/jordan-simonovski/paperwing)'
@@ -155,9 +156,7 @@ export async function fetchJson<T>(url: string, init: SafeFetchInit = {}): Promi
   return JSON.parse(text) as T
 }
 
-export function linkKey(url: string): string {
-  return 'ln-' + Buffer.from(url).toString('base64url')
-}
+export const linkKey = (url: string): string => storyKey({ kind: 'ln', url })
 
 const NAMED: Record<string, string> = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', mdash: '—', ndash: '–', hellip: '…' }
 

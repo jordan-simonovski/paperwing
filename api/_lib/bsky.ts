@@ -1,3 +1,4 @@
+import { storyKey } from '../../src/lib/storyKey.js'
 import { BSKY_FEED_BY_RKEY, BSKY_FEEDS, isOffTopic, searchQueries, strongHits, strongTerms, type BskyFeedDef } from '../../src/lib/bskyFeeds.js'
 import { isGifLink, postMedia, quotedPost, sharedLink, type Shareable } from '../../src/lib/bskyPost.js'
 import type { Story } from '../../src/lib/types.js'
@@ -218,7 +219,7 @@ export async function buildFeed(rkey: string): Promise<PostView[]> {
 /* ------------------------------------------------------------- as stories */
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-export const bskyKey = (uri: string) => 'bs-' + Buffer.from(uri).toString('base64url')
+export const bskyKey = (uri: string) => storyKey({ kind: 'bs', uri })
 
 export function postUrl(p: Pick<PostView, 'uri' | 'author'>): string {
   return `https://bsky.app/profile/${p.author.handle}/post/${p.uri.split('/').pop()}`

@@ -1,3 +1,4 @@
+import { parseStoryKey, storyKey } from '../../src/lib/storyKey.js'
 import type { Comment, Story, Thread } from '../../src/lib/types.js'
 import { fetchJson, stripHtml } from './http.js'
 
@@ -18,10 +19,10 @@ export type FrontpageFeed = 'hot' | 'new' | 'top'
 
 const AT_URI = /^at:\/\/(did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+))\/(fyi\.frontpage\.feed\.(?:post|comment)|fyi\.unravel\.frontpage\.(?:post|comment))\/([a-z2-7]{13})$/
 
-export const frontpageKey = (uri: string) => 'fp-' + Buffer.from(uri).toString('base64url')
+export const frontpageKey = (uri: string) => storyKey({ kind: 'fp', uri })
 export function uriFromKey(key: string): string | undefined {
-  const uri = Buffer.from(key.slice(3), 'base64url').toString('utf8')
-  return AT_URI.test(uri) ? uri : undefined
+  const p = parseStoryKey(key)
+  return p?.kind === 'fp' && AT_URI.test(p.uri) ? p.uri : undefined
 }
 
 /* ---------------------------------------------------------- identities */

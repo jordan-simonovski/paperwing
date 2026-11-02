@@ -1,3 +1,4 @@
+import { keyId, parseStoryKey } from '../../src/lib/storyKey.js'
 import type { Comment } from '../../src/lib/types.js'
 import { spiceMin, type SpiceGrade, type SpiceLevel } from '../../src/lib/spiceTypes.js'
 import { parseLemmyKey } from '../../src/lib/lemmyKey.js'
@@ -31,7 +32,10 @@ export function validKey(key: string): boolean {
   return /^at:\/\/did:[a-z0-9:._-]+\/app\.bsky\.feed\.post\/[a-z0-9]+$/i.test(blueskyUri(key))
 }
 
-const blueskyUri = (key: string) => Buffer.from(key.slice(3), 'base64url').toString('utf8')
+const blueskyUri = (key: string) => {
+  const p = parseStoryKey(key)
+  return p?.kind === 'bs' ? p.uri : ''
+}
 
 const count = (cs: SpiceComment[]): number => cs.reduce((n, c) => n + 1 + count(c.children), 0)
 
@@ -73,8 +77,9 @@ interface BskyNode {
 
 /** A thread's title and comment tree, best-first where the source ranks them. */
 export async function fetchDiscussion(key: string): Promise<{ title: string; comments: SpiceComment[] }> {
-  if (key.startsWith('hn-')) {
-    const id = key.slice(3)
+  const hn = keyId(key, 'hn')
+  if (hn) {
+    const id = hn
     const [item, ranked] = await Promise.all([
       fetchJson<AlgoliaItem & { title?: string }>(`https://hn.algolia.com/api/v1/items/${id}`),
       fetchJson<{ kids?: number[] } | null>(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).catch(() => null),
@@ -93,14 +98,16 @@ export async function fetchDiscussion(key: string): Promise<{ title: string; com
     ])
     return { title: post_view.post.name, comments: lemmyTree(comments) }
   }
-  if (key.startsWith('dv-')) {
-    const id = key.slice(3)
+  const dv = keyId(key, 'dv')
+  if (dv) {
+    const id = dv
     const [article, comments] = await Promise.all([fetchJson<{ title: string }>(`https://dev.to/api/articles/${id}`), fetchJson<DevtoComment[]>(`https://dev.to/api/comments?a_id=${id}`)])
     const map = (c: DevtoComment): SpiceComment => ({ author: c.user?.username ?? '', text: stripHtml(c.body_html ?? ''), children: (c.children ?? []).map(map) })
     return { title: article.title, comments: comments.map(map) }
   }
-  if (key.startsWith('lb-')) {
-    const thread = await lobstersThread(key.slice(3))
+  const lb = keyId(key, 'lb')
+  if (lb) {
+    const thread = await lobstersThread(lb)
     const map = (c: Comment): SpiceComment => ({ author: c.author, text: c.deleted ? '' : stripHtml(c.html), children: c.children.map(map) })
     return { title: thread.story.title, comments: thread.comments.map(map) }
   }

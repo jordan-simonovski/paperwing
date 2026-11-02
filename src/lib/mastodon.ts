@@ -1,3 +1,4 @@
+import { parseStoryKey } from './storyKey'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { getJson } from './sources/http'
@@ -170,10 +171,9 @@ export const canFavourite = (s: Pick<MastodonState, 'token' | 'scope'>) => !!s.t
 /** Favourites a status on your own server (or takes it back). Only statuses read through your server have its ids. */
 export async function favourite(key: string, on: boolean) {
   const { token, instance, favourites = {} } = useMastodon.getState()
-  const rest = key.slice(3)
-  const at = rest.lastIndexOf('-')
-  const host = rest.slice(0, at)
-  const id = rest.slice(at + 1)
+  const p = parseStoryKey(key)
+  const host = p?.kind === 'md' ? p.instance : undefined
+  const id = p?.kind === 'md' ? p.id : ''
   if (!token || host !== instance) throw new Error('Only posts read through your own Mastodon server can be favourited')
   const next = { ...favourites }
   if (on) next[key] = true

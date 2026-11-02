@@ -1,3 +1,4 @@
+import { parseStoryKey, storyKey } from '../storyKey'
 import { isGifLink } from '../bskyPost'
 import { DEFAULT_INSTANCE, useMastodon } from '../mastodon'
 import { matchesTopic, storyText, TOPICS } from '../topics'
@@ -88,12 +89,11 @@ const lines = (html: string) =>
     .map((l) => l.trim())
     .filter(Boolean)
 
-export const keyFor = (instance: string, id: string) => `md-${instance}-${id}`
 /** md-<server>-<id>: ids are the server's own, so the key carries which server it came from. */
+export const keyFor = (instance: string, id: string) => storyKey({ kind: 'md', instance, id })
 export function parseKey(key: string): { instance: string; id: string } {
-  const rest = key.slice(3)
-  const at = rest.lastIndexOf('-')
-  return { instance: rest.slice(0, at), id: rest.slice(at + 1) }
+  const p = parseStoryKey(key)
+  return p?.kind === 'md' ? { instance: p.instance, id: p.id } : { instance: '', id: '' }
 }
 
 function media(s: Status): Media[] | undefined {

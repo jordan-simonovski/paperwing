@@ -8,6 +8,7 @@ import { api, getJson, urlFromLinkKey } from './http'
 import { blueskyCustomFeed, blueskyFeed, blueskyFollowing, blueskyThread } from './bluesky'
 import { lemmyByUrl, lemmyFeed, lemmyThread } from './lemmy'
 import { parseLemmyKey } from '../lemmyKey'
+import { parseStoryKey } from '../storyKey'
 import { useLemmyAccount } from '../lemmyAccount'
 import { mastodonHome, mastodonTags, mastodonThread, mastodonTrends } from './mastodon'
 
@@ -108,14 +109,14 @@ export async function fetchFeed(ref: FeedRef): Promise<Story[]> {
 }
 
 export async function fetchThread(key: string): Promise<Thread | null> {
-  const [prefix, id] = [key.slice(0, 2), key.slice(3)]
-  switch (prefix) {
+  const p = parseStoryKey(key)
+  switch (p?.kind) {
     case 'hn':
-      return hnThread(id)
+      return hnThread(p.id)
     case 'dv':
-      return devtoThread(id)
+      return devtoThread(p.id)
     case 'lb':
-      return (await api('thread', { src: 'lobsters', id })) as Thread
+      return (await api('thread', { src: 'lobsters', id: p.id })) as Thread
     case 'bs':
       return blueskyThread(key)
     case 'lm': {

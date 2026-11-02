@@ -1,3 +1,4 @@
+import { storyKey } from './storyKey.js'
 // What a Bluesky post shares, read the same way by the feed generator and the client.
 import type { Media, Quote } from './types.js'
 import { webUrl } from './webUrl.js'
@@ -94,11 +95,7 @@ export function postHtml(text: string): string {
 }
 
 /** The app's key for a Bluesky post: its at:// URI, base64url. Works in the browser and on the server. */
-export function bskyKeyOf(uri: string): string {
-  let bin = ''
-  for (const b of new TextEncoder().encode(uri)) bin += String.fromCharCode(b)
-  return 'bs-' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
+export const bskyKeyOf = (uri: string): string => storyKey({ kind: 'bs', uri })
 
 /** The post a quote post quotes, with its own images and link card. */
 export function quotedPost(p: Shareable): Quote | undefined {

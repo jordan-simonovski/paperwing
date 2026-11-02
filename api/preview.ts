@@ -1,3 +1,4 @@
+import { parseStoryKey } from '../src/lib/storyKey.js'
 import { HOME } from '../src/lib/oauthClient.js'
 import type { Story } from '../src/lib/types.js'
 import { posts } from './_lib/atlinks.js'
@@ -46,16 +47,15 @@ const host = (url: string) => {
 
 /** Builds the card from what the story is: a link, an HN item, a Bluesky post or a Lobsters story. */
 async function cardFor(key: string): Promise<Card | undefined> {
-  const prefix = key.slice(0, 3)
-  if (prefix === 'ln-') {
-    const url = Buffer.from(key.slice(3), 'base64url').toString('utf8')
-    if (!/^https?:\/\//.test(url)) return undefined
+  const p = parseStoryKey(key)
+  if (p?.kind === 'ln') {
+    const url = p.url
     const c = await linkCard(url)
     return { title: c.title ?? host(url), description: c.description ?? `From ${host(url)}, with every discussion about it on PaperWing`, image: c.image }
   }
-  if (prefix === 'hn-' && /^\d{1,10}$/.test(key.slice(3))) {
+  if (p?.kind === 'hn' && /^\d{1,10}$/.test(p.id)) {
     const item = await fetchJson<{ title?: string; url?: string; text?: string; score?: number; descendants?: number; dead?: boolean; deleted?: boolean }>(
-      `https://hacker-news.firebaseio.com/v0/item/${key.slice(3)}.json`,
+      `https://hacker-news.firebaseio.com/v0/item/${p.id}.json`,
       { timeoutMs: 5000 },
     )
     if (!item?.title || item.dead || item.deleted) return undefined
@@ -67,8 +67,8 @@ async function cardFor(key: string): Promise<Card | undefined> {
       image: c.image,
     }
   }
-  if (prefix === 'bs-') {
-    const uri = Buffer.from(key.slice(3), 'base64url').toString('utf8')
+  if (p?.kind === 'bs') {
+    const uri = p.uri
     if (!/^at:\/\/did:[a-z]+:[a-zA-Z0-9._:%-]+\/app\.bsky\.feed\.post\/[a-z2-7]+$/.test(uri)) return undefined
     const [post] = await posts([uri])
     if (!post) return undefined
@@ -83,8 +83,8 @@ async function cardFor(key: string): Promise<Card | undefined> {
       image: c.image ?? story.thumbnail ?? story.media?.find((m) => m.kind === 'image')?.thumb,
     }
   }
-  if (prefix === 'lb-' && /^[a-z0-9]{1,12}$/.test(key.slice(3))) {
-    const { story } = await lobstersThread(key.slice(3))
+  if (p?.kind === 'lb' && /^[a-z0-9]{1,12}$/.test(p.id)) {
+    const { story } = await lobstersThread(p.id)
     const c = story.url ? await linkCard(story.url) : {}
     const stats = [count(story.score, 'vote'), count(story.comments, 'comment')].filter(Boolean).join(' · ')
     return { title: story.title, description: [stats && `${stats} on Lobsters`, c.description].filter(Boolean).join('. '), image: c.image }

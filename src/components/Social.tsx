@@ -1,3 +1,4 @@
+import { keyId } from '../lib/storyKey'
 import { ArrowBigUp, Heart, MessageSquareReply, Send } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAtproto } from '../lib/atproto'
@@ -137,7 +138,7 @@ export function StoryActions({ story, root }: { story: Story; root?: { uri: stri
   return (
     <>
       {story.source === 'hn' && hnUser && (
-        <button className="pill" onClick={() => open({ kind: 'hn-reply', threadKey: story.key, parent: story.key.slice(3), story: true, to: story.author })}>
+        <button className="pill" onClick={() => open({ kind: 'hn-reply', threadKey: story.key, parent: keyId(story.key, 'hn') ?? '', story: true, to: story.author })}>
           <MessageSquareReply size={15} /> Comment
         </button>
       )}
