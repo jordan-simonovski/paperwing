@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Check, Code2, ExternalLink, Heart, Highlighter, KeyRound, Layers, Loader2, MessageSquareQuote, Plus, Rss, Send, UserPlus, Users, X } from 'lucide-react'
+import { ArrowLeft, Check, Code2, Heart, KeyRound, Loader2, Plus, Rss, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { BlueskyAccount } from '../components/BlueskyAccount'
@@ -8,8 +8,7 @@ import { LemmyAccount } from '../components/LemmyAccount'
 import { MastodonSettings } from '../components/MastodonSettings'
 import { Pip } from '../components/Pip'
 import { RestoreSync } from '../components/RestoreSync'
-import { PaperwingIcon, SourceIcon } from '../components/SourceIcon'
-import { SummarySettings } from '../components/SummarySettings'
+import { SourceIcon } from '../components/SourceIcon'
 import { STEPS, useOnboarding, type Step } from '../lib/onboarding'
 import { createSyncPasskey, useSyncReadiness } from '../lib/passkey'
 import { usePrefs } from '../lib/store'
@@ -19,9 +18,9 @@ import { CLUSTERS, TOPICS, type ClusterId } from '../lib/topics'
 import { toast } from '../lib/ui'
 
 // The first thing a new install sees: a short tour that ends in a feed that's already yours.
-// Pick topics, add your own sites, see how For you is ordered, sign in where you post (or don't),
-// and learn the three things people miss: sharing everywhere at once, saving for offline, and
-// bringing your own AI key. Every step but the topics can be skipped, and it all lives in Settings.
+// Pick topics, add your own sites, see how For you is ordered, and sign in where you post (or
+// don't). Sharing, saving and the rest explain themselves the first time they happen (firsts.ts).
+// Every step but the topics can be skipped, and it all lives in Settings.
 
 const GENERAL = (Object.keys(CLUSTERS) as ClusterId[]).filter((c) => CLUSTERS[c].pack === 'general')
 const TECH = (Object.keys(CLUSTERS) as ClusterId[]).filter((c) => CLUSTERS[c].pack === 'tech')
@@ -29,9 +28,6 @@ const SECTIONS: { label: string; blurb: string; clusters: ClusterId[] }[] = [
   ...GENERAL.map((c) => ({ label: CLUSTERS[c].label, blurb: CLUSTERS[c].blurb, clusters: [c] })),
   { label: 'Tech', blurb: 'Where PaperWing started: AI, systems, code and the industry', clusters: TECH },
 ]
-
-const FEED_URL = 'https://bsky.app/profile/paperwing.io/feed/paperwing'
-const NEW_FEED_URL = 'https://bsky.app/profile/paperwing.io/feed/paperwing-new'
 
 function Heading({ kicker, title, children }: { kicker: string; title: string; children?: React.ReactNode }) {
   return (
@@ -307,115 +303,6 @@ function Accounts() {
   )
 }
 
-function Sharing() {
-  return (
-    <>
-      <Heading kicker="Step 5: sharing" title="Post once, everywhere you are">
-        <p>Found something worth talking about? Share it from PaperWing to every network you’re signed in to, in one go.</p>
-      </Heading>
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        <Point icon={<Send size={16} />} title="Cross-post in one step">
-          One title and your take, a tick for each place: Bluesky, Mastodon, Hacker News and a Lemmy community. Each gets the right format and length.
-        </Point>
-        <Point icon={<PaperwingIcon size={16} />} title="List it on PaperWing">
-          Share to Bluesky and tick “List it on PaperWing”: your post goes on PaperWing’s front page and topic boards. Its likes are the votes and its replies are the comments. It lives in your own
-          Bluesky account, so there’s no new account and nothing to lose.
-        </Point>
-        <Point icon={<SourceIcon source="bluesky" size={16} />} title="PaperWing, right inside Bluesky">
-          The front page is also a pair of Bluesky feeds: PaperWing (what’s hot) and PaperWing New. Pin them in the Bluesky app and you can read and vote from there too.
-          <span className="mt-2 flex flex-wrap gap-2">
-            <a className="btn h-8 text-[0.8125rem]" href={FEED_URL} target="_blank" rel="noopener noreferrer">
-              PaperWing feed <ExternalLink size={13} />
-            </a>
-            <a className="btn h-8 text-[0.8125rem]" href={NEW_FEED_URL} target="_blank" rel="noopener noreferrer">
-              PaperWing New <ExternalLink size={13} />
-            </a>
-          </span>
-        </Point>
-      </div>
-    </>
-  )
-}
-
-function Social() {
-  return (
-    <>
-      <Heading kicker="Step 6: the social web" title="The social web, the way it was">
-        <p>
-          Before feeds were tuned to keep you scrolling, the web was social through people: what they shared, the blogs they read, the places they gathered. PaperWing brings that back, built on
-          Bluesky, so everything you make lives in your own account.
-        </p>
-      </Heading>
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        <Point icon={<MessageSquareQuote size={16} />} title="Share with a note">
-          Like Google Reader’s shared items: a link and a line on why it’s worth reading. It goes on your profile and into the feed of anyone who follows you here, without posting to Bluesky.
-        </Point>
-        <Point icon={<UserPlus size={16} />} title="Follow people, not just topics">
-          Follow someone on PaperWing and what they share and list joins For you. Signed in with Bluesky, you’ll also see when people you follow shared or discussed a story.
-        </Point>
-        <Point icon={<Users size={16} />} title="Community boards">
-          Spaces with their own rules and moderators, started by anyone. A board lives in its owner’s Bluesky account, so it belongs to its community, not to PaperWing.
-        </Point>
-        <Point icon={<Highlighter size={16} />} title="Margin notes">
-          Select a passage in the reader view and add a note. Notes from other readers show highlighted in the article.
-        </Point>
-        <Point icon={<Rss size={16} />} title="Blogrolls">
-          Show the blogs you read on your profile, and follow someone else’s blogroll in one tap. The way people found good blogs before algorithms did.
-        </Point>
-        <Point icon={<Layers size={16} />} title="Mixes">
-          Your own channels, built from any blogs, topics, communities and feeds: tap Add to mix wherever you can follow. Publish one and others can follow it, here or as a Bluesky feed.
-        </Point>
-      </div>
-    </>
-  )
-}
-
-function Saving() {
-  return (
-    <>
-      <Heading kicker="Step 7: saving" title="Saved means readable offline">
-        <p>Saving isn’t just a bookmark. PaperWing downloads the story so it’s there on a plane, underground, or after the link dies.</p>
-      </Heading>
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        <Point icon={<Bookmark size={16} />} title="Tap save, or swipe right">
-          The bookmark on any story saves it. On a phone, swipe a row right to save it and left to hide it.
-        </Point>
-        <Point icon={<span className="font-bold">↓</span>} title="Kept on this device">
-          The article in a clean reader view, its pictures and the discussion are stored here and open without a connection.
-        </Point>
-        <Point icon={<span className="font-bold">✓</span>} title="A queue you finish">
-          Saved stories wait in Saved; finished ones move to the archive, and you’ll see when a saved thread gets new replies.
-        </Point>
-        <Point icon={<span className="font-bold">↗</span>} title="Save from anywhere">
-          Use the share sheet on your phone or the bookmarklet on a computer to send any page to your queue.
-        </Point>
-      </div>
-    </>
-  )
-}
-
-function Ai() {
-  return (
-    <>
-      <Heading kicker="Step 8: summaries (optional)" title="Bring your own AI key">
-        <p>
-          PaperWing can summarise a long discussion across every network that covered a story: the main points, where people disagree, and the comments worth reading. It uses Claude, with your own
-          Anthropic API key.
-        </p>
-      </Heading>
-      <div className="mt-6 max-w-xl space-y-3 rounded-[18px] bg-panel p-5">
-        <SummarySettings />
-      </div>
-      <div className="mt-4 max-w-xl">
-        <Point icon={<KeyRound size={16} />} title="Your key stays yours">
-          It’s stored only in this browser. It isn’t synced, isn’t part of your backups, and is never saved on a server: each summary request carries it to Anthropic for that one request, and nothing
-          keeps it. Remove it any time under Settings, Summaries.
-        </Point>
-      </div>
-    </>
-  )
-}
-
 function Passkey({ onDone }: { onDone: () => void }) {
   const code = useSync((s) => s.code)
   const { available, passkeys: support } = useSyncReadiness()
@@ -511,14 +398,10 @@ export function WelcomePage() {
     feeds: <Feeds />,
     ranking: <Ranking />,
     accounts: <Accounts />,
-    sharing: <Sharing />,
-    social: <Social />,
-    saving: <Saving />,
-    ai: <Ai />,
     passkey: <Passkey onDone={finish} />,
   }
   const blocked = step === 'topics' && !picks
-  const skippable: Step[] = ['feeds', 'accounts', 'ai', 'passkey']
+  const skippable: Step[] = ['feeds', 'accounts', 'passkey']
   const label = step === 'hello' ? 'Start fresh' : at === STEPS.length - 1 ? 'Start reading' : 'Continue'
 
   return (
