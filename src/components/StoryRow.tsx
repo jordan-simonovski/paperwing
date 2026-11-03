@@ -1,4 +1,5 @@
 import { useComposer } from '../lib/compose'
+import { firstTime } from '../lib/firsts'
 import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
 import { boardPath } from '../lib/boards'
@@ -230,8 +231,8 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
 })
 
 /**
- * Up and down, Reddit-style, around the source's own score. Votes stay on this device: they don't
- * reach Hacker News or anywhere else, they teach the ranking what you want more and less of.
+ * Up and down around the source's own score: taste stays here, and up also votes on the network
+ * where the reader is signed in.
  */
 export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1 }) {
   const cast = useActivity((a) => a.vote)
@@ -241,8 +242,11 @@ export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1
   const voted = useVoted(target)
   const platform = target && { on: voted, label: target.label, toggle: () => castVote(target, !voted) }
   const press = (dir: 1 | -1) => {
-    const up = dir === 1 && vote !== 1
-    cast(s, dir)
+    const up = dir === 1 && !(platform ? platform.on : vote === 1)
+    if (dir === -1) cast(s, dir)
+    else if (up) {
+      if (vote !== 1) cast(s, 1)
+    } else if (vote) cast(s, vote)
     if (platform && up !== platform.on) platform.toggle().catch((err: Error) => toast(err.message, { tone: 'error' }))
   }
   const upOn = vote === 1 || !!platform?.on
@@ -268,7 +272,9 @@ export function hideStory(key: string, story?: Story) {
   // A hide is a mild "less like this"; a downvote is the strong one.
   const { learn } = usePrefs.getState()
   if (story) learn(story, -LESSON.hide)
-  toast('Story hidden', {
+  // The first hide says what hiding teaches: ranking is on the device, and it listens.
+  const said = story && firstTime('hide') ? 'Story hidden. PaperWing now ranks stories like it a little lower; a down vote counts for more.' : 'Story hidden'
+  toast(said, {
     action: {
       label: 'Undo',
       run: () => {
@@ -312,7 +318,12 @@ export async function toggleSaved(s: Story) {
     const m = await lib.save(s)
     // Saving says you want to read it: half an upvote.
     usePrefs.getState().learn(s, LESSON.save)
-    toast(m.hasArticle || m.hasThread ? `Saved to your queue${m.minutes ? `, ${m.minutes} min read` : ''}` : 'Saved, but the article could not be fetched')
+    if (!m.hasArticle && !m.hasThread) return toast('Saved, but the article could not be fetched')
+    const saved = `Saved to your queue${m.minutes ? `, ${m.minutes} min read` : ''}`
+    // The first save says what saving does: it's a copy that reads offline, not a bookmark.
+    if (!firstTime('save')) return toast(saved)
+    const kept = m.hasArticle && m.hasThread ? 'The article and its comments stay' : m.hasArticle ? 'The article stays' : 'The comments stay'
+    toast(`${saved}. ${kept} on this device, so it reads offline too.`)
   } catch {
     toast('Could not save this story', { tone: 'error' })
   }

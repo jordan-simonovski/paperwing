@@ -1,4 +1,5 @@
 import { RefreshCw, WifiOff } from 'lucide-react'
+import { Pip } from './Pip'
 import { TopicChip } from './TopicTag'
 
 // What a list says when it has nothing to show, and what to do about it. Every state offers a way
@@ -83,6 +84,25 @@ export function FeedEmpty({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * The Saved queue, read through: everything saved has been finished. Pip shuts the book as on
+ * Today's last story, and hops once only when the queue emptied while you watched.
+ */
+export function QueueCleared({ archived, settle = false, onArchive }: { archived: number; settle?: boolean; onArchive: () => void }) {
+  return (
+    <div className="px-6 py-14 text-center">
+      <Pip variant="done" className={`mx-auto block size-24 ${settle ? 'pip-settle' : ''}`} />
+      <p className="mt-1 text-[1.125rem] font-bold">Queue cleared</p>
+      <p className="mx-auto mt-2 max-w-sm text-[0.9375rem] text-ink-3">
+        Nothing left waiting. The next story you save lands here, and the <span className="num">{archived}</span> you’ve finished are in the archive.
+      </p>
+      <button className="btn mt-5" onClick={onArchive}>
+        Open the archive
+      </button>
     </div>
   )
 }

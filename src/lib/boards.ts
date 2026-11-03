@@ -5,9 +5,11 @@ import { tid } from './mixes'
 import { AT_COMMUNITY } from './paperwing'
 import { keys } from './query'
 import { BOARD_HIDE_NSID, BOARD_NSID, boardRecord, type Board } from './social'
+import { firstTime } from './firsts'
 import { usePrefs } from './store'
 import type { Story } from './types'
 import { feedUrl } from './sources/http'
+import { toast } from './ui'
 
 // Community boards (social.ts, api/_lib/boards.ts): spaces with their own name, rules and moderators,
 // owned by whoever made them and kept in their Bluesky account. Votes and comments are Bluesky likes
@@ -72,9 +74,12 @@ export const useAllBoardsWhen = (enabled: boolean) =>
     },
   })
 
-export function toggleJoin(board: { uri: string; name: string }) {
+/** Joins or leaves a board. The first join on a device says where a joined board shows up; making your own board says its own thing. */
+export function toggleJoin(board: { uri: string; name: string }, { explain = true } = {}) {
   const { boards, set } = usePrefs.getState()
-  set({ boards: boards.some((b) => b.uri === board.uri) ? boards.filter((b) => b.uri !== board.uri) : [...boards, { uri: board.uri, name: board.name }] })
+  const leaving = boards.some((b) => b.uri === board.uri)
+  set({ boards: leaving ? boards.filter((b) => b.uri !== board.uri) : [...boards, { uri: board.uri, name: board.name }] })
+  if (!leaving && explain && firstTime('join')) toast(`Joined ${board.name}. It’s under Boards in your menu, and among the places to put a story when you share or post.`)
 }
 
 /**

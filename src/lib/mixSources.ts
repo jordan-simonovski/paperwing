@@ -16,6 +16,7 @@ export const feedRkey = (mixRkey: string) => `pw-${mixRkey}`
 export type MixSource =
   | { kind: 'topic'; id: string }
   | { kind: 'rss'; url: string; label: string }
+  | { kind: 'standard'; url: string; label: string }
   | { kind: 'lemmy'; community: string; via?: string }
   | { kind: 'bskyFeed'; uri: string; name: string }
   | { kind: 'news'; q: string }
@@ -39,10 +40,17 @@ export function cleanSource(raw: unknown): MixSource | undefined {
       const id = str(s.id, 80)
       return id && TOPIC_BY_ID.has(id) ? { kind: 'topic', id } : undefined
     }
-    case 'rss': {
+    case 'rss':
+    case 'standard': {
       const url = str(s.url, 2000)
       if (!url || !/^https?:\/\/[^\s/]+\.[^\s/]+/i.test(url)) return undefined
-      return { kind: 'rss', url, label: str(s.label, 120) ?? new URL(url).hostname }
+      try {
+        const parsed = new URL(url)
+        if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password) return undefined
+        return { kind: s.kind, url, label: str(s.label, 120) ?? parsed.hostname }
+      } catch {
+        return undefined
+      }
     }
     case 'lemmy': {
       const community = str(s.community, 200)
@@ -86,6 +94,7 @@ export function sourceLabel(s: MixSource): string {
     case 'topic':
       return TOPIC_BY_ID.get(s.id)?.label ?? s.id
     case 'rss':
+    case 'standard':
       return s.label
     case 'lemmy':
       return `c/${s.community}`

@@ -95,6 +95,13 @@ export const FEED_KINDS: { [K in FeedRef['kind']]: FeedKind<K> } = {
     mark: (r) => ({ source: 'rss', site: siteOf(r.url) }),
     fetch: (r) => viaServer('rss', { url: r.url, label: r.label }),
   },
+  standard: {
+    id: (r) => `standard:${r.url}`,
+    label: (r) => r.label,
+    brand: (r) => r.label,
+    mark: (r) => ({ source: 'rss', site: siteOf(r.url) }),
+    fetch: (r) => viaServer('standard', { url: r.url, label: r.label }),
+  },
   arxiv: {
     id: (r) => `ax:${r.q}`,
     label: () => 'arXiv',

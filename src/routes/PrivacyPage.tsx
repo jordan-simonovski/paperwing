@@ -4,7 +4,7 @@ import { Pip } from '../components/Pip'
 // What PaperWing keeps, where, and who sees it. Written to match the code: if something here
 // changes in the app (a new server store, a new service), this page changes with it.
 
-const UPDATED = '2 November 2026'
+const UPDATED = '3 November 2026'
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -29,8 +29,8 @@ export function PrivacyPage() {
 
         <Part title="On your device">
           <p>
-            Your topics, feeds, votes, hides, what you’ve read, your taste profile, your saved stories and their downloaded articles are stored in this browser. Nobody else can see them, and clearing
-            the site’s data removes them.
+            Your topics, feeds, votes, hides, what you’ve read, your taste profile, your saved stories and their downloaded articles, and which one-time explanations you’ve already seen are stored in
+            this browser. Nobody else can see them, and clearing the site’s data removes them.
           </p>
         </Part>
 
@@ -58,6 +58,10 @@ export function PrivacyPage() {
           <p>
             Posting, voting and sharing happen only when you ask. Stories you list on PaperWing are ordinary public Bluesky posts with a small public record in your own Bluesky account (the link, its
             title, the board you chose and whether it goes on the front page too); you can delete them on Bluesky like any post.
+          </p>
+          <p>
+            When you’re signed in with Bluesky, upvoting someone else’s PaperWing listing also likes its Bluesky post under your account. Taking the upvote back removes that like. Downvotes aren’t
+            published.
           </p>
           <p>
             A post you write on PaperWing works the same way: its Bluesky post has the title, the start of your words and a link to it here, and the words themselves are in that public record in your
@@ -89,6 +93,10 @@ export function PrivacyPage() {
           <p>
             To get around browser restrictions, the server fetches some things for you: feeds, articles for the reader view, link previews and site icons. It sees the address it fetches, and caches
             public results so other readers get them faster. Our host, Vercel, keeps short-lived request logs, as any website’s host does.
+          </p>
+          <p>
+            Following a Discourse forum fetches its public RSS feed. Following a Standard.site publication reads its public records from the author’s server and checks its website and article links.
+            The publication address and format stay with your other feed settings, including encrypted sync and your public blogroll if you turn it on.
           </p>
           <p>
             To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself

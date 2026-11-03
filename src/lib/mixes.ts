@@ -37,7 +37,8 @@ export function mixFeedRefs(sources: MixSource[], topicFeeds: (id: string) => Fe
       case 'topic':
         return topicFeeds(s.id)
       case 'rss':
-        return [{ kind: 'rss', url: s.url, label: s.label }]
+      case 'standard':
+        return [{ kind: s.kind, url: s.url, label: s.label }]
       case 'lemmy':
         return [{ kind: 'lemmy', community: s.community, via: s.via }]
       case 'bskyFeed':
@@ -159,6 +160,7 @@ export function sameSource(a: MixSource, b: MixSource): boolean {
     case 'topic':
       return a.id === (b as typeof a).id
     case 'rss':
+    case 'standard':
       return a.url === (b as typeof a).url
     case 'lemmy':
       return a.community === (b as typeof a).community

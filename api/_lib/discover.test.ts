@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { commonFeeds, feedLinks, knownFeeds, looksLikeFeed } from './discover'
+import { commonFeeds, discoverFeeds, discourseFeeds, feedLinks, knownFeeds, looksLikeFeed } from './discover'
+import { fakeUpstreams } from '../_test/harness'
+
+const net = fakeUpstreams()
 
 describe('feed discovery', () => {
   it('reads the feeds a page names, resolved, without comment feeds', () => {
@@ -31,5 +34,22 @@ describe('feed discovery', () => {
     expect(looksLikeFeed('<?xml version="1.0"?>\n<?xml-stylesheet href="/s.xsl"?><rss version="2.0">')).toBe(true)
     expect(looksLikeFeed('<feed xmlns="http://www.w3.org/2005/Atom">')).toBe(true)
     expect(looksLikeFeed('<!doctype html><html>')).toBe(false)
+  })
+
+  it('finds a Discourse category’s feed without falling back to the whole forum', async () => {
+    net.get('https://forum.example').intercept({ path: '/c/help/7' }).reply(200, '<meta name="generator" content="Discourse 3.5">')
+    net
+      .get('https://forum.example')
+      .intercept({ path: '/c/help/7.rss' })
+      .reply(200, '<rss><channel><title>Forum — Help</title><item><title>A question</title><link>https://forum.example/t/a-question/12</link></item></channel></rss>')
+    expect(await discoverFeeds('https://forum.example/c/help/7')).toMatchObject([{ url: 'https://forum.example/c/help/7.rss', title: 'Forum — Help', posts: 1 }])
+  })
+
+  it('offers chronological and weekly forum feeds, and preserves tag and top filters', () => {
+    const html = '<meta content="Discourse 3.5" name="generator">'
+    expect(discourseFeeds(html, 'https://forum.example/')).toEqual(['https://forum.example/latest.rss?order=created', 'https://forum.example/top.rss?period=weekly'])
+    expect(discourseFeeds(html, 'https://forum.example/tag/rust/12')).toEqual(['https://forum.example/tag/rust/12.rss'])
+    expect(discourseFeeds(html, 'https://forum.example/top?period=monthly')).toEqual(['https://forum.example/top.rss?period=monthly'])
+    expect(discourseFeeds('<meta name="generator" content="WordPress">', 'https://blog.example')).toEqual([])
   })
 })

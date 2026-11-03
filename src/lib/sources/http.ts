@@ -40,6 +40,7 @@ export const api = (path: string, params: Params) => getJson<unknown>(`/api/${pa
 export type FeedSource =
   | 'lobsters'
   | 'rss'
+  | 'standard'
   | 'card'
   | 'cardimage'
   | 'paperwing'

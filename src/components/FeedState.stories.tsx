@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { FeedEmpty, FeedFailed } from './FeedState'
+import { FeedEmpty, FeedFailed, QueueCleared } from './FeedState'
 
 const meta = { title: 'Feed/FeedState', component: FeedFailed } satisfies Meta<typeof FeedFailed>
 export default meta
@@ -46,6 +46,18 @@ export const NothingMatchesTheFilter: StoryObj<typeof FeedEmpty> = {
   play: async ({ args, canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Show everything' }))
     await expect(args.onClearFilter).toHaveBeenCalled()
+  },
+}
+
+/** The Saved queue read through: Pip shuts the book, and the archive is one tap away. */
+export const QueueReadThrough: StoryObj<typeof QueueCleared> = {
+  render: (args) => <QueueCleared {...args} />,
+  args: { archived: 12, onArchive: fn() },
+  play: async ({ args, canvasElement }) => {
+    const c = within(canvasElement)
+    await expect(c.getByText('Queue cleared')).toBeVisible()
+    await userEvent.click(c.getByRole('button', { name: 'Open the archive' }))
+    await expect(args.onArchive).toHaveBeenCalled()
   },
 }
 

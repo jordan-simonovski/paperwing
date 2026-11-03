@@ -13,6 +13,7 @@ import { marginNotes } from './_lib/notes.js'
 import { allBoards, boardFront, readBoard } from './_lib/boards.js'
 import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './_lib/sources.js'
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
+import { standardFeed, StandardRateLimit } from './_lib/standard.js'
 
 // One function for every server-fetched source keeps us well under Vercel Hobby's function limit.
 // Each source is one entry in SOURCES: what it needs from the query string, and how long its answer
@@ -53,6 +54,7 @@ interface Source {
 export const SOURCES: Record<FeedSource, Source> = {
   lobsters: { ttl: 300, run: (p) => lobsters(p.get('path') ?? 'hottest') },
   rss: { ttl: 900, run: (p) => rss(need(p, 'url'), p.get('label') ?? undefined) },
+  standard: { ttl: 900, run: (p, request) => standardFeed(need(p, 'url'), p.get('label') ?? undefined, request) },
   // A link card's words, for sharing a story to Bluesky: a day at the edge.
   card: { ttl: 86_400, run: (p) => pageCard(need(p, 'url')).catch(() => ({})) },
   // The card's picture as bytes, so the app can upload it to the reader's own repo. Only small pictures.
@@ -149,6 +151,7 @@ export async function GET(request: Request): Promise<Response> {
     const out = await source.run(p, request)
     return out instanceof Response ? out : json(out, source.ttl, 200, source.stale)
   } catch (err) {
+    if (err instanceof StandardRateLimit) return fail(err.message, 429)
     if (err instanceof BadRequest) return fail(err.message)
     return fail(err instanceof Error ? err.message : 'fetch failed', 502)
   }

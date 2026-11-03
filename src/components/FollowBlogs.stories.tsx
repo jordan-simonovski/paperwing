@@ -31,7 +31,7 @@ export const FollowFromARow: Story = {
 /** In the reader, beside a story from a blog you don't get yet. */
 export const FollowTheSite: Story = {
   render: () => <FollowSite story={story({ url: 'https://anildash.com/2012/12/13/the_web_we_lost/' })} />,
-  parameters: { app: { queries: [[['discover', 'anildash.com'], [anil]]] } },
+  parameters: { app: { queries: [[['discover', 'https://anildash.com/2012/12/13/the_web_we_lost/'], [anil]]] } },
 }
 
 export const Finder: Story = {
@@ -54,6 +54,49 @@ export const FinderFindsNothing: Story = {
   },
 }
 
+export const StandardPublication: Story = {
+  render: () => <FeedFinder />,
+  parameters: { app: { fetch: { 'src=discover': [{ url: 'https://lab.leaflet.pub', title: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', posts: 0, format: 'standard' }] } } },
+  play: async ({ canvas }) => {
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Site to follow' }), 'lab.leaflet.pub')
+    await userEvent.click(canvas.getByRole('button', { name: 'Find' }))
+    await expect(await canvas.findByText('lab.leaflet.pub · Standard.site publication')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
+    await expect(usePrefs.getState().customFeeds).toContainEqual({ url: 'https://lab.leaflet.pub', label: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', format: 'standard' })
+  },
+}
+
+export const DiscourseCategory: Story = {
+  args: { feed: { url: 'https://meta.discourse.org/c/support/6.rss', title: 'Discourse — Support', site: 'meta.discourse.org', posts: 20, format: 'discourse' } },
+  parameters: { app: { prefs: { customFeeds: [{ url: 'https://meta.discourse.org/c/feature/2.rss', label: 'Discourse — Feature', format: 'discourse' }] } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Follow' })).toBeEnabled()
+    await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
+    await expect(usePrefs.getState().customFeeds).toHaveLength(2)
+  },
+}
+
+export const TwoPublicationsOnOneSite: Story = {
+  render: () => (
+    <>
+      <FollowSite story={story({ url: 'https://writer.example/journal-a/post' })} />
+      <FollowSite story={story({ url: 'https://writer.example/journal-b/post' })} />
+    </>
+  ),
+  parameters: {
+    app: {
+      fetch: {
+        'url=https%3A%2F%2Fwriter.example%2Fjournal-a%2Fpost': [{ url: 'https://writer.example/journal-a', title: 'Journal A', site: 'writer.example', posts: 0, format: 'standard' }],
+        'url=https%3A%2F%2Fwriter.example%2Fjournal-b%2Fpost': [{ url: 'https://writer.example/journal-b', title: 'Journal B', site: 'writer.example', posts: 0, format: 'standard' }],
+      },
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('button', { name: 'Follow Journal A' })).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Follow Journal B' })).toBeVisible()
+  },
+}
+
 export const SuggestionsEmpty: Story = { render: () => <BlogSuggestions /> }
 
 export const Suggestions: Story = {
@@ -61,7 +104,7 @@ export const Suggestions: Story = {
   parameters: {
     app: {
       activity: { sites: { 'anildash.com': { keys: ['a', 'b', 'c', 'd'], last: Date.now() - 86_400_000, url: 'https://anildash.com/2012/12/13/the_web_we_lost/' } } },
-      queries: [[['discover', 'anildash.com'], [anil]]],
+      queries: [[['discover', 'https://anildash.com/2012/12/13/the_web_we_lost/'], [anil]]],
     },
   },
   play: async ({ canvas }) => {

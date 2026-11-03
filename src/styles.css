@@ -1906,7 +1906,7 @@
       transform: translateY(8px);
     }
   }
-  /* Today, finished while you watched: Pip gives a small hop and lands on its feet, book shut. Once, never on return. */
+  /* Today or the Saved queue, finished while you watched: Pip gives a small hop and lands on its feet, book shut. Once, never on return. */
   .pip-settle {
     transform-origin: 50% 85%;
     animation: pip-settle 560ms var(--ease) both;

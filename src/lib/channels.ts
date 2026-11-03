@@ -1,4 +1,5 @@
 import type { FollowedPerson } from './people'
+import { publisherRef } from './publishers'
 import { channelId, parseChannelId } from './channelId'
 import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
 import { isTechTopic, literalTerm, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
@@ -512,7 +513,7 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
     const tech = followsTech(ctx.followed)
     const own = ctx.followed.map((f) => TOPIC_BY_ID.get(f)).filter((t): t is Topic => !!t && !isTechTopic(t.id))
     const rssOf = (ts: Topic[]) => ts.flatMap((t) => t.feeds.filter((f) => f.kind === 'rss'))
-    const feeds = uniqueFeeds([...(tech ? rssOf(TOPICS.filter((t) => isTechTopic(t.id))) : []), ...rssOf(own), ...ctx.customFeeds.map((f): FeedRef => ({ kind: 'rss', url: f.url, label: f.label }))])
+    const feeds = uniqueFeeds([...(tech ? rssOf(TOPICS.filter((t) => isTechTopic(t.id))) : []), ...rssOf(own), ...ctx.customFeeds.map(publisherRef)])
     return {
       id,
       label: tech ? 'Blogs' : 'Publishers',
@@ -528,7 +529,7 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
   if (a.kind === 'feed') {
     const url = a.url
     const custom = ctx.customFeeds.find((f) => f.url === url)
-    return { id, label: custom?.label ?? url, eyebrow: 'Feed', feeds: [{ kind: 'rss', url, label: custom?.label ?? new URL(url).hostname }], native: true }
+    return { id, label: custom?.label ?? url, eyebrow: 'Feed', feeds: [publisherRef(custom ?? { url, label: new URL(url).hostname })], native: true }
   }
   const topic = findTopic(id, ctx.interests)
   if (topic) {
@@ -585,7 +586,7 @@ export function mixSourceFor(channel: Channel, interests: Interest[] = []): { so
     case 'bskyFeed':
       return { source: { kind: 'bskyFeed', uri: a.uri, name: label }, label }
     case 'feed':
-      return { source: { kind: 'rss', url: a.url, label }, label }
+      return { source: { kind: channel.feeds[0]?.kind === 'standard' ? 'standard' : 'rss', url: a.url, label }, label }
     default:
       return undefined
   }

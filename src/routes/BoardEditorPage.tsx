@@ -88,7 +88,7 @@ export function BoardEditorPage() {
         rkey,
         handles,
       )
-      if (!existing) toggleJoin({ uri, name: name.trim() })
+      if (!existing) toggleJoin({ uri, name: name.trim() }, { explain: false })
       toast(existing ? 'Board updated' : 'Your board is up. Share its link to invite people.')
       navigate(boardPath(uri))
     } catch (err) {
