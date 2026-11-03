@@ -66,6 +66,25 @@ export const StandardPublication: Story = {
   },
 }
 
+/** Given a site (a link pasted into Find): it's looked up straight away, with no typing or Find press. */
+export const LooksUpASiteItWasGiven: Story = {
+  render: () => <FeedFinder initial="https://lab.leaflet.pub" />,
+  parameters: { app: { fetch: { 'src=discover': [{ url: 'https://lab.leaflet.pub', title: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', posts: 0, format: 'standard' }] } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('textbox', { name: 'Site to follow' })).toHaveValue('https://lab.leaflet.pub')
+    await expect(await canvas.findByText('Standard.site publication')).toBeVisible()
+  },
+}
+
+/** Given nothing, it waits to be asked. */
+export const WaitsWithoutASite: Story = {
+  render: () => <FeedFinder initial="" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('textbox', { name: 'Site to follow' })).toHaveValue('')
+    await expect(canvas.queryByText(/Looking|No feed found/)).toBeNull()
+  },
+}
+
 export const DiscourseCategory: Story = {
   args: { feed: { url: 'https://meta.discourse.org/c/support/6.rss', title: 'Discourse — Support', site: 'meta.discourse.org', posts: 20, format: 'discourse' } },
   parameters: { app: { prefs: { customFeeds: [{ url: 'https://meta.discourse.org/c/feature/2.rss', label: 'Discourse — Feature', format: 'discourse' }] } } },

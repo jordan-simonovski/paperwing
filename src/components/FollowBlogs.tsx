@@ -55,8 +55,10 @@ export function FeedRow({ feed, note, detail }: { feed: FoundFeed; note?: string
   )
 }
 
-/** Settings: paste any link to a site (homepage, a post, or the feed) and follow what it publishes. */
-/** `initial`: a site to look up straight away (a link pasted into the palette, say). */
+/**
+ * Paste any link to a site (homepage, a post, or the feed) and follow what it publishes.
+ * `initial`: a site to look up straight away (a link pasted into the palette, say).
+ */
 export function FeedFinder({ initial = '' }: { initial?: string }) {
   const [draft, setDraft] = useState(initial)
   const [state, setState] = useState<{ status: 'idle' | 'looking' | 'done' | 'failed'; feeds: FoundFeed[]; error?: string }>({ status: 'idle', feeds: [] })

@@ -269,7 +269,7 @@ export function ExplorePage() {
         <h1 className="text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em]">Explore</h1>
         <nav
           ref={tabs}
-          className="seg mt-4 max-w-full overflow-x-auto [scrollbar-width:none] max-[899px]:[mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)]"
+          className="seg mt-4 max-w-full overflow-x-auto [scrollbar-width:none] max-[899px]:pr-6 max-[899px]:[mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)]"
           aria-label="What to explore"
         >
           {TABS.map((t) => (

@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { activityLabel, byActivity, findBoards } from '../lib/boardFinder'
 import { boardPath, toggleJoin, useAllBoards } from '../lib/boards'
 import { usePrefs } from '../lib/store'
+import { CouldntReach } from './FeedState'
 import { OfficialBadge } from './OfficialBadge'
 
 /**
@@ -11,7 +12,7 @@ import { OfficialBadge } from './OfficialBadge'
  * own above all), or the newest, and searchable by name and what they're about.
  */
 export function BoardDirectory() {
-  const { data: all = [], isPending } = useAllBoards()
+  const { data: all = [], isPending, isError, refetch } = useAllBoards()
   const joined = usePrefs((p) => p.boards)
   const [order, setOrder] = useState<'active' | 'new'>('active')
   const [query, setQuery] = useState('')
@@ -47,6 +48,9 @@ export function BoardDirectory() {
       )}
       {isPending ? (
         <p className="mt-6 text-ink-3">Finding boards…</p>
+      ) : isError && !all.length ? (
+        // A load that failed isn't an empty directory: say so, with a way to try again.
+        <CouldntReach what="the boards" onRetry={() => void refetch()} />
       ) : all.length === 0 ? (
         <div className="mt-6 rounded-[18px] bg-panel p-5">
           <p className="text-[1.125rem] font-bold">No community boards yet</p>

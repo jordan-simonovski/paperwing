@@ -22,7 +22,7 @@ test('following a Standard.site publication reads its native feed and keeps it a
   expect(prefs).toContainEqual({ url: publication.url, label: publication.title, site: publication.site, format: 'standard' })
 })
 
-test('pasting a site into the palette offers to follow it, and finds its feed', async ({ page }) => {
+test('pasting a site into the palette offers to follow it, and finds its feed', async ({ page, net }) => {
   await page.goto('/t/for-you')
   await page.keyboard.press('/')
   await page.getByRole('combobox').fill(publication.url)
@@ -30,4 +30,5 @@ test('pasting a site into the palette offers to follow it, and finds its feed', 
   await expect(page).toHaveURL(/\/explore\/publishers\?follow=/)
   await expect(page.getByRole('textbox', { name: 'Site to follow' })).toHaveValue(/lab\.leaflet\.pub/)
   await expect(page.getByRole('group', { name: publication.title, exact: true }).getByRole('button', { name: 'Follow', exact: true })).toBeVisible()
+  expect(net.unhandled).toEqual([])
 })
