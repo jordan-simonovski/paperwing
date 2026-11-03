@@ -1,8 +1,8 @@
-import { canUpdate, canWrite, createRecord, getOwnRecord, putRecord, uploadBlob, useAtproto, type StrongRef } from './atproto'
+import { canUpdate, canUpload, canWrite, createRecord, getOwnRecord, putRecord, uploadBlob, useAtproto, type StrongRef } from './atproto'
 import { facetsFor, graphemes, type Facet } from './facets'
 import { MAX_ALT, MAX_IMAGES } from './images'
 import { markdownHtml, markdownText } from './markdown'
-import { BODY_LIMIT, newTid, selfPostUrl, SUBMISSION_NSID, submissionRecord, type SelfPostBody } from './paperwing'
+import { BODY_LIMIT, newTid, SELF_LINK_TEXT, selfPostUrl, SUBMISSION_NSID, submissionRecord, type SelfPostBody } from './paperwing'
 import { api } from './sources/http'
 import { storyKey } from './storyKey'
 import type { Media, Story } from './types'
@@ -23,9 +23,6 @@ export interface PostImage {
 
 /** Bluesky's self-labels a poster can put on their own pictures. */
 export type ContentLabel = 'nudity' | 'sexual' | 'porn' | 'graphic-media'
-
-/** What a picture post's words end with: a link to its page here (the whole address is in the link). */
-const LINK_TEXT = 'paperwing.io'
 
 const POST_LIMIT = 300
 
@@ -92,19 +89,20 @@ export async function writeSelfPost(i: SelfPostInput): Promise<{ key: string; st
   const { did, scope } = useAtproto.getState()
   if (!did) throw new Error('Sign in with Bluesky to post')
   if (canWrite(scope, SUBMISSION_NSID) === false) throw new Error('Posting to PaperWing needs one more permission: allow it under Settings, Sources.')
+  if (images.length && canUpload(scope) === false) throw new Error('Posting pictures needs one more permission: allow it under Settings, Sources.')
 
   // One key for both records, chosen now: the post links to its own page, which is named by it.
   const rkey = newTid()
   const uri = `at://${did}/app.bsky.feed.post/${rkey}`
   const url = selfPostUrl(uri)
   // A picture post has no room for a link card (a post carries pictures or a card): it links back in its words.
-  const words = postText(title, body, images.length ? LINK_TEXT.length + 2 : 0)
+  const words = postText(title, body, images.length ? SELF_LINK_TEXT.length + 2 : 0)
   const facets: Facet[] = await facetsFor(words)
   let text = words
   if (images.length) {
-    text = `${words}\n\n${LINK_TEXT}`
+    text = `${words}\n\n${SELF_LINK_TEXT}`
     const start = new TextEncoder().encode(`${words}\n\n`).length
-    facets.push({ index: { byteStart: start, byteEnd: start + LINK_TEXT.length }, features: [{ $type: 'app.bsky.richtext.facet#link', uri: url }] })
+    facets.push({ index: { byteStart: start, byteEnd: start + SELF_LINK_TEXT.length }, features: [{ $type: 'app.bsky.richtext.facet#link', uri: url }] })
   }
   const uploaded = await Promise.all(images.map((im) => uploadBlob(im.blob)))
   const now = Date.now()
@@ -121,7 +119,8 @@ export async function writeSelfPost(i: SelfPostInput): Promise<{ key: string; st
             images: images.map((im, n) => ({ image: uploaded[n], alt: im.alt.trim().slice(0, MAX_ALT), aspectRatio: { width: im.width, height: im.height } })),
           }
         : { $type: 'app.bsky.embed.external', external: { uri: url, title: title.slice(0, 300), description: markdownText(body).slice(0, 1000) } },
-      ...(i.label ? { labels: { $type: 'com.atproto.label.defs#selfLabels', values: [{ val: i.label }] } } : {}),
+      // A content warning is for the pictures: a post without any carries none.
+      ...(i.label && images.length ? { labels: { $type: 'com.atproto.label.defs#selfLabels', values: [{ val: i.label }] } } : {}),
     },
     rkey,
   )

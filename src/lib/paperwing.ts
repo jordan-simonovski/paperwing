@@ -8,6 +8,8 @@ import { TOPIC_BY_ID } from './topics.js'
 
 export const SUBMISSION_NSID = 'io.paperwing.submission'
 export const PAPERWING_SITE = 'https://paperwing.io'
+/** What a picture post's words end with: a link to its page here (the whole address is in the link). */
+export const SELF_LINK_TEXT = new URL(PAPERWING_SITE).host
 export const boardUrl = (board: string) => `${PAPERWING_SITE}/b/${encodeURIComponent(board)}`
 
 export type PaperwingSort = 'hot' | 'new' | 'top'

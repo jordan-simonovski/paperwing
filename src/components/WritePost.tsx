@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link2, Loader2, PenLine, Send } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { canUpdate, canWrite, useAtproto } from '../lib/atproto'
+import { canUpdate, canUpload, canWrite, useAtproto } from '../lib/atproto'
 import { useComposer } from '../lib/compose'
 import { BODY_LIMIT, SUBMISSION_NSID } from '../lib/paperwing'
 import { keys } from '../lib/query'
@@ -34,16 +34,21 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
   const [pending, setPending] = useState<PendingSelfPost>()
   const [pictures, setPictures] = useState<Picture[]>([])
   const [label, setLabel] = useState<ContentLabel | ''>('')
+  // The previews are this device's copies: let them go with the sheet (a posted story has its own).
+  const shown = useRef(pictures)
+  shown.current = pictures
+  useEffect(() => () => shown.current.forEach((p) => URL.revokeObjectURL(p.url)), [])
   const requireAlt = usePrefs((p) => p.requireAlt)
   const { shut, name: boardName, noImages } = useBoardShut(board)
   const undescribed = requireAlt && pictures.some((p) => !p.alt.trim())
   const noPicturesHere = noImages && pictures.length > 0
   const allowed = edit ? canUpdate(scope, SUBMISSION_NSID) !== false : canWrite(scope, SUBMISSION_NSID) !== false
+  const uploads = canUpload(scope) !== false
   const over = body.trim().length > BODY_LIMIT
   // Saving the same words again isn't an edit.
   const changed = !edit || body.trim() !== edit.selfPost?.body
-  // Words, pictures, or both: with pictures, the words are optional.
-  const something = !!body.trim() || (!edit && !pending && pictures.length > 0)
+  // Words, pictures, or both: with pictures, the words are optional (saving a picture post's listing again too).
+  const something = !!body.trim() || (!edit && (pending ? !!pending.media?.length : pictures.length > 0))
   const ready = !!did && allowed && something && !over && changed && (!!edit || !!pending || (!!title.trim() && !shut && !undescribed && !noPicturesHere))
 
   const submit = async () => {
@@ -132,16 +137,22 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         <MarkdownEditor value={body} onChange={setBody} label="Your post" placeholder="Say what you want to say. Markdown works." autoFocus={!!edit} />
         {over && <p className="text-[0.8125rem] text-signal">That’s over {BODY_LIMIT.toLocaleString()} characters.</p>}
 
-        {!edit && !pending && did && allowed && <PicturePicker pictures={pictures} onChange={setPictures} label={label} onLabel={setLabel} requireAlt={requireAlt} />}
-        {undescribed && (
-          <p className="text-[0.8125rem] text-ink-3">
-            Describe every picture to post it.{' '}
-            <Link to="/settings/sources" className="underline underline-offset-2" onClick={onClose}>
-              Alt text is required in your settings
-            </Link>
-            .
-          </p>
-        )}
+        {!edit &&
+          !pending &&
+          did &&
+          allowed &&
+          (uploads ? (
+            <PicturePicker pictures={pictures} onChange={setPictures} label={label} onLabel={setLabel} requireAlt={requireAlt} />
+          ) : (
+            <p className="text-[0.8125rem] text-ink-3">
+              Pictures need one more Bluesky permission.{' '}
+              <Link to="/settings/sources" className="underline underline-offset-2" onClick={onClose}>
+                Allow pictures under Settings, Sources
+              </Link>
+            </p>
+          ))}
+        {/* No link to the setting: following it would close this sheet and lose the post. */}
+        {undescribed && <p className="text-[0.8125rem] text-ink-3">Describe every picture to post it. (Alt text is required under Settings, Sources, Posting.)</p>}
         {noPicturesHere && <p className="text-[0.8125rem] text-signal">{boardName ?? 'This board'} takes no pictures: remove them, or pick another board.</p>}
 
         {pending && (

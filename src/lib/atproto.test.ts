@@ -1,6 +1,6 @@
 import { FetchRequestError, TokenRefreshError } from '@atproto/oauth-client-browser'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { canUpdate, CLIENT_METADATA, SCOPE, session, useAtproto } from './atproto'
+import { canUpdate, canUpload, CLIENT_METADATA, SCOPE, session, useAtproto } from './atproto'
 import { clientMetadata, HOME } from './oauthClient'
 
 // The OAuth client is faked so a test chooses what restoring a sign-in does; its error classes stay real.
@@ -32,6 +32,12 @@ describe('what a sign-in may change', () => {
     expect(canUpdate('atproto repo:io.paperwing.submission', 'io.paperwing.submission')).toBe(true)
     expect(canUpdate('atproto repo:io.paperwing.submissionx?action=update', 'io.paperwing.submission')).toBe(false)
     expect(canUpdate(undefined, 'io.paperwing.submission')).toBeUndefined()
+  })
+
+  it('knows whether a sign-in may upload pictures', () => {
+    expect(canUpload(SCOPE)).toBe(true)
+    expect(canUpload('atproto repo:app.bsky.feed.post?action=create')).toBe(false)
+    expect(canUpload(undefined)).toBeUndefined()
   })
 })
 

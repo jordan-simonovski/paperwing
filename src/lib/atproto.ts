@@ -187,6 +187,9 @@ export async function appview<T>(nsid: string, params: Record<string, string | n
 /** Whether the sign-in may write this collection: undefined until known. */
 export const canWrite = (scope: string | undefined, collection: string) => (scope === undefined ? undefined : scope.includes(`repo:${collection}`))
 
+/** Whether the sign-in may upload pictures to the account: undefined until known. */
+export const canUpload = (scope: string | undefined) => (scope === undefined ? undefined : scope.split(' ').some((s) => s.startsWith('blob:')))
+
 /**
  * Whether the sign-in may change records it already wrote in this collection: undefined until known.
  * A sign-in from before PaperWing asked for that may only create them.

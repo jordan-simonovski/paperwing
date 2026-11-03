@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const DID = 'did:plc:ukwly4246zmbi537o4u36pff'
 const writes: { op: string; collection: string; rkey?: string; record: Record<string, unknown> }[] = []
 const own: Record<string, { uri: string; cid: string; value: Record<string, unknown> }> = {}
-let scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
+let scope = 'atproto blob:image/* repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
 let failSubmission = 0
 const uploads: Blob[] = []
 /** The server writes the record but the answer never arrives. */
@@ -17,6 +17,7 @@ vi.mock('./atproto', async (orig) => {
     useAtproto: { getState: () => ({ did: DID, handle: 'me.example', scope }) },
     canWrite: real.canWrite,
     canUpdate: real.canUpdate,
+    canUpload: real.canUpload,
     createRecord: async (collection: string, record: Record<string, unknown>, rkey?: string) => {
       if (collection === 'io.paperwing.submission' && failSubmission-- > 0) throw new Error('PDS hiccup')
       const uri = `at://${DID}/${collection}/${rkey ?? '3m2zzzzzzzzzz'}`
@@ -53,7 +54,7 @@ const { parseStoryKey } = await import('./storyKey')
 beforeEach(() => {
   writes.length = 0
   for (const k of Object.keys(own)) delete own[k]
-  scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
+  scope = 'atproto blob:image/* repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
   failSubmission = 0
   uploads.length = 0
   loseAnswer = false
@@ -164,6 +165,37 @@ describe('posting pictures', () => {
   it('carries a content warning as Bluesky’s own self-label', async () => {
     await writeSelfPost({ title: 'T', body: 'B', images: [picture('A')], label: 'graphic-media' })
     expect(writes.find((w) => w.collection === 'app.bsky.feed.post')!.record.labels).toEqual({ $type: 'com.atproto.label.defs#selfLabels', values: [{ val: 'graphic-media' }] })
+  })
+
+  it('links back at the right place whatever the title is written in, within Bluesky’s 300', async () => {
+    await writeSelfPost({ title: 'Café 🍳 kitchen, ünïcode', body: 'Ça va? 🙂 '.repeat(60), images: [picture('A')] })
+    const post = writes.find((w) => w.collection === 'app.bsky.feed.post')!
+    const text = post.record.text as string
+    expect([...new Intl.Segmenter().segment(text)].length).toBeLessThanOrEqual(300)
+    expect(text.endsWith('\n\npaperwing.io')).toBe(true)
+    const [link] = post.record.facets as { index: { byteStart: number; byteEnd: number } }[]
+    expect(new TextDecoder().decode(new TextEncoder().encode(text).slice(link.index.byteStart, link.index.byteEnd))).toBe('paperwing.io')
+  })
+
+  it('saves a picture post’s listing again without words, never posting twice', async () => {
+    failSubmission = 2
+    const err = (await writeSelfPost({ title: 'T', body: '', images: [picture('A')] }).catch((e: unknown) => e)) as InstanceType<typeof WordsNotSaved>
+    expect(err).toBeInstanceOf(WordsNotSaved)
+    const { story } = await saveWords(err.pending, '')
+    expect(writes.map((w) => w.collection)).toEqual(['app.bsky.feed.post', 'io.paperwing.submission'])
+    expect(story.media).toHaveLength(1)
+  })
+
+  it('needs the permission to upload pictures, asking before anything is posted', async () => {
+    scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
+    await expect(writeSelfPost({ title: 'T', body: 'B', images: [picture('A')] })).rejects.toThrow(/Settings, Sources/)
+    expect(uploads).toHaveLength(0)
+    expect(writes).toHaveLength(0)
+  })
+
+  it('puts a content warning only on pictures', async () => {
+    await writeSelfPost({ title: 'T', body: 'B', label: 'nudity' })
+    expect(writes.find((w) => w.collection === 'app.bsky.feed.post')!.record.labels).toBeUndefined()
   })
 
   it('takes four at most, and words or pictures, not neither', async () => {

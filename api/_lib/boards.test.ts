@@ -31,6 +31,8 @@ const records: Record<string, unknown> = {
 
 /** Posts that carry pictures. */
 const withPictures = new Set<string>()
+/** Posts their authors put a content warning on. */
+const selfLabelled = new Set<string>()
 /** Records whose server isn't answering just now. */
 const unreachable = new Set<string>()
 /** Accounts whose server isn't answering just now. */
@@ -63,6 +65,7 @@ vi.mock('./atlinks.js', () => ({
           author: { did: u.split('/')[2], handle: 'x' },
           record: { text: u.split('/').pop(), createdAt: '2026-11-01T00:00:00Z' },
           ...(withPictures.has(u) ? { embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'A picture' }] } } : {}),
+          ...(selfLabelled.has(u) ? { labels: [{ src: u.split('/')[2], uri: u, val: 'graphic-media' }] } : {}),
           likeCount: 1,
           replyCount: 0,
           indexedAt: '2026-11-01T00:00:00Z',
@@ -75,7 +78,7 @@ vi.mock('./atlinks.js', () => ({
 const linkTargets: Record<string, string[]> = {}
 /** Addresses Constellation isn't answering for just now. */
 const failing: Record<string, true> = {}
-vi.mock('./paperwing.js', () => ({
+vi.mock('./paperwing.js', async (orig) => ({
   official: (did: string) => did === 'did:plc:eprq6bm2okrgk6zsoka2wpux',
   // Honours its limit, like Constellation's pager: a smaller one would miss boards.
   linksTo: vi.fn(async (target: string, _c?: string, _p?: string, max = 300) => {
@@ -84,7 +87,8 @@ vi.mock('./paperwing.js', () => ({
   }),
   // As the real one reads it: PAPERWING_BLOCKED, DIDs or at:// URIs.
   blocked: () => new Set((process.env.PAPERWING_BLOCKED ?? '').split(/[\s,]+/).filter(Boolean)),
-  unlisted: () => false,
+  // The real one: what's kept off PaperWing's pages is kept off boards too.
+  unlisted: (await orig<typeof import('./paperwing.js')>()).unlisted,
   rank: (list: PostView[]) => list,
   submissions: vi.fn(async () => [`at://${ANN}/io.paperwing.submission/1`, `at://${ANN}/io.paperwing.submission/2`, `at://${ANN}/io.paperwing.submission/3`, `at://${BOB}/io.paperwing.submission/1`]),
 }))
@@ -149,6 +153,18 @@ describe('community boards', () => {
     } finally {
       withPictures.clear()
       records[BOARD] = before
+    }
+  })
+
+  it('leaves out posts their authors put a content warning on', async () => {
+    const warned = post(ANN, 'aaaaaaaaaaaaa')
+    selfLabelled.add(warned)
+    try {
+      const { resetMemoryKv } = await import('./kv.js')
+      resetMemoryKv()
+      expect((await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).stories).toEqual([])
+    } finally {
+      selfLabelled.clear()
     }
   })
 

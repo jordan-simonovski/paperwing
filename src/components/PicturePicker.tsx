@@ -1,5 +1,5 @@
 import { ImagePlus, Loader2, X } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { useId, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { MAX_ALT, MAX_IMAGES, prepareImage } from '../lib/images'
 import type { ContentLabel } from '../lib/selfPost'
 import { toast } from '../lib/ui'
@@ -27,7 +27,8 @@ const LABELS: [ContentLabel | '', string][] = [
 
 interface Props {
   pictures: Picture[]
-  onChange: (pictures: Picture[]) => void
+  /** Given changes as updates to the latest pictures: one being made ready never undoes another edit. */
+  onChange: Dispatch<SetStateAction<Picture[]>>
   label: ContentLabel | ''
   onLabel: (label: ContentLabel | '') => void
   /** Every picture needs a description (the reader's setting). */
@@ -48,22 +49,27 @@ export function PicturePicker({ pictures, onChange, label, onLabel, requireAlt }
     if (!chosen.length) return
     setReading(true)
     const added: Picture[] = []
-    for (const file of chosen) {
-      try {
-        const ready = await prepareImage(file)
-        added.push({ id: `p${next++}`, url: URL.createObjectURL(ready.blob), ...ready, alt: '' })
-      } catch (err) {
-        toast((err as Error).message, { tone: 'error' })
+    try {
+      for (const file of chosen) {
+        try {
+          const ready = await prepareImage(file)
+          added.push({ id: `p${next++}`, url: URL.createObjectURL(ready.blob), ...ready, alt: '' })
+        } catch (err) {
+          toast((err as Error).message, { tone: 'error' })
+        }
       }
+    } finally {
+      setReading(false)
+      onChange((now) => [...now, ...added].slice(0, MAX_IMAGES))
+      if (input.current) input.current.value = ''
     }
-    setReading(false)
-    onChange([...pictures, ...added])
-    if (input.current) input.current.value = ''
   }
 
   const remove = (p: Picture) => {
     URL.revokeObjectURL(p.url)
-    onChange(pictures.filter((x) => x !== p))
+    onChange((now) => now.filter((x) => x.id !== p.id))
+    // A content warning is for the pictures: it goes with the last of them.
+    if (pictures.length === 1) onLabel('')
   }
 
   return (
@@ -82,7 +88,10 @@ export function PicturePicker({ pictures, onChange, label, onLabel, requireAlt }
               maxLength={MAX_ALT}
               placeholder="What’s in it, for someone who can’t see it"
               aria-invalid={requireAlt && !p.alt.trim()}
-              onChange={(e) => onChange(pictures.map((x) => (x === p ? { ...x, alt: e.target.value } : x)))}
+              onChange={(e) => {
+                const alt = e.target.value
+                onChange((now) => now.map((x) => (x.id === p.id ? { ...x, alt } : x)))
+              }}
             />
           </label>
           <button type="button" className="icon-btn flex-none self-start" aria-label={`Remove picture ${n + 1}`} onClick={() => remove(p)}>
@@ -113,7 +122,7 @@ export function PicturePicker({ pictures, onChange, label, onLabel, requireAlt }
           </span>
         )}
       </div>
-      {label && (
+      {label && pictures.length > 0 && (
         <p className="text-[0.8125rem] text-ink-3">
           The post goes to Bluesky with this warning, which covers the pictures there. PaperWing keeps posts with a content warning off its front page and boards.
         </p>

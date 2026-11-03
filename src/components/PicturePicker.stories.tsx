@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent, waitFor } from 'storybook/test'
+import { expect, fireEvent, userEvent, waitFor } from 'storybook/test'
 import type { ContentLabel } from '../lib/selfPost'
 import { PicturePicker, type Picture } from './PicturePicker'
 
@@ -71,5 +71,29 @@ export const WithAWarning: Story = {
   args: { initial: seeded(1, 'A scene'), initialLabel: 'graphic-media' },
   play: async ({ canvas }) => {
     await expect(canvas.getByText(/keeps posts with a content warning off its front page/)).toBeVisible()
+  },
+}
+
+/** Describing one picture while another is being made ready: neither is lost. */
+export const DescribeWhileAdding: Story = {
+  args: { initial: seeded(2) },
+  play: async ({ canvas }) => {
+    fireEvent.change(canvas.getByLabelText('Choose pictures'), { target: { files: [await aPicture()] } })
+    fireEvent.change(canvas.getByRole('textbox', { name: /Describe picture 1/ }), { target: { value: 'A green tiled kitchen' } })
+    fireEvent.click(canvas.getByRole('button', { name: 'Remove picture 2' }))
+    await waitFor(() => expect(canvas.getAllByRole('textbox')).toHaveLength(2))
+    await expect(canvas.getByRole('textbox', { name: /Describe picture 1/ })).toHaveValue('A green tiled kitchen')
+    await expect(canvas.getByRole('textbox', { name: /Describe picture 2/ })).toHaveValue('')
+  },
+}
+
+/** Taking away the last picture takes its content warning with it. */
+export const WarningGoesWithThePictures: Story = {
+  args: { initial: seeded(1, 'A scene'), initialLabel: 'graphic-media' },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Remove picture 1' }))
+    await expect(canvas.queryByText(/keeps posts with a content warning/)).toBeNull()
+    await userEvent.upload(canvas.getByLabelText('Choose pictures'), await aPicture())
+    await expect(await canvas.findByRole('combobox')).toHaveValue('')
   },
 }

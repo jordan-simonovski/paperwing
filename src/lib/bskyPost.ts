@@ -1,4 +1,4 @@
-import { isSelfPost } from './paperwing.js'
+import { isSelfPost, SELF_LINK_TEXT } from './paperwing.js'
 import { storyKey } from './storyKey.js'
 // What a Bluesky post shares, read the same way by the feed generator and the client.
 import type { Media, Quote } from './types.js'
@@ -60,7 +60,7 @@ export const selfPostOf = (p: Shareable) =>
 /** A post's words; a self post's without the link back to its page here (where they're being read). */
 export const postWords = (p: Shareable) => {
   const text = p.record.text.trim()
-  return selfPostOf(p) ? text.replace(/\s*paperwing\.io$/, '').trim() : text
+  return selfPostOf(p) && text.endsWith(SELF_LINK_TEXT) ? text.slice(0, -SELF_LINK_TEXT.length).trim() : text
 }
 
 /** The link a post shares: its preview card, else the first link typed into the text (not other Bluesky posts). A self post shares none. */

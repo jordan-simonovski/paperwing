@@ -5,7 +5,7 @@ import { aPicture } from './PicturePicker.stories'
 import { WritePost } from './WritePost'
 
 const ME = 'did:plc:readerreaderreaderreader'
-const bsky = { did: ME, handle: 'reader.example', scope: 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update' }
+const bsky = { did: ME, handle: 'reader.example', scope: 'atproto blob:image/* repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update' }
 const page = () => within(document.body)
 const mine = story({
   key: 'bs-mine',
@@ -88,8 +88,19 @@ export const PicturesNeedDescribing: Story = {
     const describe = await page().findByRole('textbox', { name: /Describe picture 1/ })
     await expect(page().getByRole('button', { name: 'Post' })).toBeDisabled()
     await expect(page().getByText(/Describe every picture to post it/)).toBeVisible()
+    // Saying where the setting is never takes you away from the post you're writing.
+    await expect(page().queryByRole('link', { name: /Alt text/ })).toBeNull()
     await userEvent.type(describe, 'A green tiled kitchen')
     await waitFor(() => expect(page().getByRole('button', { name: 'Post' })).toBeEnabled())
+  },
+}
+
+/** Signed in before pictures were asked for: it says to allow them, and words still post. */
+export const PicturesNeedPermission: Story = {
+  parameters: { app: { atproto: { ...bsky, scope: 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update' } } },
+  play: async () => {
+    await waitFor(() => expect(page().getByRole('link', { name: 'Allow pictures under Settings, Sources' })).toBeVisible())
+    await expect(page().queryByLabelText('Choose pictures')).toBeNull()
   },
 }
 

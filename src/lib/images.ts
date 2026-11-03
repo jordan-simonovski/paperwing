@@ -57,7 +57,6 @@ export async function prepareImage(file: Blob): Promise<PreparedImage> {
     ctx.fillRect(0, 0, size.width, size.height)
     ctx.drawImage(bitmap, 0, 0, size.width, size.height)
     return new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('That picture couldn’t be prepared'))), 'image/jpeg', quality))
-  })
-  bitmap.close()
+  }).finally(() => bitmap.close())
   return { blob, ...size }
 }
