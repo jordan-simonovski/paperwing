@@ -191,6 +191,8 @@ export function SavedPage() {
     setLastQueue(counts.queue)
     setJustCleared(lastQueue > 0 && counts.queue === 0)
   }
+  // The hop is for the moment it happened: coming back from the archive doesn't replay it.
+  if (justCleared && view !== 'queue') setJustCleared(false)
   const listed = view === 'watching' && !searching ? watchRows : stories
   const { cursor, open } = useListKeys(listed, itemKey, '/saved')
 

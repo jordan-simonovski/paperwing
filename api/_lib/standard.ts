@@ -88,7 +88,7 @@ async function readStandardFeed(raw: string): Promise<Story[]> {
   let cursor: string | undefined
   // shortcut: scans the newest 300 documents per author, use a publication index for larger archives.
   for (let page = 0; page < 3; page++) {
-    const params = new URLSearchParams({ repo: did, collection: 'site.standard.document', limit: '100', reverse: 'true', ...(cursor ? { cursor } : {}) })
+    const params = new URLSearchParams({ repo: did, collection: 'site.standard.document', limit: '100', ...(cursor ? { cursor } : {}) })
     const result = await fetchJson<{ records: unknown[]; cursor?: string }>(`${pds}/xrpc/com.atproto.repo.listRecords?${params}`, { timeoutMs: 8000 })
     if (!Array.isArray(result.records)) throw new Error('Malformed Standard.site documents')
     for (const rawRecord of result.records.slice(0, 100)) {
@@ -148,12 +148,15 @@ async function readStandardFeed(raw: string): Promise<Story[]> {
   return verified.filter((s): s is Story => !!s)
 }
 
-/** Shared by the app and public mixes: cache verified articles, and charge only cold reads. */
-export async function standardFeed(raw: string, label?: string, request?: Request): Promise<Story[]> {
+/** What a cold read costs the allowance: it asks a dozen or more servers (records, pages, verification). */
+export const STANDARD_COLD_READ_COST = 8
+
+/** Shared by the app and public mixes: cache verified articles, and charge only cold reads, to whoever `payer` names. */
+export async function standardFeed(raw: string, label?: string, payer?: Request | string): Promise<Story[]> {
   const url = canonical(await assertPublicUrl(raw))
   const stories = await cachedInKv(`rd:standard:${url}`, 900, async () => {
     // Metadata, three record pages, and four batches of article verification.
-    if (request && (await fanOutLimited(request, 8))) throw new StandardRateLimit()
+    if (payer && (await fanOutLimited(payer, STANDARD_COLD_READ_COST))) throw new StandardRateLimit()
     return readStandardFeed(url)
   })
   return label ? stories.map((s) => ({ ...s, sourceLabel: label })) : stories

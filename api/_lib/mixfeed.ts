@@ -31,7 +31,7 @@ export async function readMix(uri: string): Promise<{ mix: MixRecord; did: strin
 const APPVIEW = 'https://public.api.bsky.app'
 
 /** Recent link stories from a mix's non-Bluesky sources: a few from each, newest first. */
-export async function linkStories(sources: MixSource[], request?: Request): Promise<Story[]> {
+export async function linkStories(sources: MixSource[], payer?: Request | string): Promise<Story[]> {
   const jobs: (() => Promise<Story[]>)[] = []
   let limited: StandardRateLimit | undefined
   for (const s of sources) {
@@ -39,7 +39,7 @@ export async function linkStories(sources: MixSource[], request?: Request): Prom
     else if (s.kind === 'standard')
       jobs.push(async () => {
         try {
-          return await standardFeed(s.url, s.label, request)
+          return await standardFeed(s.url, s.label, payer)
         } catch (err) {
           if (err instanceof StandardRateLimit) limited = err
           throw err
@@ -95,7 +95,7 @@ async function bestPostFor(url: string): Promise<string[]> {
   return uris
 }
 
-async function buildMixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
+async function buildMixFeed(did: string, rkey: string, payer?: Request | string): Promise<string[]> {
   const { mix } = await readMix(`at://${did}/${MIX_NSID}/${rkey}`)
   const feeds = mix.sources.filter((s): s is Extract<MixSource, { kind: 'bskyFeed' }> => s.kind === 'bskyFeed').slice(0, 6)
   const [fromFeeds, stories] = await Promise.all([
@@ -107,7 +107,7 @@ async function buildMixFeed(did: string, rkey: string, request?: Request): Promi
         { timeoutMs: 8000 },
       ),
     ),
-    linkStories(mix.sources, request),
+    linkStories(mix.sources, payer),
   ])
   // For each story, every post that shared it; then the most liked of those, one per story.
   const sharing = await pool(stories, 8, (s) => bestPostFor(s.url!))
@@ -131,6 +131,6 @@ async function buildMixFeed(did: string, rkey: string, request?: Request): Promi
 }
 
 /** A mix's feed, from the cache when it's under ten minutes old. */
-export async function mixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
-  return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey, request))
+export async function mixFeed(did: string, rkey: string, payer?: Request | string): Promise<string[]> {
+  return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey, payer))
 }

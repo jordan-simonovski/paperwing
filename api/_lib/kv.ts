@@ -215,9 +215,13 @@ export async function overLimit(key: string, seconds: number, limit: number, by 
  * so the app's own busiest minute fits (api/_test/feed.test.ts pins it): this stops a script, not a
  * reader. A one-fetch answer (a feed, an icon, a card) costs nothing and never comes here.
  */
-export const FAN_OUT_PER_MINUTE = 120
+export const FAN_OUT_PER_MINUTE = 140
 
-/** Counts `cost` against the caller's fan-out allowance; true when this call goes over it. Fails closed. */
-export function fanOutLimited(request: Request, cost: number): Promise<boolean> {
-  return overLimit(`rd:fanout:${clientKey(request)}`, 60, FAN_OUT_PER_MINUTE, cost)
+/**
+ * Counts `cost` against a fan-out allowance; true when this call goes over it. Fails closed. The
+ * allowance is the caller's, or a named one for work done on someone's behalf (a mix Bluesky reads
+ * is charged to its author, not to Bluesky's shared address).
+ */
+export function fanOutLimited(payer: Request | string, cost: number): Promise<boolean> {
+  return overLimit(`rd:fanout:${typeof payer === 'string' ? payer : clientKey(payer)}`, 60, FAN_OUT_PER_MINUTE, cost)
 }

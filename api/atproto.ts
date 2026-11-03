@@ -94,7 +94,8 @@ export async function GET(request: Request): Promise<Response> {
         }
         if (m && mixRkey) {
           // A feed whose mix was deleted or never existed is an unknown feed to Bluesky, not a server error.
-          const uris = await mixFeed(m[1], mixRkey, request).catch((err: Error) => err)
+          // Bluesky asks for every mix from a few shared addresses: cold reads are charged to the mix's author.
+          const uris = await mixFeed(m[1], mixRkey, `mix:${m[1]}`).catch((err: Error) => err)
           if (uris instanceof StandardRateLimit) return xrpcError('RateLimitExceeded', uris.message, 429)
           if (uris instanceof Error) return xrpcError('UnknownFeed', `No PaperWing mix behind this feed: ${uris.message}`)
           const next = offset + limit < uris.length ? String(offset + limit) : undefined

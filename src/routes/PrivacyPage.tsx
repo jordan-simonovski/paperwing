@@ -99,8 +99,8 @@ export function PrivacyPage() {
             The publication address and format stay with your other feed settings, including encrypted sync and your public blogroll if you turn it on.
           </p>
           <p>
-            To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself
-            isn’t stored.
+            To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). When Bluesky reads a published mix, the count is kept
+            against the mix owner’s public account ID instead. The counters expire within a day, and the address itself isn’t stored.
           </p>
         </Part>
 
