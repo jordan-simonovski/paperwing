@@ -1,5 +1,24 @@
 # What's new
 
+## 0.8.0
+
+_Released 3 November 2026_
+
+### New
+
+- **Find boards from For you.** For you now suggests a few more posts from PaperWing's liveliest boards, marked Suggested, and any board post has a Join button. Joined boards' posts show up in For you too. Turn suggestions off under Settings, Tuning.
+
+### Improved
+
+- **PaperWing's announcements reach For you.** A new announcement from PaperWing's official board sits at the top of For you for its first few days, as it does on the front page. Hide it like any story once you've read it.
+- **Announcements are yours to dismiss.** Tap the ✕ on a pinned announcement to put it away, or turn PaperWing's announcements off under Settings, Tuning to leave them out of For you.
+- **PaperWing keeps less of your posts.** Earlier versions of an edited post are kept for about a day instead of a year, and are cleared once the post is deleted. A post you edit from now on says it was edited for as long as it's up.
+
+### Fixes
+
+- **Board changes show up straight away.** A board you start or edit (a new moderator, new rules) shows your changes the moment you save, and everyone else sees them within a minute or two instead of up to half an hour.
+- **Formatting keeps up with fast typing.** When writing a post, pressing Bold, Italic or another formatting button and typing straight away puts your words inside the formatting, instead of sometimes splitting them around it.
+
 ## 0.7.1
 
 _Released 3 November 2026_
