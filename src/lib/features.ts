@@ -177,3 +177,16 @@ export function reasons(f: Features, profile: Record<string, number>, n = 3): { 
     .sort((a, b) => Math.abs(b.pull) - Math.abs(a.pull))
     .slice(0, n)
 }
+
+/**
+ * The one reason worth putting on a row: only when your taste clearly moved the story (lifted by
+ * 30% or more, or sunk by 25% or more), and only the strongest feature pulling that way.
+ */
+export function rowReason(f: Features, profile: Record<string, number>): { key: string; up: boolean } | undefined {
+  if (!Object.keys(profile).length) return undefined
+  const factor = tasteFactor(f, profile)
+  const up = factor >= 1.3
+  if (!up && factor > 0.75) return undefined
+  const top = reasons(f, profile, 6).find((r) => (up ? r.pull > 0 : r.pull < 0))
+  return top && { key: top.key, up }
+}

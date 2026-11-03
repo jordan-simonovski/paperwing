@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { reasons, storyFeatures } from '../lib/features'
+import { reasons, rowReason, storyFeatures } from '../lib/features'
 import { usePrefs } from '../lib/store'
 import { featureLabel } from '../lib/tasteLabel'
 import type { Story } from '../lib/types'
@@ -25,4 +25,17 @@ export function WhyRanked({ story, topics }: { story: Story; topics: string[] })
       )}
     </p>
   )
+}
+
+/**
+ * On a row in a ranked feed: the one thing about your taste that clearly moved this story, if
+ * anything did. The recipe is written down; this shows it where people read.
+ */
+export function TasteLine({ story, topics }: { story: Story; topics: string[] }) {
+  const affinity = usePrefs((p) => p.affinity)
+  const interests = usePrefs((p) => p.interests)
+  const why = useMemo(() => rowReason(storyFeatures({ ...story, topics }), affinity), [story, topics, affinity])
+  if (!why) return null
+  const name = featureLabel(why.key, interests).name
+  return <p className="mt-1 text-[0.8125rem] text-ink-3">{why.up ? <>Up for you: you like {name}</> : <>Down for you: you voted down {name}</>}</p>
 }

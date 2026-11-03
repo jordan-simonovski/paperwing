@@ -1,6 +1,7 @@
 import { useComposer } from '../lib/compose'
 import { firstTime } from '../lib/firsts'
 import { FriendsLine } from './FriendsLine'
+import { TasteLine } from './WhyRanked'
 import { profilePath } from '../lib/people'
 import { boardPath, toggleJoin } from '../lib/boards'
 import { OfficialBadge } from './OfficialBadge'
@@ -41,9 +42,11 @@ interface Props {
   note?: React.ReactNode
   /** Replaces the default swipes (right saves, left hides). */
   swipe?: { right?: [label: string, run: () => void]; left?: [label: string, run: () => void] }
+  /** In a feed your taste orders (Hot): say when it clearly moved this story. */
+  why?: boolean
 }
 
-export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpen, now, note, swipe }: Props) {
+export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpen, now, note, swipe, why }: Props) {
   const showExcerpts = usePrefs((p) => p.showExcerpts)
   const thumbnails = usePrefs((p) => p.thumbnails)
   // Behind a warning: the note shows, and in blur mode the picture (and, unless only pictures were flagged, the excerpt) is covered.
@@ -159,6 +162,7 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </p>
             )}
             <FriendsLine story={s} className="mt-1.5" />
+            {why && <TasteLine story={s} topics={s.topics} />}
             {s.shareNote && (
               <p className="row-quote mt-1.5 line-clamp-3 text-[0.875rem] leading-snug text-ink-2">
                 <span className="font-semibold">{s.sharedBy?.[0] ? `@${s.sharedBy[0]}` : 'Shared'}:</span> {s.shareNote}
