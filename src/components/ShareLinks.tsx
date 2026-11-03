@@ -62,7 +62,7 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
     {
       icon: <Pip variant="head" className="size-5" />,
       title: 'PaperWing link',
-      detail: storyPath(story).includes('tab=article') ? 'Opens on the article, with every discussion of it' : 'With every discussion of it',
+      detail: storyPath(story).includes('tab=article') ? 'The article and every discussion' : 'With every discussion of it',
       run: () => go(storyLink(story)),
       url: storyLink(story),
     },

@@ -19,7 +19,7 @@ export const Links: Story = {
   play: async () => {
     await waitFor(() => expect(page().getByRole('dialog', { name: 'Share' })).toBeVisible())
     await waitFor(() => expect(page().getByText('PaperWing link')).toBeVisible())
-    await expect(page().getByText('Opens on the article, with every discussion of it')).toBeVisible()
+    await expect(page().getByText('The article and every discussion')).toBeVisible()
     await waitFor(() => expect(page().getByText('Original article')).toBeVisible())
     await waitFor(() => expect(page().getByText('The Hacker News discussion')).toBeVisible())
   },
