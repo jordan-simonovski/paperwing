@@ -60,6 +60,10 @@ export function PrivacyPage() {
             title, the board you chose and whether it goes on the front page too); you can delete them on Bluesky like any post.
           </p>
           <p>
+            When you’re signed in with Bluesky, upvoting someone else’s PaperWing listing also likes its Bluesky post under your account. Taking the upvote back removes that like. Downvotes aren’t
+            published.
+          </p>
+          <p>
             A post you write on PaperWing works the same way: its Bluesky post has the title, the start of your words and a link to it here, and the words themselves are in that public record in your
             own account, where you can edit them, along with when you last edited them. So that a fresh edit shows what it changed, PaperWing’s server keeps the versions of the words it sees in its
             database (Upstash) for about a day after each is replaced. All of it goes within a day of the post last being opened, and is removed the next time the post is opened after you delete its

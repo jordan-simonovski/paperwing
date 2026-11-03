@@ -67,6 +67,7 @@ export function TermsPage() {
             <strong>Listing a story on PaperWing</strong> publishes a public Bluesky post and a small public record in your Bluesky account. They can be seen and copied by anyone, like any Bluesky
             post, and you can delete them on Bluesky.
           </p>
+          <p>While signed in with Bluesky, an upvote on someone else’s PaperWing listing is also a public Bluesky like. Taking it back removes the like. Downvotes only affect your own ranking.</p>
         </Part>
 
         <Part title="Using it fairly">
