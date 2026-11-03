@@ -1,6 +1,7 @@
 import type { FollowedPerson } from './people'
 import { channelId, parseChannelId } from './channelId'
 import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
+import { AT_COMMUNITY } from './paperwing'
 import { isTechTopic, literalTerm, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
 import { mixFeedRefs } from './mixes'
 import { sourceLabel, type MixSource } from './mixSources'
@@ -136,6 +137,8 @@ interface Ctx {
   people?: FollowedPerson[]
   /** Community boards you've joined. */
   boards?: { uri: string; name: string }[]
+  /** Suggest posts from boards you haven't joined (For you); on unless turned off. */
+  boardPicks?: boolean
   releaseRepos?: string[]
   /** Signed in to Mastodon, so Following can work. */
   mastodon?: boolean
@@ -210,6 +213,12 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
         ...(ctx.mastodon && topics.length ? [{ kind: 'mastodon', feed: 'home', topics: topics.map((t) => t.id) } as FeedRef] : []),
         // What the people you follow list on PaperWing (the most recently followed, to keep requests few).
         ...(ctx.people ?? []).slice(-20).map((p): FeedRef => ({ kind: 'person', actor: p.did, label: `@${p.handle}` })),
+        // The boards you've joined (the ten joined last), and suggestions from ones you haven't.
+        ...(ctx.boards ?? []).slice(-10).flatMap((b): FeedRef[] => {
+          const m = AT_COMMUNITY.exec(b.uri)
+          return m ? [{ kind: 'board', did: m[1], rkey: m[2], sort: 'hot', name: b.name }] : []
+        }),
+        ...(ctx.boardPicks === false ? [] : [{ kind: 'boardpicks' } as FeedRef]),
       ]),
       boost: topics.map((t) => t.id),
       related: [...new Set(topics.flatMap((t) => t.related))].filter((r) => !ctx.followed.includes(r)),

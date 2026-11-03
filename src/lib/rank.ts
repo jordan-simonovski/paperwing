@@ -100,6 +100,8 @@ export function engagement(s: Pick<Story, 'source' | 'score' | 'comments' | 'wei
 const COMMENTARY = 0.5
 /** Posts from people you follow on Mastodon. */
 const FOLLOWED = 1.5
+/** A suggestion from a board you haven't joined counts for less than what you chose. */
+const SUGGESTED = 0.6
 
 export interface Filters {
   mutedWords: string[]
@@ -258,11 +260,13 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
     const taste = affinityFactor(r, opts.affinity) * (opts.votes?.[r.key] ? VOTED[opts.votes[r.key]] : 1)
     // Someone you chose to follow said it: worth more than a stranger's post with the same numbers.
     const voice = r.followed ? FOLLOWED : mixed && SOCIAL.has(r.source) && kindOf(r) === 'discussions' ? COMMENTARY : 1
+    // A suggestion from a board you haven't joined seasons the list; it doesn't take it over.
+    const suggested = r.recommended ? SUGGESTED : 1
     // HN-style gravity on engagement, damped so a big story doesn't swamp everything fresh.
     // Votes decay fast because they arrive fast. Blogs, papers and releases have no votes, so a
     // two-day-old post shouldn't be buried the way a two-day-old HN story is.
     const gravity = unscored(r) ? 1.3 : 1.5
-    return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice) / Math.pow(ageH + 2, gravity)
+    return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice * suggested) / Math.pow(ageH + 2, gravity)
   }
   // PaperWing's official announcement leads Hot wherever its front page is part of the list, the
   // way it leads the front page: only the server pins, and only for its first few days.

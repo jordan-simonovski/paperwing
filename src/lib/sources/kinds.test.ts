@@ -44,6 +44,7 @@ const SAMPLES: { [K in FeedRef['kind']]: Ref<K>[] } = {
   ],
   person: [{ kind: 'person', actor: 'did:plc:anil', label: '@anil.example' }],
   board: [{ kind: 'board', did: 'did:plc:mod', rkey: 'open-web', sort: 'hot', name: 'The Open Web' }],
+  boardpicks: [{ kind: 'boardpicks' }],
   status: [{ kind: 'status' }, { kind: 'status', providers: ['github'], active: true }],
 }
 const all = Object.values(SAMPLES).flat() as FeedRef[]

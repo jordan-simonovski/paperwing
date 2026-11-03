@@ -185,6 +185,13 @@ export const FEED_KINDS: { [K in FeedRef['kind']]: FeedKind<K> } = {
       return [...p.stories, ...(p.shares ?? [])]
     },
   },
+  boardpicks: {
+    id: () => 'bp',
+    label: () => 'Suggested from boards',
+    brand: () => 'PaperWing boards',
+    mark: () => ({ own: 'paperwing' }),
+    fetch: () => viaServer('boardpicks', {}),
+  },
   board: {
     id: (r) => `cb:${r.did}:${r.rkey}:${r.sort}`,
     label: (r) => r.name ?? 'Community board',

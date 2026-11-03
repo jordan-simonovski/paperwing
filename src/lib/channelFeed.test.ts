@@ -29,6 +29,59 @@ describe('planning For you', () => {
   })
 })
 
+describe('boards in For you', () => {
+  // Valid board addresses: a 24-letter base32 DID and a 13-letter record key.
+  const letters = 'abcdefghijklmnopqrstuvwxyz234567'
+  const boards = Array.from({ length: 12 }, (_, i) => ({ uri: `at://did:plc:${letters[i].repeat(24)}/io.paperwing.board/3m2board${letters[i].repeat(5)}`, name: `Board ${i}` }))
+
+  it('suggests posts from boards you haven’t joined, unless you’ve turned that off', () => {
+    expect(kinds(reader({ followed: ['web'] }), 'for-you')).toContainEqual({ kind: 'boardpicks' })
+    expect(kinds(reader({ followed: ['web'], boardPicks: false }), 'for-you')).not.toContainEqual({ kind: 'boardpicks' })
+  })
+
+  it('brings in the posts of the boards you’ve joined: the ten you joined last', () => {
+    const planned = kinds(reader({ followed: ['web'], boards }), 'for-you').filter((f) => f.kind === 'board')
+    expect(planned).toHaveLength(10)
+    expect(planned[0]).toEqual({ kind: 'board', did: `did:plc:${'c'.repeat(24)}`, rkey: '3m2boardccccc', sort: 'hot', name: 'Board 2' })
+  })
+})
+
+describe('ranking For you with boards and announcements', () => {
+  const JOINED = 'at://did:plc:owner/io.paperwing.board/3m2joinedaaaa'
+  const OTHER = 'at://did:plc:other/io.paperwing.board/3m2otheraaaaa'
+  const ANNOUNCEMENTS = 'at://did:plc:pw/io.paperwing.board/3m2newsaaaaaa'
+  const front = [
+    story({ key: 'bs-news', title: 'Welcome to PaperWing', url: null, pinned: true, board: { uri: ANNOUNCEMENTS, name: 'Announcements', official: true } }),
+    story({ key: 'hn-1', title: 'A tiny Lisp in 500 lines', url: 'https://a.example/lisp' }),
+  ]
+  const picks = [
+    story({ key: 'bs-joined', title: 'Sourdough starters compared', url: 'https://a.example/sourdough', recommended: true, board: { uri: JOINED, name: 'Joined', official: false } }),
+    story({ key: 'bs-other', title: 'Rewiring a 1960s caravan', url: 'https://a.example/caravan', recommended: true, board: { uri: OTHER, name: 'Other', official: false } }),
+  ]
+  const ranked = (r: Reader, id = 'for-you') => {
+    const plan = planChannel(r, id, { sort: 'hot', blueskyEnabled: false })!
+    return rankChannel(
+      plan,
+      r,
+      plan.feeds.map((f) => (f.ref.kind === 'paperwing' ? front : f.ref.kind === 'boardpicks' ? picks : [])),
+    ).map((s) => s.key)
+  }
+
+  it('suggests only boards you haven’t joined', () => {
+    const keys = ranked(reader({ followed: ['web'], boards: [{ uri: JOINED, name: 'Joined' }] }))
+    expect(keys).toContain('bs-other')
+    expect(keys).not.toContain('bs-joined')
+  })
+
+  it('leaves announcements out of For you once you’ve turned them off, and only unpins them elsewhere', () => {
+    expect(ranked(reader({ followed: ['web'] }))[0]).toBe('bs-news')
+    expect(ranked(reader({ followed: ['web'], announcements: false }))).not.toContain('bs-news')
+    const plan = planChannel(reader({ announcements: false }), 'paperwing', { sort: 'hot', blueskyEnabled: false })!
+    const onFront = rankChannel(plan, reader({ announcements: false }), [front])
+    expect(onFront.find((s) => s.key === 'bs-news')).toMatchObject({ pinned: undefined })
+  })
+})
+
 describe('planning Latest', () => {
   it('asks each source for its newest posts, not its front page reordered', () => {
     const hot = kinds(reader(), 'hn', { variant: 'top', sort: 'hot' })

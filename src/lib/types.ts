@@ -53,6 +53,8 @@ export interface Story {
   board?: { uri: string; name: string; official: boolean }
   /** An official announcement held at the top of PaperWing's front page for a few days. */
   pinned?: boolean
+  /** Suggested from a community board the reader hasn't joined (the same suggestions for everyone). */
+  recommended?: boolean
   thumbnail?: string
   /** True when comments can be rendered in-app. */
   hasThread: boolean

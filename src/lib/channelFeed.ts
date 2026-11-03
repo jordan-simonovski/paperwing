@@ -28,6 +28,10 @@ export interface Reader {
   followedMixes: FollowedMix[]
   people: FollowedPerson[]
   boards: { uri: string; name: string }[]
+  /** Suggestions from boards they haven't joined, in For you. */
+  boardPicks: boolean
+  /** PaperWing's announcements: in For you and pinned, or neither. */
+  announcements: boolean
   releaseRepos: string[]
   /** Hosts of the status pages they follow beyond the built-in ones. */
   statusHosts: string[]
@@ -88,6 +92,7 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
     followedMixes: reader.followedMixes,
     people: reader.people,
     boards: reader.boards,
+    boardPicks: reader.boardPicks,
     releaseRepos: reader.releaseRepos,
     mastodon: !!reader.mastodon?.signedIn,
     bluesky: !!reader.bluesky,
@@ -112,11 +117,18 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
 export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[]): Ranked[] {
   const topicsOf = (ref: FeedRef) =>
     ('topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []).map((id) => findTopic(id, reader.interests)).filter((t): t is Topic => !!t)
+  const joined = new Set(reader.boards.map((b) => b.uri))
+  const forYou = plan.channel.id === 'for-you'
   const checked = plan.feeds.map((f, i) => {
     const topics = topicsOf(f.ref)
-    const data = batches[i] ?? []
+    let data = batches[i] ?? []
     // Keyword searches are noisy: keep only results that really are about the topic they were run for.
-    return topics.length ? data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s)))) : data
+    if (topics.length) data = data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s))))
+    // Suggestions are the same for everyone; the boards you've joined come in on their own.
+    if (f.ref.kind === 'boardpicks') data = data.filter((s) => !s.board || !joined.has(s.board.uri))
+    // Announcements turned off: out of For you, and never pinned anywhere.
+    if (!reader.announcements) data = data.flatMap((s) => (forYou && (s.pinned || s.board?.official) ? [] : s.pinned ? [{ ...s, pinned: undefined }] : [s]))
+    return data
   })
   return rankStories(reader, checked, { sort: plan.sort, native: plan.channel.native, boost: plan.channel.boost })
 }

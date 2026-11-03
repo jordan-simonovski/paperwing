@@ -99,6 +99,10 @@ export interface Prefs {
   people: FollowedPerson[]
   /** Community boards you've joined. */
   boards: JoinedBoard[]
+  /** Suggest posts from boards you haven't joined in For you. */
+  boardPicks: boolean
+  /** PaperWing's announcements: off, they're left out of For you and never pinned. */
+  announcements: boolean
   /** Your feeds shown on your PaperWing profile as a blogroll (io.paperwing.blogroll). */
   blogrollPublic: boolean
   interests: Interest[]
@@ -137,6 +141,8 @@ export const SYNCED_PREFS = [
   'people',
   'blogrollPublic',
   'boards',
+  'boardPicks',
+  'announcements',
   'mutedWords',
   'mutedDomains',
   'labelers',
@@ -173,6 +179,8 @@ export const usePrefs = create<Prefs>()(
       people: [],
       blogrollPublic: false,
       boards: [],
+      boardPicks: true,
+      announcements: true,
       interests: [],
       mutedWords: [],
       mutedDomains: [],

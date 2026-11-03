@@ -45,6 +45,7 @@ import { Pip } from '../components/Pip'
 import { HnAccount } from '../components/HnAccount'
 import { LemmyAccount } from '../components/LemmyAccount'
 import { Labelers } from '../components/ModerationSettings'
+import { BoardSettings } from '../components/BoardSettings'
 import { BlueskyFeeds } from '../components/BlueskyFeeds'
 import { playSplash } from '../lib/splash'
 import { MastodonSettings } from '../components/MastodonSettings'
@@ -847,6 +848,9 @@ function TuningSettings() {
             ['hide', 'Hide'],
           ]}
         />
+      </Section>
+      <Section title="Boards and announcements" hint="What For you shows from PaperWing’s community boards. Your choices sync.">
+        <BoardSettings />
       </Section>
       <Section
         title="Labelers"

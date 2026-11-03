@@ -166,6 +166,8 @@ export const testReader = (overrides: Partial<Reader> = {}): Reader => ({
   followedMixes: [],
   people: [],
   boards: [],
+  boardPicks: true,
+  announcements: true,
   releaseRepos: [],
   statusHosts: [],
   mutedWords: [],
