@@ -6,7 +6,7 @@ import { linking, posts, variants } from './atlinks.js'
 import { postTime, type PostView } from './bsky.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
-import { cachedInKv, type Payer } from './kv.js'
+import { cachedInKv, forMix, type Payer } from './kv.js'
 import { newsSearch, rss } from './sources.js'
 import { standardFeed, StandardRateLimit } from './standard.js'
 
@@ -84,7 +84,7 @@ export async function linkStories(sources: MixSource[], payer?: Payer, onSkipped
   }
   const results = await pool(jobs.slice(0, 16), 6, (job) => job())
   // A reader over their allowance is told so; a mix Bluesky reads goes without what it can't afford this minute.
-  if (limited && payer instanceof Request) throw limited
+  if (limited && !forMix(payer)) throw limited
   if (limited) onSkipped?.()
   if (failedNative && results.every((r) => r === undefined)) throw new MixSourceError('Mix publishers could not be read')
   const seen = new Set<string>()

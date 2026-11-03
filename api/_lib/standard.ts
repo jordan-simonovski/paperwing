@@ -3,7 +3,7 @@ import { parseHTML } from 'linkedom'
 import { getRecord, pdsOf, pool } from './frontpage.js'
 import { assertPublicUrl, fetchJson, fetchText, linkKey } from './http.js'
 import { escapeHtml } from './text.js'
-import { cachedInKv, fanOutLimited, type Payer } from './kv.js'
+import { cachedInKv, fanOutLimited, kv, kvConfigured, type Payer } from './kv.js'
 
 const DID = 'did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)'
 const publicationUri = new RegExp(`^at://(${DID})/site\\.standard\\.publication/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
@@ -154,10 +154,27 @@ export const STANDARD_COLD_READ_COST = 8
 /** Shared by the app and public mixes: cache verified articles, and charge only cold reads, to whoever `payer` names. */
 export async function standardFeed(raw: string, label?: string, payer?: Payer): Promise<Story[]> {
   const url = canonical(await assertPublicUrl(raw))
+  // A publication that just failed isn't asked again for a minute (one allowance window), so one that keeps failing costs once a window.
+  const failed = `rd:standard:failed:${url}`
   const stories = await cachedInKv(`rd:standard:${url}`, 900, async () => {
+    if (
+      kvConfigured() &&
+      (await kv()
+        .get(failed)
+        .catch(() => null))
+    )
+      throw new Error('This publication couldn’t be read just now')
     // Metadata, three record pages, and four batches of article verification.
     if (payer && (await fanOutLimited(payer, STANDARD_COLD_READ_COST))) throw new StandardRateLimit()
-    return readStandardFeed(url)
+    try {
+      return await readStandardFeed(url)
+    } catch (err) {
+      if (kvConfigured())
+        await kv()
+          .set(failed, '1', 60)
+          .catch(() => {})
+      throw err
+    }
   })
   return label ? stories.map((s) => ({ ...s, sourceLabel: label })) : stories
 }

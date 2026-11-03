@@ -4,6 +4,7 @@ import { fanOutLimited, FAN_OUT_PER_MINUTE, kv, MIX_FAN_OUT_PER_MINUTE, overLimi
 import { GET as rss } from '../rss'
 import { GET as atproto } from '../atproto'
 import { getRecord } from './frontpage'
+import { standardFeed } from './standard'
 
 const did = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa'
 const rkey = 'bbbbbbbbbbbbb'
@@ -132,5 +133,19 @@ describe('native publishers in public mix feeds', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('gives every did:web account on one site a single allowance between them', async () => {
+    await overLimit('rd:fanout:mix:did:web:minted.example', 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE)
+    expect(await fanOutLimited({ mix: 'did:web:minted.example:u2' }, 8)).toBe(true)
+    expect(await fanOutLimited({ mix: 'did:plc:pppppppppppppppppppppppp' }, 8)).toBe(false)
+  })
+
+  it('charges a publication that keeps failing once a window, not on every read', async () => {
+    const payer = { mix: did }
+    await expect(standardFeed('https://broken.example', undefined, payer)).rejects.toThrow()
+    await expect(standardFeed('https://broken.example', undefined, payer)).rejects.toThrow()
+    // One cold read charged (8): a second would leave less than this much room.
+    expect(await overLimit(`rd:fanout:mix:${did}`, 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE - 8)).toBe(false)
   })
 })

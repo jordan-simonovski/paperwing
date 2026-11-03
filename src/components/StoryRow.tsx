@@ -291,8 +291,10 @@ function JoinBoard({ board }: { board: { uri: string; name: string } }) {
       aria-label={`Join ${board.name}`}
       onClick={(e) => {
         e.stopPropagation()
-        toggleJoin(board)
-        toast(`Joined ${board.name}: its posts show in For you`, { action: { label: 'Undo', run: () => toggleJoin(board) } })
+        toggleJoin(board, { explain: false })
+        // One message either way: the first join on a device also says where a joined board shows up.
+        const where = firstTime('join') ? ' It’s under Boards in your menu, and among the places to put a story when you share or post.' : ''
+        toast(`Joined ${board.name}: its posts show in For you.${where}`, { action: { label: 'Undo', run: () => toggleJoin(board, { explain: false }) } })
       }}
     >
       <Plus size={12} /> Join

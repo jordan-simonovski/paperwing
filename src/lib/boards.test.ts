@@ -116,3 +116,29 @@ describe('editing a board’s moderators', () => {
     }
   })
 })
+
+describe('joining a board says where it shows up, once', async () => {
+  const { toggleJoin } = await import('./boards')
+  const { usePrefs } = await import('./store')
+  const { useUI } = await import('./ui')
+  const board = { uri: `at://${DID}/io.paperwing.board/3kb`, name: 'Home Cooking' }
+  const said = () => useUI.getState().toasts.map((t) => t.message)
+
+  it('explains on the first join, and not on the next', () => {
+    usePrefs.setState({ boards: [], firsts: [] })
+    useUI.setState({ toasts: [] })
+    toggleJoin(board)
+    expect(said()).toEqual([expect.stringMatching(/^Joined Home Cooking\. It’s under Boards in your menu/)])
+    toggleJoin(board)
+    toggleJoin(board)
+    expect(said()).toHaveLength(1)
+  })
+
+  it('leaves the explanation for later when the caller says its own thing (making a board)', () => {
+    usePrefs.setState({ boards: [], firsts: [] })
+    useUI.setState({ toasts: [] })
+    toggleJoin(board, { explain: false })
+    expect(said()).toEqual([])
+    expect(usePrefs.getState().firsts).toEqual([])
+  })
+})
