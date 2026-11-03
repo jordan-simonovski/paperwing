@@ -3,7 +3,7 @@ import { parseHTML } from 'linkedom'
 import { getRecord, pdsOf, pool } from './frontpage.js'
 import { assertPublicUrl, fetchJson, fetchText, linkKey } from './http.js'
 import { escapeHtml } from './text.js'
-import { cachedInKv, fanOutLimited } from './kv.js'
+import { cachedInKv, fanOutLimited, type Payer } from './kv.js'
 
 const DID = 'did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)'
 const publicationUri = new RegExp(`^at://(${DID})/site\\.standard\\.publication/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
@@ -152,7 +152,7 @@ async function readStandardFeed(raw: string): Promise<Story[]> {
 export const STANDARD_COLD_READ_COST = 8
 
 /** Shared by the app and public mixes: cache verified articles, and charge only cold reads, to whoever `payer` names. */
-export async function standardFeed(raw: string, label?: string, payer?: Request | string): Promise<Story[]> {
+export async function standardFeed(raw: string, label?: string, payer?: Payer): Promise<Story[]> {
   const url = canonical(await assertPublicUrl(raw))
   const stories = await cachedInKv(`rd:standard:${url}`, 900, async () => {
     // Metadata, three record pages, and four batches of article verification.

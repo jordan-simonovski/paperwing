@@ -6,7 +6,7 @@ import { linking, posts, variants } from './atlinks.js'
 import { postTime, type PostView } from './bsky.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
-import { cachedInKv } from './kv.js'
+import { cachedInKv, type Payer } from './kv.js'
 import { newsSearch, rss } from './sources.js'
 import { standardFeed, StandardRateLimit } from './standard.js'
 
@@ -31,7 +31,7 @@ export async function readMix(uri: string): Promise<{ mix: MixRecord; did: strin
 const APPVIEW = 'https://public.api.bsky.app'
 
 /** Recent link stories from a mix's non-Bluesky sources: a few from each, newest first. */
-export async function linkStories(sources: MixSource[], payer?: Request | string): Promise<Story[]> {
+export async function linkStories(sources: MixSource[], payer?: Payer): Promise<Story[]> {
   const jobs: (() => Promise<Story[]>)[] = []
   let limited: StandardRateLimit | undefined
   for (const s of sources) {
@@ -79,7 +79,8 @@ export async function linkStories(sources: MixSource[], payer?: Request | string
     }
   }
   const results = await pool(jobs.slice(0, 16), 6, (job) => job())
-  if (limited) throw limited
+  // A reader over their allowance is told so; a mix Bluesky reads goes without what it can't afford this minute.
+  if (limited && payer instanceof Request) throw limited
   const seen = new Set<string>()
   return results
     .flatMap((r) => (r ?? []).slice(0, 10))
@@ -95,7 +96,7 @@ async function bestPostFor(url: string): Promise<string[]> {
   return uris
 }
 
-async function buildMixFeed(did: string, rkey: string, payer?: Request | string): Promise<string[]> {
+async function buildMixFeed(did: string, rkey: string, payer?: Payer): Promise<string[]> {
   const { mix } = await readMix(`at://${did}/${MIX_NSID}/${rkey}`)
   const feeds = mix.sources.filter((s): s is Extract<MixSource, { kind: 'bskyFeed' }> => s.kind === 'bskyFeed').slice(0, 6)
   const [fromFeeds, stories] = await Promise.all([
@@ -131,6 +132,6 @@ async function buildMixFeed(did: string, rkey: string, payer?: Request | string)
 }
 
 /** A mix's feed, from the cache when it's under ten minutes old. */
-export async function mixFeed(did: string, rkey: string, payer?: Request | string): Promise<string[]> {
+export async function mixFeed(did: string, rkey: string, payer?: Payer): Promise<string[]> {
   return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey, payer))
 }

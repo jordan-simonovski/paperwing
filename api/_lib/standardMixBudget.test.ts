@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { call, fakeUpstreams, memoryStore } from '../_test/harness'
-import { fanOutLimited, FAN_OUT_PER_MINUTE } from './kv'
+import { fanOutLimited, FAN_OUT_PER_MINUTE, MIX_FAN_OUT_PER_MINUTE, overLimit } from './kv'
 import { GET as rss } from '../rss'
 import { GET as atproto } from '../atproto'
 
@@ -28,12 +28,24 @@ describe('native publishers in public mix feeds', () => {
   it('charges the mix’s author, not Bluesky’s shared address, when Bluesky reads the mix', async () => {
     // Bluesky asks for every mix from a few addresses: one busy mix mustn't stall everyone else's.
     await fanOutLimited(new Request('https://paperwing.io', { headers: { 'x-forwarded-for': '198.51.100.7' } }), FAN_OUT_PER_MINUTE)
-    const shared = await call(atproto, bluesky(), { headers: { 'x-forwarded-for': '198.51.100.7' } })
-    expect(shared.status).not.toBe(429)
+    const res = await call(atproto, bluesky(), { headers: { 'x-forwarded-for': '198.51.100.7' } })
+    expect(res.status).toBe(200)
+    // The cold read went on the author's allowance: 8 more than a full allowance would be over it.
+    expect(await overLimit(`rd:fanout:mix:${did}`, 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE - 7)).toBe(true)
+  })
 
-    await fanOutLimited(`mix:${did}`, FAN_OUT_PER_MINUTE)
-    // Another of the author's mixes, so the first one's cached feed isn't what answers.
-    const spent = await call(atproto, bluesky('ccccccccccccc'), { headers: { 'x-forwarded-for': '198.51.100.8' } })
-    expect(spent.status).toBe(429)
+  it('serves a mix without the publications its author can’t afford, rather than failing it', async () => {
+    await fanOutLimited({ mix: did }, FAN_OUT_PER_MINUTE)
+    const res = await call(atproto, bluesky('ccccccccccccc'), { headers })
+    expect(res.status).toBe(200)
+  })
+
+  it('caps cold reads across every Bluesky-read mix, so new accounts don’t buy new allowances', async () => {
+    await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, MIX_FAN_OUT_PER_MINUTE)
+    const fresh = 'did:plc:dddddddddddddddddddddddd'
+    const res = await call(atproto, bluesky('eeeeeeeeeeeee').replace(encodeURIComponent(did), encodeURIComponent(fresh)), { headers })
+    expect(res.status).toBe(200)
+    // Turned away at the ceiling before its author was charged anything.
+    expect(await overLimit(`rd:fanout:mix:${fresh}`, 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE)).toBe(false)
   })
 })

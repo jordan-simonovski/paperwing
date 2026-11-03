@@ -218,10 +218,17 @@ export async function overLimit(key: string, seconds: number, limit: number, by 
 export const FAN_OUT_PER_MINUTE = 140
 
 /**
- * Counts `cost` against a fan-out allowance; true when this call goes over it. Fails closed. The
- * allowance is the caller's, or a named one for work done on someone's behalf (a mix Bluesky reads
- * is charged to its author, not to Bluesky's shared address).
+ * Every mix Bluesky reads, together: Bluesky asks from a few shared addresses, so each mix is charged
+ * to its author instead, and this ceiling stops anyone minting accounts to buy fresh allowances.
  */
-export function fanOutLimited(payer: Request | string, cost: number): Promise<boolean> {
-  return overLimit(`rd:fanout:${typeof payer === 'string' ? payer : clientKey(payer)}`, 60, FAN_OUT_PER_MINUTE, cost)
+export const MIX_FAN_OUT_PER_MINUTE = 600
+
+/** Who pays for fan-out: the caller, or the author of a mix that Bluesky is reading. */
+export type Payer = Request | { mix: string }
+
+/** Counts `cost` against a fan-out allowance; true when this call goes over it. Fails closed. */
+export async function fanOutLimited(payer: Payer, cost: number): Promise<boolean> {
+  if (payer instanceof Request) return overLimit(`rd:fanout:${clientKey(payer)}`, 60, FAN_OUT_PER_MINUTE, cost)
+  // The shared ceiling first: past it, no author is charged for a read that won't happen.
+  return (await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, cost)) || overLimit(`rd:fanout:mix:${payer.mix}`, 60, FAN_OUT_PER_MINUTE, cost)
 }
