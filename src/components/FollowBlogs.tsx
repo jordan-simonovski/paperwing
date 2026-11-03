@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { findFeeds, follow, isFollowed, useFollowedHosts, useSiteFeeds, useSuggestedBlogs, type FoundFeed } from '../lib/follow'
 import { ago } from '../lib/format'
 import type { Story } from '../lib/types'
+import { publisherRef } from '../lib/publishers'
 
 /** In the reader: follow the blog a story comes from, when it has a feed you don't get yet. */
 export function FollowSite({ story }: { story: Story }) {
@@ -19,7 +20,7 @@ export function FollowSite({ story }: { story: Story }) {
           <Plus size={13} /> Follow {feed.title.length > 28 ? 'this blog' : feed.title}
         </button>
       )}
-      <AddToMix source={{ kind: 'rss', url: feed.url, label: feed.title }} label={feed.title} />
+      <AddToMix source={publisherRef({ ...feed, label: feed.title })} label={feed.title} />
     </>
   )
 }
@@ -28,7 +29,7 @@ export function FeedRow({ feed, note }: { feed: FoundFeed; note?: string }) {
   const hosts = useFollowedHosts()
   const following = isFollowed(feed, hosts)
   return (
-    <div className="flex items-center gap-3 py-1.5">
+    <div className="flex items-center gap-3 py-1.5" role="group" aria-label={feed.title}>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.9375rem] font-semibold">{feed.title}</p>
         <p className="truncate text-[0.8125rem] text-ink-3">
@@ -36,7 +37,7 @@ export function FeedRow({ feed, note }: { feed: FoundFeed; note?: string }) {
           {feed.latest ? ` · last post ${ago(feed.latest)}` : ''}
         </p>
       </div>
-      <AddToMix source={{ kind: 'rss', url: feed.url, label: feed.title }} label={feed.title} iconOnly className="icon-btn size-8 flex-none" />
+      <AddToMix source={publisherRef({ ...feed, label: feed.title })} label={feed.title} iconOnly className="icon-btn size-8 flex-none" />
       <button className={`btn h-8 flex-none px-3 ${following ? '' : 'btn-primary'}`} disabled={following} onClick={() => follow(feed)}>
         {following ? (
           <>
@@ -80,7 +81,7 @@ export function FeedFinder() {
           inputMode="url"
           autoCapitalize="off"
           autoCorrect="off"
-          placeholder="A blog, one of its posts, or its feed"
+          placeholder="A blog, Discourse forum or Standard.site publication"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           aria-label="Site to follow"
@@ -92,7 +93,7 @@ export function FeedFinder() {
       {state.status === 'done' && !state.feeds.length && <p className="text-[0.8125rem] text-ink-3">No feed found there. Some sites don’t publish one, or block apps from reading it.</p>}
       {state.status === 'failed' && <p className="text-[0.8125rem] text-signal">{state.error}</p>}
       {state.feeds.map((f) => (
-        <FeedRow key={f.url} feed={f} note={`${f.site} · ${f.posts} recent posts`} />
+        <FeedRow key={f.url} feed={f} note={`${f.site} · ${f.format === 'standard' ? 'Standard.site publication' : `${f.posts} recent posts`}`} />
       ))}
     </div>
   )

@@ -5,8 +5,9 @@ import { plural } from '../lib/format'
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
 import { AddToMix } from './AddToMix'
+import { publisherRef, type PublisherFeed } from '../lib/publishers'
 
-type Feed = { url: string; label: string; site?: string }
+type Feed = PublisherFeed
 
 /** Someone's blogroll on their profile: the blogs they read, each one to follow or mix, or all at once. */
 export function Blogroll({ feeds, who, mine }: { feeds: Feed[]; who: string; mine: boolean }) {
@@ -17,7 +18,7 @@ export function Blogroll({ feeds, who, mine }: { feeds: Feed[]; who: string; min
   const missing = feeds.filter((f) => !followed.has(f.url))
   const followAll = () => {
     const { customFeeds, set } = usePrefs.getState()
-    set({ customFeeds: [...customFeeds, ...missing.map((f) => ({ url: f.url, label: f.label, site: f.site }))] })
+    set({ customFeeds: [...customFeeds, ...missing] })
     toast(`Following ${plural(missing.length, 'blog')} from ${who}’s blogroll`, {
       action: { label: 'Undo', run: () => usePrefs.getState().set({ customFeeds: usePrefs.getState().customFeeds.filter((f) => !missing.some((m) => m.url === f.url)) }) },
     })
@@ -47,11 +48,11 @@ export function Blogroll({ feeds, who, mine }: { feeds: Feed[]; who: string; min
                   <p className="truncate text-[0.9375rem] font-semibold">{f.label}</p>
                   {f.site && <p className="truncate text-[0.8125rem] text-ink-3">{f.site}</p>}
                 </div>
-                <AddToMix source={{ kind: 'rss', url: f.url, label: f.label }} label={f.label} iconOnly className="icon-btn size-8 flex-none" />
+                <AddToMix source={publisherRef(f)} label={f.label} iconOnly className="icon-btn size-8 flex-none" />
                 <button
                   className={`btn h-8 flex-none px-3 text-[0.8125rem] ${has ? '' : 'btn-primary'}`}
                   disabled={has}
-                  onClick={() => follow({ url: f.url, title: f.label, site: f.site ?? '', posts: 0 })}
+                  onClick={() => follow({ url: f.url, title: f.label, site: f.site ?? '', posts: 0, format: f.format })}
                 >
                   {has ? <Check size={14} /> : <Plus size={14} />} {has ? 'Following' : 'Follow'}
                 </button>

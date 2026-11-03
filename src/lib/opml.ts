@@ -2,11 +2,8 @@
 // your feeds into PaperWing; exporting takes them, and the publishers behind your topics, anywhere
 // else. Parsed with a small tolerant reader rather than an XML library: OPML in the wild is messy.
 
-export interface OpmlFeed {
-  url: string
-  label: string
-  site?: string
-}
+import type { PublisherFeed } from './publishers'
+export type OpmlFeed = PublisherFeed
 
 const ATTR = /([a-zA-Z:]+)\s*=\s*("([^"]*)"|'([^']*)')/g
 const decode = (s: string) =>
@@ -34,14 +31,16 @@ export function parseOpml(text: string): OpmlFeed[] {
     } catch {
       /* no site */
     }
-    out.push({ url, label: (attrs.title || attrs.text || site || url).trim().slice(0, 120), site })
+    const format = attrs.type === 'standard' ? 'standard' : attrs.paperwingformat === 'discourse' ? 'discourse' : undefined
+    out.push({ url, label: (attrs.title || attrs.text || site || url).trim().slice(0, 120), site, ...(format ? { format } : {}) })
   }
   return out
 }
 
 /** An OPML file of feeds, in groups (a folder each in most readers). */
 export function buildOpml(title: string, groups: { name: string; feeds: OpmlFeed[] }[]): string {
-  const outline = (f: OpmlFeed) => `      <outline type="rss" text="${esc(f.label)}" title="${esc(f.label)}" xmlUrl="${esc(f.url)}"${f.site ? ` htmlUrl="https://${esc(f.site)}"` : ''}/>`
+  const outline = (f: OpmlFeed) =>
+    `      <outline type="${f.format === 'standard' ? 'standard' : 'rss'}"${f.format === 'discourse' ? ' paperwingFormat="discourse"' : ''} text="${esc(f.label)}" title="${esc(f.label)}" xmlUrl="${esc(f.url)}"${f.site ? ` htmlUrl="https://${esc(f.site)}"` : ''}/>`
   const body = groups
     .filter((g) => g.feeds.length)
     .map((g) => `    <outline text="${esc(g.name)}" title="${esc(g.name)}">\n${g.feeds.map(outline).join('\n')}\n    </outline>`)

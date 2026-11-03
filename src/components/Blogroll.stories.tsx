@@ -29,3 +29,12 @@ export const FollowAll: Story = {
     await expect(usePrefs.getState().customFeeds.map((f) => f.url)).toEqual(feeds.map((f) => f.url))
   },
 }
+
+export const NativePublication: Story = {
+  args: { feeds: [{ url: 'https://lab.leaflet.pub', label: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', format: 'standard' }] },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { expanded: false }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
+    await expect(usePrefs.getState().customFeeds[0]).toMatchObject({ url: 'https://lab.leaflet.pub', format: 'standard' })
+  },
+}

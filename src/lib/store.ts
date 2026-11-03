@@ -7,6 +7,7 @@ import { learn, storyFeatures } from './features'
 import type { MixSource } from './mixSources'
 import type { Labeler, WarningMode } from './moderation'
 import type { Story } from './types'
+import type { PublisherFeed } from './publishers'
 
 export interface Interest {
   id: string
@@ -48,12 +49,7 @@ export interface LemmyCommunity {
   icon?: string
 }
 
-export interface CustomFeed {
-  url: string
-  label: string
-  /** The publisher's host, when the feed was found from its site. */
-  site?: string
-}
+export type CustomFeed = PublisherFeed
 
 /** A site you've opened stories from: the stories (newest last, a handful kept) and when. */
 export interface SiteVisits {
