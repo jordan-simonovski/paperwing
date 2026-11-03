@@ -1,5 +1,14 @@
 # What's new
 
+## 0.13.0
+
+_Released 3 November 2026_
+
+### Improved
+
+- **Hot is fresher every time you come back.** Stories you've already seen or opened make way for new ones, and a story whose discussion has really grown since you looked comes back saying so. A line marks where you're caught up. Stories taking off right now rise, flamewars are held back, one site or topic can't fill the top, and For you mixes in a few strong stories from outside your usual. Your taste learns a little from what you stay to read, and older lessons fade.
+- **Shared links open on the article.** A PaperWing link you share for a story now opens on the article itself, with every discussion of it a tab away. Posts without a link, and videos, open as before.
+
 ## 0.12.0
 
 _Released 3 November 2026_
