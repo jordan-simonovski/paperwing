@@ -9,7 +9,7 @@ import { Link } from 'react-router'
 import { ArrowBigDown, ArrowBigUp, Bookmark, BookmarkCheck, EyeOff, Image as ImageIcon, Loader2, MessageSquare, Play, Newspaper, Plus, Share2, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { memo, useMemo, useRef } from 'react'
-import { compact, domainOf, fullDate, fullNumber, timeAgo } from '../lib/format'
+import { compact, domainOf, fullDate, fullNumber, plural, timeAgo } from '../lib/format'
 import { useSwipeActions } from '../lib/gestures'
 import { plainText } from '../lib/html'
 import { stateOf, useLibrary } from '../lib/library'
@@ -59,7 +59,7 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
   // A text-only post's title is its own first line; repeating it as an excerpt adds nothing.
   const excerpt = plain && !plain.startsWith(s.title.replace(/…$/, '').slice(0, 40)) ? plain : undefined
   const rowRef = useRef<HTMLElement>(null)
-  useImpression(rowRef, s.key, !read)
+  useImpression(rowRef, s.key, s.comments, !read)
   const vote = useActivity((a) => a.votes[s.key])
   const swipeRef = useSwipeActions<HTMLDivElement>({ right: swipe?.right?.[1] ?? (() => void toggleSaved(s)), left: swipe?.left?.[1] ?? (() => hideStory(s.key, s)) })
   const comments = s.comments ?? 0
@@ -162,7 +162,7 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </p>
             )}
             <FriendsLine story={s} className="mt-1.5" />
-            {why && <TasteLine story={s} topics={s.topics} />}
+            {why && <WhyLine story={s} />}
             {s.shareNote && (
               <p className="row-quote mt-1.5 line-clamp-3 text-[0.875rem] leading-snug text-ink-2">
                 <span className="font-semibold">{s.sharedBy?.[0] ? `@${s.sharedBy[0]}` : 'Shared'}:</span> {s.shareNote}
@@ -388,4 +388,14 @@ export function RowSkeleton() {
       </div>
     </div>
   )
+}
+
+/**
+ * Why a row in Hot is where it is, when there's something worth saying: back because its discussion
+ * grew since you looked, a pick from outside your usual, or your taste clearly moving it.
+ */
+function WhyLine({ story: s }: { story: Ranked }) {
+  if (s.sinceSeen) return <p className="mt-1 text-[0.8125rem] text-ink-3">{plural(s.sinceSeen.comments, 'new comment')} since you looked</p>
+  if (s.explore) return <p className="mt-1 text-[0.8125rem] text-ink-3">Outside your usual: busy elsewhere, and new to your taste</p>
+  return <TasteLine story={s} topics={s.topics} />
 }

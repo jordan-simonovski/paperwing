@@ -157,3 +157,19 @@ export const DismissAnnouncement: Story = {
     await expect(canvas.queryByRole('button', { name: /Join/ })).toBeNull()
   },
 }
+
+/** Back near the top because its discussion grew a lot since you last saw it. */
+export const NewCommentsSinceYouLooked: Story = {
+  args: { story: ranked({ seenBefore: true, sinceSeen: { comments: 64 } }), why: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('64 new comments since you looked')).toBeVisible()
+  },
+}
+
+/** A pick from outside your usual in For you: it says so, so what you make of it teaches the ranking. */
+export const OutsideYourUsual: Story = {
+  args: { story: ranked({ explore: true }), why: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/Outside your usual/)).toBeVisible()
+  },
+}

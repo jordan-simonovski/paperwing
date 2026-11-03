@@ -7,6 +7,7 @@ import { learn, storyFeatures } from './features'
 import type { MixSource } from './mixSources'
 import type { Labeler, WarningMode } from './moderation'
 import type { Story } from './types'
+import { firstLookThisVisit, look, type Glimpse } from './visits'
 import type { PublisherFeed } from './publishers'
 
 export interface Interest {
@@ -239,13 +240,17 @@ export const usePrefs = create<Prefs>()(
   ),
 )
 
-const seenThisSession = new Set<string>()
-
 const CAP = 5000
 function capped(map: Record<string, number>): Record<string, number> {
   const entries = Object.entries(map)
   if (entries.length <= CAP) return map
   return Object.fromEntries(entries.sort((a, b) => b[1] - a[1]).slice(0, CAP * 0.8))
+}
+/** Glimpses keep the most recently seen. */
+function cappedGlimpses(map: Record<string, Glimpse>): Record<string, Glimpse> {
+  const entries = Object.entries(map)
+  if (entries.length <= CAP) return map
+  return Object.fromEntries(entries.sort((a, b) => b[1].at - a[1].at).slice(0, CAP * 0.8))
 }
 
 /** How much each signal teaches the taste profile: a vote the most, a save half that, a hide less. */
@@ -263,8 +268,10 @@ interface Activity {
   hidden: Record<string, number>
   /** key -> previous visit to its thread, so new comments can be highlighted. */
   visits: Record<string, number>
-  /** key -> how many sessions the row was on screen without being opened. Unopened repeats sink. */
+  /** key -> how many visits the row was on screen (visits.ts). Hot sinks what you saw on earlier ones. */
   impressions: Record<string, number>
+  /** key -> its latest look and the one before this visit: when, and its comments then (visits.ts). */
+  glimpses: Record<string, Glimpse>
   /** Your votes: 1 up, -1 down. They stay on this device; what they taught the ranking syncs. */
   votes: Record<string, 1 | -1>
   /** Sites you've opened stories from, by host: what "blogs you keep reading" is worked out from. */
@@ -273,7 +280,8 @@ interface Activity {
   noteSite: (key: string, url: string) => void
   /** Votes a story up or down, or takes the vote back when it's the same direction again. */
   vote: (story: Story & { topics?: string[] }, dir: 1 | -1) => void
-  noteImpression: (key: string) => void
+  /** A row was on screen: counted once a visit, with its comments then. */
+  noteImpression: (story: Pick<Story, 'key' | 'comments'>) => void
   markRead: (key: string) => void
   toggleHidden: (key: string) => void
   /** Records a thread visit and returns the time of the previous one. */
@@ -287,6 +295,7 @@ export const useActivity = create<Activity>()(
       hidden: {},
       visits: {},
       impressions: {},
+      glimpses: {},
       votes: {},
       sites: {},
       noteSite: (key, url) => {
@@ -327,11 +336,13 @@ export const useActivity = create<Activity>()(
         // Switching from down to up undoes the downvote's lesson and teaches the upvote's.
         usePrefs.getState().learn(story, (after - before) * LESSON.vote)
       },
-      noteImpression: (key) => {
-        // Once per session: scrolling past the same row twice in one sitting isn't a second look.
-        if (seenThisSession.has(key)) return
-        seenThisSession.add(key)
-        set((s) => ({ impressions: capped({ ...s.impressions, [key]: (s.impressions[key] ?? 0) + 1 }) }))
+      noteImpression: ({ key, comments }) => {
+        // Once a visit: scrolling past the same row twice in one sitting isn't a second look.
+        if (!firstLookThisVisit(key)) return
+        set((s) => ({
+          impressions: capped({ ...s.impressions, [key]: (s.impressions[key] ?? 0) + 1 }),
+          glimpses: cappedGlimpses({ ...s.glimpses, [key]: look(s.glimpses[key], comments) }),
+        }))
       },
       markRead: (key) => {
         if (!get().read[key]) set((s) => ({ read: capped({ ...s.read, [key]: Date.now() }) }))

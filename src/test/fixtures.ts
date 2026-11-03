@@ -175,6 +175,6 @@ export const testReader = (overrides: Partial<Reader> = {}): Reader => ({
   hidden: {},
   labelers: [],
   warnings: 'blur',
-  taste: () => ({ seen: {}, affinity: {}, votes: {} }),
+  taste: () => ({ memory: {}, affinity: {}, votes: {} }),
   ...overrides,
 })

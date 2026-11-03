@@ -11,6 +11,24 @@ export interface Ranked extends Story {
   /** Other links about the same event (another outlet's article, a thread on it elsewhere). */
   coverage?: Story[]
   topics: string[]
+  /** You saw it on an earlier visit (or opened it then): below these, you're caught up. */
+  seenBefore?: boolean
+  /** It's back because its discussion really grew since you last looked. */
+  sinceSeen?: { comments: number }
+  /** In For you from outside your usual: strong, and your taste has no view on it yet. */
+  explore?: boolean
+}
+
+/** What you did with a story on earlier visits (reader.ts builds it; this visit doesn't count). */
+export interface Memory {
+  /** Earlier visits it was on screen. */
+  looks: number
+  /** When you last saw it. */
+  at: number
+  /** Its comments then, to tell whether it has really moved since. */
+  comments?: number
+  /** When you opened it, on an earlier visit. */
+  openedAt?: number
 }
 
 /** Spicy ranks like hot, then puts the most heated discussions first (hooks.ts, spice.ts). */
@@ -132,8 +150,12 @@ export interface MergeOptions {
   boost?: string[]
   extraTopics?: Topic[]
   filters: Filters
-  /** Sessions each story has been on screen unopened; repeats sink in hot. A snapshot, so rows don't move mid-scroll. */
-  seen?: Record<string, number>
+  /** What you did with each story on earlier visits: seen ones sink, opened ones more. Nothing from this visit, so rows don't move mid-scroll. */
+  memory?: Record<string, Memory>
+  /** HN-equivalent points an hour each story has been gaining between fetches (momentum.ts). */
+  momentum?: Record<string, number>
+  /** For you: a few strong stories from outside your usual, labelled. */
+  explore?: boolean
   /** Your taste profile (features.ts): feature -> -3..3, from votes, saves, hides and More/Fewer. */
   affinity?: Record<string, number>
   /** Your own votes: a story you voted down sinks, one you voted up rises, whatever it resembles. */
@@ -255,13 +277,21 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
   const now = Date.now()
   const boost = new Set(opts.boost ?? [])
   const mixed = order.some((r) => !SOCIAL.has(r.source))
+  for (const r of order) {
+    const m = opts.memory?.[r.key]
+    if (!m) continue
+    r.seenBefore = true
+    const grew = r.comments !== undefined && m.comments !== undefined ? r.comments - m.comments : 0
+    if (grew >= Math.max(10, m.comments ?? 0)) r.sinceSeen = { comments: grew }
+  }
   const rank = (r: Ranked) => {
     const ageH = Math.max(0, (now - r.createdAt) / 3_600_000)
     const crossPosted = 1 + 0.2 * r.alsoOn.length
     const interest = boost.size && r.topics.some((t) => boost.has(t)) ? 1.3 : 1
-    // Seen in two or more earlier sessions and never opened: it had its chance.
-    const looks = opts.seen?.[r.key] ?? 0
-    const stale = looks > 1 ? Math.max(0.35, 0.8 ** (looks - 1)) : 1
+    const stale = staleness(opts.memory?.[r.key], r, now)
+    // Gaining points fast right now: up to half again.
+    const moving = 1 + 0.5 * Math.min(1, (opts.momentum?.[r.key] ?? 0) / 100)
+    const fight = flamewar(r)
     const taste = affinityFactor(r, opts.affinity) * (opts.votes?.[r.key] ? VOTED[opts.votes[r.key]] : 1)
     // Someone you chose to follow said it: worth more than a stranger's post with the same numbers.
     const voice = r.followed ? FOLLOWED : mixed && SOCIAL.has(r.source) && kindOf(r) === 'discussions' ? COMMENTARY : 1
@@ -271,25 +301,101 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
     // Votes decay fast because they arrive fast. Blogs, papers and releases have no votes, so a
     // two-day-old post shouldn't be buried the way a two-day-old HN story is.
     const gravity = unscored(r) ? 1.3 : 1.5
-    return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice * suggested) / Math.pow(ageH + 2, gravity)
+    return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * moving * fight * taste * voice * suggested) / Math.pow(ageH + 2, gravity)
   }
   // PaperWing's official announcement leads Hot wherever its front page is part of the list, the
   // way it leads the front page: only the server pins, and only for its first few days.
   const pinned = order.filter((r) => r.pinned)
   const rest = pinned.length ? order.filter((r) => !r.pinned) : order
   const ranks = new Map(rest.map((r) => [r, rank(r)]))
-  return [...pinned, ...interleave(rest, ranks)]
+  const spread = interleave(rest, ranks)
+  return [...pinned, ...(opts.explore ? explore(spread, opts.affinity) : spread)]
+}
+
+/**
+ * How far an earlier visit sinks a story: each visit it was on screen unopened costs it 40%,
+ * recovering over a day, and opening it costs 85%. A story whose discussion has really grown since
+ * (sinceSeen) is worth another look: half a sink at most.
+ */
+function staleness(m: Memory | undefined, r: Ranked, now: number): number {
+  if (!m) return 1
+  const days = Math.max(0, (now - m.at) / 86_400_000)
+  const looks = m.looks * 0.5 ** days
+  const sunk = Math.max(0.3, 0.6 ** looks) * (m.openedAt ? 0.15 : 1)
+  return r.sinceSeen ? Math.max(sunk, 0.6) : sunk
+}
+
+/**
+ * Hacker News's flamewar rule: once a thread has 40 comments and more comments than votes, it's
+ * held back by the square of the ratio, to at most 60% off. Social posts count replies as their
+ * engagement and have no votes to weigh them against.
+ */
+function flamewar(r: Story): number {
+  if (SOCIAL.has(r.source) || r.score === undefined || r.comments === undefined || r.comments < 40 || r.comments <= r.score) return 1
+  return Math.max(0.4, (Math.max(1, r.score) / r.comments) ** 2)
+}
+
+/** Where For you's picks from outside your usual go, and how many at most. */
+const EXPLORE_AT = [6, 16, 26]
+
+/**
+ * For you, with a few strong stories your taste has no view on yet: from the busiest third of the
+ * list, not ones you've seen before or turned from, moved up into fixed slots and labelled, so
+ * what you make of one teaches the profile something new.
+ */
+function explore(stories: Ranked[], affinity: Record<string, number> | undefined): Ranked[] {
+  if (!affinity || !Object.keys(affinity).length || stories.length <= EXPLORE_AT[0]) return stories
+  const busiest = [...stories].sort((a, b) => b.heat - a.heat)[Math.floor(stories.length / 3)]?.heat ?? 1
+  const candidates = stories.filter((r, i) => {
+    if (i < EXPLORE_AT[0] || r.seenBefore || r.pinned || r.heat < busiest) return false
+    const f = affinityFactor(r, affinity)
+    return f > 0.85 && f < 1.15
+  })
+  const out = [...stories]
+  for (const [n, at] of EXPLORE_AT.entries()) {
+    const pick = candidates[n]
+    if (!pick || at >= out.length) break
+    out.splice(out.indexOf(pick), 1)
+    out.splice(at, 0, { ...pick, explore: true })
+  }
+  return out
+}
+
+/** Where Hot's stories turn to ones you've seen before: the caught-up line, when there's something on each side. */
+export function caughtUpAt(stories: Pick<Ranked, 'seenBefore'>[]): number | undefined {
+  let at = stories.length
+  while (at > 0 && stories[at - 1].seenBefore) at--
+  return at > 0 && at < stories.length ? at : undefined
 }
 
 /** Each story already placed from a source costs that source this much on its next one. */
 const SOURCE_DECAY = 0.7
 /** Blogs share the "rss" source, so one publisher also pays for its own run. */
 const PUBLISHER_DECAY = 0.6
+/** A site's or a person's next story: 1, 0.63, 0.44, 0.34… never below a quarter (X's author diversity). */
+const repeat = (k: number) => 0.75 * 0.5 ** k + 0.25
+/** A topic's next story costs a little, never below 0.6: a topic channel is all one topic, and that's fine. */
+const topicRepeat = (k: number) => Math.max(0.6, 0.85 ** k)
+/** How far down each source's own order to look for the next pick, now that sites and topics reorder it. */
+const DEPTH = 8
+
+/** What a story shares with the ones above it: its source, its blog, its site, its author and its main topic. */
+function groupsOf(r: Ranked): { source: string; publisher?: string; site?: string; author?: string; topic?: string } {
+  const social = SOCIAL.has(r.source)
+  return {
+    source: r.source,
+    publisher: r.source === 'rss' ? `rss:${r.sourceLabel}` : undefined,
+    // A blog pays as a publisher already; a social post's link is often a different site from its own.
+    site: r.source === 'rss' || social ? undefined : domainKey(r.url),
+    author: social && r.author ? `a:${r.author}` : undefined,
+    topic: r.topics[0] ? `t:${r.topics[0]}` : undefined,
+  }
+}
 
 /**
- * Hot order with the sources split up. Picks greedily: a story's rank is discounted by how many
- * stories from its source (and, for blogs, its publisher) are already above it. A strong story
- * still leads; a source just has to earn its fifth slot more than its first.
+ * Hot order, spread out. Picks greedily: a story's rank is discounted by how many stories above it
+ * share its source, its blog, its site, its author or its main topic. A strong story still leads; a
+ * source, site or person just has to earn its fifth slot more than its first.
  */
 function interleave(stories: Ranked[], ranks: Map<Ranked, number>): Ranked[] {
   const queues = new Map<string, Ranked[]>()
@@ -298,17 +404,20 @@ function interleave(stories: Ranked[], ranks: Map<Ranked, number>): Ranked[] {
     q.push(r)
     queues.set(r.source, q)
   }
-  if (queues.size < 2) return stories.sort((a, b) => ranks.get(b)! - ranks.get(a)!)
   for (const q of queues.values()) q.sort((a, b) => ranks.get(b)! - ranks.get(a)!)
   const placed = new Map<string, number>()
+  const count = (k?: string) => (k ? (placed.get(k) ?? 0) : 0)
+  // Worked out once a story: the picker weighs each story many times over.
+  const groups = new Map(stories.map((r) => [r, groupsOf(r)]))
+  const value = (r: Ranked) => {
+    const g = groups.get(r)!
+    return ranks.get(r)! * SOURCE_DECAY ** count(g.source) * PUBLISHER_DECAY ** count(g.publisher) * repeat(count(g.site)) * repeat(count(g.author)) * topicRepeat(count(g.topic))
+  }
   const out: Ranked[] = []
-  const value = (r: Ranked) => ranks.get(r)! * SOURCE_DECAY ** (placed.get(r.source) ?? 0) * PUBLISHER_DECAY ** (r.source === 'rss' ? (placed.get(`rss:${r.sourceLabel}`) ?? 0) : 0)
   while (queues.size) {
     let best: { q: Ranked[]; i: number; v: number } | undefined
     for (const q of queues.values()) {
-      // Within blogs, a publisher's discount can reorder the queue, so look past the head.
-      const depth = q[0].source === 'rss' ? Math.min(q.length, 8) : 1
-      for (let i = 0; i < depth; i++) {
+      for (let i = 0; i < Math.min(q.length, DEPTH); i++) {
         const v = value(q[i])
         if (!best || v > best.v) best = { q, i, v }
       }
@@ -316,8 +425,7 @@ function interleave(stories: Ranked[], ranks: Map<Ranked, number>): Ranked[] {
     const [r] = best!.q.splice(best!.i, 1)
     if (!best!.q.length) queues.delete(r.source)
     out.push(r)
-    placed.set(r.source, (placed.get(r.source) ?? 0) + 1)
-    if (r.source === 'rss') placed.set(`rss:${r.sourceLabel}`, (placed.get(`rss:${r.sourceLabel}`) ?? 0) + 1)
+    for (const k of Object.values(groups.get(r)!)) if (k) placed.set(k, count(k) + 1)
   }
   return out
 }

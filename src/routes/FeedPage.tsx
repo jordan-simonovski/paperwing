@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { channelId as toChannelId } from '../lib/channelId'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { ChannelBrief } from '../components/ChannelBrief'
@@ -13,7 +13,8 @@ import { usePullToRefresh } from '../lib/gestures'
 import { Pip } from '../components/Pip'
 import { useChannelFeed, useNow } from '../lib/hooks'
 import { usePretext, useTypesetIn } from '../lib/pretext'
-import { kindOf, type SortMode } from '../lib/rank'
+import { caughtUpAt, kindOf, type SortMode } from '../lib/rank'
+import { CaughtUp } from '../components/CaughtUp'
 import { useActivity, usePrefs } from '../lib/store'
 import type { SourceKind } from '../lib/types'
 
@@ -63,6 +64,8 @@ export function FeedPage() {
     [feed.stories, sourceFilter, kindFilter, hideRead, hideRead ? read : null, itemKey],
   )
   const { cursor, open } = useListKeys(visible, itemKey, base, feed.refetch)
+  // In Hot, where the stories turn to ones you saw on earlier visits.
+  const caughtUp = tasteOrders ? caughtUpAt(visible) : undefined
 
   // A new list (another channel, sort or filter) paints its first screen of rows at once and the
   // rest just after, in an interruptible render, so a tap on Hot, Latest or Top answers straight
@@ -149,8 +152,11 @@ export function FeedPage() {
             <div role="feed" aria-busy={feed.loading}>
               {feed.loading && !visible.length && pretext && <TypesetLoader label={channel.label} />}
               {feed.loading && !visible.length && Array.from({ length: pretext ? 4 : 8 }, (_, i) => <RowSkeleton key={i} />)}
-              {visible.slice(0, rendered).map((s) => (
-                <StoryRow key={s.key} story={s} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} why={tasteOrders} />
+              {visible.slice(0, rendered).map((s, i) => (
+                <Fragment key={s.key}>
+                  {i === caughtUp && <CaughtUp />}
+                  <StoryRow story={s} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} why={tasteOrders} />
+                </Fragment>
               ))}
             </div>
             {allFailed && <FeedFailed offline={!navigator.onLine} statuses={feed.statuses} onRetry={() => void feed.refetch()} />}
