@@ -63,14 +63,18 @@ export function useSiteFeeds(url: string | null | undefined, enabled = true) {
 /** What following more says once your feeds are full. */
 export const FEEDS_FULL = 'Your feeds are full: unfollow some under Settings, Sources to follow more'
 
-/** The plain settings a sealed sync record can hold: 64,000 characters, less a third for sealing and some to spare. */
-const SYNCED_BYTES = 44_000
+/** The plain settings a sealed sync record can hold: 64,000 characters, less a third for sealing and a little to spare. */
+const SYNCED_BYTES = 46_000
+/** Room kept for the taste profile at its full 400 entries (features.ts), which keeps growing after your feeds fill up. */
+const PROFILE_BYTES = 20_000
 
-/** The bytes your feeds may take: what your other synced settings leave of the record they travel in. */
+const utf8 = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length
+
+/** The bytes your feeds may take: what your other synced settings leave of the record they travel in, the taste profile at its fullest. */
 export function feedRoom(): number {
   const prefs = usePrefs.getState()
-  const others = Object.fromEntries(SYNCED_PREFS.filter((k) => k !== 'customFeeds').map((k) => [k, prefs[k]]))
-  return Math.max(0, SYNCED_BYTES - new TextEncoder().encode(JSON.stringify(others)).length)
+  const others = Object.fromEntries(SYNCED_PREFS.filter((k) => k !== 'customFeeds' && k !== 'affinity').map((k) => [k, prefs[k]]))
+  return Math.max(0, SYNCED_BYTES - Math.max(PROFILE_BYTES, utf8(prefs.affinity)) - utf8(others))
 }
 
 export function follow(feed: FoundFeed) {

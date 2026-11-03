@@ -88,6 +88,22 @@ describe('how many feeds you can follow', () => {
     expect(JSON.stringify(sealed).length).toBeLessThanOrEqual(64_000)
   })
 
+  it('leaves room for your taste profile to grow to its full size after your feeds fill up', async () => {
+    usePrefs.setState({ customFeeds: [], affinity: {}, mutedWords: [] })
+    const typical = Array.from({ length: MAX_FEEDS }, (_, n) =>
+      feed(n, { url: `https://blog-number-${n}.example.com/feeds/posts/default?alt=rss`, label: `A blog with a longer name ${n}`, folder: 'Engineering' }),
+    )
+    const { feeds } = addFeeds([], typical, feedRoom())
+    // A good library of ordinary feeds still fits most of the limit.
+    expect(feeds.length).toBeGreaterThan(150)
+    // Then the taste profile fills to its cap, with keys as long as real ones get.
+    const affinity = Object.fromEntries(Array.from({ length: 400 }, (_, n) => [`p:A publisher with a long name number ${n}`, -2.5]))
+    usePrefs.setState({ customFeeds: feeds, affinity })
+    const prefs = usePrefs.getState()
+    const sealed = await seal('abcdefghijklmnopqrstuvwxyz', { key: 'prefs', updatedAt: Date.now(), data: Object.fromEntries(SYNCED_PREFS.map((k) => [k, prefs[k]])) })
+    expect(JSON.stringify(sealed).length).toBeLessThanOrEqual(64_000)
+  })
+
   it('groups your feeds by folder, loose ones first, folders in the order they first appear', () => {
     const groups = byFolder([feed(1, { folder: 'B' }), feed(2), feed(3, { folder: 'A' }), feed(4, { folder: 'B' })])
     expect(groups.map((g) => [g.name, g.feeds.map((f) => f.label)])).toEqual([
