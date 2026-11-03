@@ -2,6 +2,8 @@
 // integration sets KV_REST_API_*; a database made on upstash.com gives UPSTASH_REDIS_REST_*.
 // SYNC_MEMORY=1 swaps in an in-process store for local development.
 
+import { clientKey } from './http.js'
+
 export interface Kv {
   hmget(key: string, fields: string[]): Promise<(string | null)[]>
   hset(key: string, entries: [string, string][]): Promise<void>
@@ -205,4 +207,17 @@ export async function overLimit(key: string, seconds: number, limit: number, by 
     .bump(key, seconds, by)
     .catch(() => Infinity)
   return used > limit
+}
+
+/**
+ * How much fan-out (requests to other servers) one caller may cause a minute, across every
+ * endpoint that fans out. A call costs more the more it can ask of others, but the costs are sized
+ * so the app's own busiest minute fits (api/_test/feed.test.ts pins it): this stops a script, not a
+ * reader. A one-fetch answer (a feed, an icon, a card) costs nothing and never comes here.
+ */
+export const FAN_OUT_PER_MINUTE = 120
+
+/** Counts `cost` against the caller's fan-out allowance; true when this call goes over it. Fails closed. */
+export function fanOutLimited(request: Request, cost: number): Promise<boolean> {
+  return overLimit(`rd:fanout:${clientKey(request)}`, 60, FAN_OUT_PER_MINUTE, cost)
 }

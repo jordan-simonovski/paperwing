@@ -1,6 +1,7 @@
 import { Play } from 'lucide-react'
 import { useState } from 'react'
 import type { Story } from '../lib/types'
+import { feedUrl } from '../lib/sources/http'
 
 // Sources whose preview images are text cards (paper titles, repo names), unreadable at this size.
 const NO_LOOKUP = new Set(['arxiv', 'hf', 'github', 'release'])
@@ -46,7 +47,7 @@ export function thumbFor(s: Pick<Story, 'source' | 'url' | 'thumbnail' | 'media'
     /* not a URL */
   }
   if (!s.url || !host || NO_LOOKUP.has(s.source) || NO_LOOKUP_HOSTS.test(host) || /\.pdf(\?|$)/i.test(s.url)) return undefined
-  const lookup = `/api/feed?src=og&url=${encodeURIComponent(s.url)}`
+  const lookup = feedUrl('og', { url: s.url })
   return noPicture.has(lookup) ? undefined : lookup
 }
 

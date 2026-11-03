@@ -6,7 +6,7 @@ import type { SourceKind, Story } from '../types'
 import { blueskyCustomFeed, blueskyFeed, blueskyFollowing } from './bluesky'
 import { devtoTag } from './devto'
 import { hnList, hnSearch } from './hn'
-import { api } from './http'
+import { feed, type FeedSource } from './http'
 import { lemmyFeed } from './lemmy'
 import { mastodonHome, mastodonTags, mastodonTrends } from './mastodon'
 
@@ -40,7 +40,7 @@ interface FeedKind<K extends FeedRef['kind']> {
 }
 
 /** A source the browser can't call directly: fetched through api/feed.ts, which names it the same way. */
-const viaServer = (src: string, params: Record<string, string | number | undefined> = {}) => api('feed', { src, ...params }) as Promise<Story[]>
+const viaServer = (src: FeedSource, params: Record<string, string | number | undefined> = {}) => feed(src, params) as Promise<Story[]>
 const join = (list: string[] | undefined) => (list?.length ? list.join(',') : undefined)
 const siteOf = (url: string) => {
   try {

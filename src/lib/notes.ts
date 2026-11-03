@@ -2,6 +2,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { canWrite, createRecord, deleteRecord, useAtproto } from './atproto'
 import { keys } from './query'
 import { NOTE_NSID } from './social'
+import { feedUrl } from './sources/http'
 
 // Margin notes: a passage of an article and what someone made of it, kept as a public record in
 // their own Bluesky account (social.ts) and found by anyone reading the same article here
@@ -22,7 +23,7 @@ export const useMarginNotes = (url: string | null | undefined) =>
     enabled: !!url,
     staleTime: 2 * 60_000,
     queryFn: async () => {
-      const res = await fetch(`/api/feed?src=notes&url=${encodeURIComponent(url!)}`)
+      const res = await fetch(feedUrl('notes', { url: url! }))
       return res.ok ? ((await res.json()) as NoteView[]) : []
     },
   })

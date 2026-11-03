@@ -6,7 +6,7 @@ import { useAccounts } from './accounts'
 import { appview, canReadNotifications, useAtproto } from './atproto'
 import { bskyKeyOf } from './bskyPost'
 import { lemmyInbox } from './lemmyAccount'
-import { api, getJson } from './sources/http'
+import { feed, getJson } from './sources/http'
 import { auth, cleanHtml, keyFor, type Status } from './sources/mastodon'
 import type { Story } from './types'
 
@@ -242,7 +242,7 @@ interface FpActivity {
 }
 
 export async function frontpageActivity(did: string): Promise<Activity> {
-  const a = (await api('feed', { src: 'fpactivity', did })) as FpActivity
+  const a = (await feed('fpactivity', { did })) as FpActivity
   const titleOf = new Map(a.posts.map((p) => [p.key, p.title]))
   return {
     mine: [
