@@ -35,6 +35,8 @@ release, and merging the Release pull request is the production deploy.
    - Findings left as they are get one line each, saying why, in the pull request description or the
      commit message.
 5. **Push, or open the pull request.**
+   - Work that builds on another open pull request goes up as a GitHub stack, never as a PR whose base
+     you set by hand (`stacked-prs` skill). Each layer passes this gate on its own diff.
    - Commits are authored as the repository owner and carry no AI attribution (`AGENTS.md`).
    - A pull request description cites the reviewed commit, summarises what the review found, and links
      screenshots for anything visible.
