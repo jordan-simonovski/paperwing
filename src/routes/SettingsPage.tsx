@@ -34,11 +34,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router'
 import { useMediaQuery } from '../lib/hooks'
 import { download, exportJson, exportMarkdown, parseImport, toSavedItems } from '../lib/importExport'
-import { buildOpml, parseOpml } from '../lib/opml'
 import { unpublishBlogroll } from '../lib/blogroll'
 import { useAtproto } from '../lib/atproto'
 import { profilePath } from '../lib/people'
 import { BlogSuggestions, FeedFinder } from '../components/FollowBlogs'
+import { FeedList } from '../components/FeedList'
+import { OpmlTools } from '../components/OpmlTools'
 import { BlueskyAccount } from '../components/BlueskyAccount'
 import { SourceIcon } from '../components/SourceIcon'
 import { Pip } from '../components/Pip'
@@ -62,8 +63,7 @@ import { pushAvailable, pushInfo, usePush } from '../lib/push'
 import { alertPages, MAX_ALERT_PAGES, STATUS_PAGES } from '../lib/statusPageList'
 import { SummarySettings } from '../components/SummarySettings'
 import { formatCode, joinSync, notSyncedText, startSyncWithNewCode, syncNow, useSync } from '../lib/sync'
-import { ago, fullDate, plural } from '../lib/format'
-import { TOPIC_BY_ID } from '../lib/topics'
+import { ago, fullDate } from '../lib/format'
 import { isIOS, usePWA } from '../lib/pwa'
 import { useActivity, usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
@@ -675,50 +675,6 @@ function BlogrollToggle() {
   )
 }
 
-/** Moving feeds in and out with OPML, the format every feed reader speaks. */
-function OpmlTools() {
-  const p = usePrefs()
-  const input = useRef<HTMLInputElement>(null)
-  const importFile = async (file: File) => {
-    const found = parseOpml(await file.text())
-    const have = new Set(p.customFeeds.map((f) => f.url))
-    const added = found.filter((f) => !have.has(f.url))
-    if (!found.length) return toast('No feeds found in that file', { tone: 'error' })
-    p.set({ customFeeds: [...p.customFeeds, ...added] })
-    toast(added.length ? `Following ${plural(added.length, 'new feed')}. They're in Blogs.` : 'You already follow all of those')
-  }
-  const exportFile = () => {
-    const topicFeeds = p.followed.flatMap((id) => {
-      const t = TOPIC_BY_ID.get(id)
-      const feeds = (t?.feeds ?? []).flatMap((f) => (f.kind === 'rss' ? [{ url: f.url, label: f.label }] : []))
-      return t && feeds.length ? [{ name: t.label, feeds }] : []
-    })
-    download('paperwing-feeds.opml', buildOpml('PaperWing feeds', [{ name: 'Your feeds', feeds: p.customFeeds }, ...topicFeeds]), 'text/x-opml')
-  }
-  return (
-    <div className="flex flex-wrap items-center gap-2 pt-1">
-      <input
-        ref={input}
-        type="file"
-        accept=".opml,.xml,text/xml,text/x-opml"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) void importFile(file)
-          e.target.value = ''
-        }}
-      />
-      <button className="btn h-9 text-[0.8125rem]" onClick={() => input.current?.click()}>
-        <Upload size={14} /> Import OPML
-      </button>
-      <button className="btn h-9 text-[0.8125rem]" onClick={exportFile}>
-        <Download size={14} /> Export OPML
-      </button>
-      <span className="text-[0.8125rem] text-ink-3">Bring feeds from another reader, or take yours (and your topics’ publishers) anywhere.</span>
-    </div>
-  )
-}
-
 function SourcesSettings() {
   const p = usePrefs()
   return (
@@ -754,19 +710,7 @@ function SourcesSettings() {
         title="Your feeds"
         hint="Paste a blog's address, one of its posts, or its feed, and follow what it publishes. These show up in Blogs. In the reader, a Follow button appears beside a story whose blog has a feed."
       >
-        {p.customFeeds.map((f) => (
-          <div key={f.url} className="flex max-w-lg items-center gap-3 py-1">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[0.9375rem] font-semibold">{f.label}</p>
-              <p className="truncate text-[0.8125rem] text-ink-3" title={f.url}>
-                {f.site ?? f.url.replace(/^https?:\/\/(www\.)?/, '')}
-              </p>
-            </div>
-            <button className="icon-btn flex-none" onClick={() => p.set({ customFeeds: p.customFeeds.filter((x) => x.url !== f.url) })} aria-label={`Remove ${f.label}`}>
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+        <FeedList />
         <FeedFinder />
         <OpmlTools />
         <BlogrollToggle />

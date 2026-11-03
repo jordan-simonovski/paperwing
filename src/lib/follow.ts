@@ -3,10 +3,10 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { followsTech } from './channels'
 import { feed } from './sources/http'
-import { useActivity, usePrefs } from './store'
+import { SYNCED_PREFS, useActivity, usePrefs } from './store'
 import { isTechTopic, TOPICS } from './topics'
 import { toast } from './ui'
-import type { FoundFeed } from './publishers'
+import { addFeeds, type FoundFeed } from './publishers'
 export type { FoundFeed } from './publishers'
 
 // Following a blog from anywhere: its feed is found from any link to it (api/_lib/discover.ts),
@@ -60,10 +60,29 @@ export function useSiteFeeds(url: string | null | undefined, enabled = true) {
   return useQuery({ ...discoverQuery(url ?? ''), enabled: enabled && !!host })
 }
 
+/** What following more says once your feeds are full. */
+export const FEEDS_FULL = 'Your feeds are full: unfollow some under Settings, Sources to follow more'
+
+/** The plain settings a sealed sync record can hold: 64,000 characters, less a third for sealing and a little to spare. */
+const SYNCED_BYTES = 46_000
+/** Room kept for the taste profile at its full 400 entries (features.ts), which keeps growing after your feeds fill up. */
+const PROFILE_BYTES = 20_000
+
+const utf8 = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length
+
+/** The bytes your feeds may take: what your other synced settings leave of the record they travel in, the taste profile at its fullest. */
+export function feedRoom(): number {
+  const prefs = usePrefs.getState()
+  const others = Object.fromEntries(SYNCED_PREFS.filter((k) => k !== 'customFeeds' && k !== 'affinity').map((k) => [k, prefs[k]]))
+  return Math.max(0, SYNCED_BYTES - Math.max(PROFILE_BYTES, utf8(prefs.affinity)) - utf8(others))
+}
+
 export function follow(feed: FoundFeed) {
   const { customFeeds, set } = usePrefs.getState()
   if (customFeeds.some((f) => f.url === feed.url)) return
-  set({ customFeeds: [...customFeeds, { url: feed.url, label: feed.title, site: feed.site, ...(feed.format ? { format: feed.format } : {}) }] })
+  const { feeds, left } = addFeeds(customFeeds, [{ url: feed.url, label: feed.title, site: feed.site, ...(feed.format ? { format: feed.format } : {}) }], feedRoom())
+  if (left) return toast(FEEDS_FULL, { tone: 'error' })
+  set({ customFeeds: feeds })
   toast(`Following ${feed.title}. New posts show in ${followsTech(usePrefs.getState().followed) ? 'Blogs' : 'Publishers'}.`, {
     action: { label: 'Undo', run: () => usePrefs.getState().set({ customFeeds: usePrefs.getState().customFeeds.filter((f) => f.url !== feed.url) }) },
   })
