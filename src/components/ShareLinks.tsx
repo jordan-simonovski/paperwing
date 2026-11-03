@@ -7,6 +7,7 @@ import { shareOnPaperWing, unshare } from '../lib/shares'
 import { useComposer } from '../lib/compose'
 import { domainOf } from '../lib/format'
 import type { Story } from '../lib/types'
+import { storyPath } from '../lib/storyLink'
 import { share, storyLink, toast } from '../lib/ui'
 import { Pip } from './Pip'
 import { Sheet } from './Sheet'
@@ -61,9 +62,9 @@ export function ShareLinks({ story, onClose }: { story: Story; onClose: () => vo
     {
       icon: <Pip variant="head" className="size-5" />,
       title: 'PaperWing link',
-      detail: 'With every discussion of it',
-      run: () => go(storyLink(story.key)),
-      url: storyLink(story.key),
+      detail: storyPath(story).includes('tab=article') ? 'The article and every discussion' : 'With every discussion of it',
+      run: () => go(storyLink(story)),
+      url: storyLink(story),
     },
     ...(story.url ? [{ icon: <Newspaper size={18} />, title: 'Original article', detail: domainOf(story.url) ?? story.url, run: () => go(story.url!), url: story.url }] : []),
     ...(story.discussionUrl && story.discussionUrl !== story.url
