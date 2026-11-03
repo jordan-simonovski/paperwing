@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { frameProps, peertubeVideo, videoEmbedOf, videoHost, type PlayableVideo } from '../lib/videoEmbed'
 import { Covered } from './Covered'
 
-type State = { at: 'poster' } | { at: 'loading' } | { at: 'frame' } | { at: 'file'; video: PlayableVideo } | { at: 'failed'; message: string }
+type State = { at: 'poster' } | { at: 'loading' } | { at: 'frame' } | { at: 'file'; video: PlayableVideo } | { at: 'failed' }
 
 /**
  * A video the story links to (YouTube, Vimeo or PeerTube), played here on a tap. Until then it's a
@@ -20,15 +20,17 @@ export function VideoEmbed({ url, title, thumb }: { url: string | null | undefin
     setState({ at: 'loading' })
     try {
       setState({ at: 'file', video: await peertubeVideo(video) })
-    } catch (err) {
-      setState({ at: 'failed', message: (err as Error).message })
+    } catch {
+      // A fixed message: nothing a server sent is shown.
+      setState({ at: 'failed' })
     }
   }
 
   const aspect = state.at === 'file' ? (state.video.aspect ?? 16 / 9) : 16 / 9
   return (
     <figure className="mt-5">
-      <div className="media-frame relative w-full overflow-hidden" style={{ aspectRatio: aspect }}>
+      {/* Capped like other media, so a portrait video never runs taller than the screen. */}
+      <div className="media-frame relative mx-auto max-h-[32rem] w-full overflow-hidden" style={{ aspectRatio: aspect }}>
         {state.at === 'frame' && video.kind !== 'peertube' ? (
           <iframe className="absolute inset-0 h-full w-full border-0" {...frameProps(video, title)} />
         ) : state.at === 'file' ? (
@@ -38,7 +40,7 @@ export function VideoEmbed({ url, title, thumb }: { url: string | null | undefin
         ) : state.at === 'failed' ? (
           <div className="absolute inset-0 grid place-items-center bg-sunk p-6 text-center">
             <div>
-              <p className="text-[0.9375rem]">{state.message}</p>
+              <p className="text-[0.9375rem]">This video can’t be played here.</p>
               <a className="btn mt-3" href={url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink size={14} /> Watch on {from}
               </a>

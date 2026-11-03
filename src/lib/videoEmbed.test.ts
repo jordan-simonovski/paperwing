@@ -61,6 +61,10 @@ describe('recognising a video link', () => {
       'https://en.wikipedia.org/w/index.php',
       'https://blog.example/w/short',
       'https://me:pw@tilvids.com/w/kkGMgK9ZtnKfYAgnEtQxbv',
+      'https://www.youtube.com/embed/videoseries?list=PL123',
+      'https://vimeo.com/showcase/1234567',
+      'https://vimeo.com/album/1234567',
+      'https://vimeo.com/event/1234567',
     ])
       expect(videoEmbedOf(url)).toBeUndefined()
   })
@@ -148,6 +152,21 @@ describe('a PeerTube video', () => {
     expect((await peertubeVideo(video)).aspect).toBeUndefined()
   })
 
+  it('never picks a file that’s only sound', async () => {
+    answer({ files: [{ resolution: { id: 720 }, fileUrl: 'https://tilvids.com/a-720.mp4', hasVideo: false }, { resolution: { id: 480 }, fileUrl: 'https://tilvids.com/x-480.mp4' }] })
+    expect((await peertubeVideo(video)).src).toBe('https://tilvids.com/x-480.mp4')
+  })
+
+  it('never picks a file with no sound in it', async () => {
+    answer({
+      files: [
+        { resolution: { id: 720 }, fileUrl: 'https://tilvids.com/v-720.mp4', hasAudio: false },
+        { resolution: { id: 480 }, fileUrl: 'https://tilvids.com/x-480.mp4', hasAudio: true },
+      ],
+    })
+    expect((await peertubeVideo(video)).src).toBe('https://tilvids.com/x-480.mp4')
+  })
+
   it('fails plainly when the server can’t be reached or answers nonsense', async () => {
     vi.stubGlobal(
       'fetch',
@@ -159,6 +178,10 @@ describe('a PeerTube video', () => {
       vi.fn(async () => ({ ok: true, json: async () => Promise.reject(new SyntaxError('bad json')) }) as unknown as Response),
     )
     await expect(peertubeVideo(video)).rejects.toThrow(/can’t be played here/)
+    for (const odd of [null, 'text', { files: {} }, { streamingPlaylists: [null, { files: 'x' }] }, { files: [null, 7] }]) {
+      answer(odd)
+      await expect(peertubeVideo(video)).rejects.toThrow(/can’t be played here/)
+    }
   })
 
   it('fails plainly when there’s nothing it can play', async () => {

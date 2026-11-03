@@ -37,14 +37,16 @@ export function videoEmbedOf(link: string | null | undefined): VideoEmbed | unde
 
   if (YOUTUBE.test(host) || host === 'youtu.be') {
     const id = host === 'youtu.be' ? parts[0] : parts[0] === 'watch' ? u.searchParams.get('v') : ['shorts', 'live', 'embed'].includes(parts[0]) ? parts[1] : undefined
-    if (!id || !YOUTUBE_ID.test(id)) return undefined
+    // 'videoseries' is a playlist, not a video, though it has a video id's shape.
+    if (!id || !YOUTUBE_ID.test(id) || id === 'videoseries') return undefined
     const start = seconds(u.searchParams.get('t') ?? u.searchParams.get('start'))
     return { kind: 'youtube', id, ...(start ? { start } : {}) }
   }
 
   if (VIMEO.test(host)) {
     const at = parts.findIndex((p) => /^\d{6,12}$/.test(p))
-    if (at < 0) return undefined
+    // A showcase, album or event is a collection, not a video.
+    if (at < 0 || ['showcase', 'album', 'event'].includes(parts[at - 1])) return undefined
     const hash = parts[at + 1] && /^[0-9a-f]{6,20}$/.test(parts[at + 1]) ? parts[at + 1] : (u.searchParams.get('h') ?? undefined)
     return { kind: 'vimeo', id: parts[at], ...(hash && /^[0-9a-f]{6,20}$/.test(hash) ? { hash } : {}) }
   }
@@ -64,7 +66,7 @@ export function playerUrl(v: Extract<VideoEmbed, { kind: 'youtube' | 'vimeo' }>)
 export const videoHost = (v: VideoEmbed) => (v.kind === 'youtube' ? 'YouTube' : v.kind === 'vimeo' ? 'Vimeo' : v.host)
 
 export interface PlayableVideo {
-  /** A video file from the PeerTube server itself. */
+  /** A video file, from wherever the PeerTube server keeps it. */
   src: string
   poster?: string
   aspect?: number
@@ -72,9 +74,16 @@ export interface PlayableVideo {
   sensitive: boolean
 }
 
-interface PeerTubeFile {
-  resolution?: { id?: number }
-  fileUrl?: string
+/** An object from the server's answer, or nothing: every field of it is checked before use. */
+const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {})
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+
+/** A playable file: an https address, a height, and both picture and sound (newer servers can keep them apart). */
+function fileOf(raw: unknown): { url: string; height: number } | undefined {
+  const f = obj(raw)
+  const height = obj(f.resolution).id
+  if (typeof f.fileUrl !== 'string' || !f.fileUrl.startsWith('https://') || typeof height !== 'number' || height <= 0 || f.hasAudio === false || f.hasVideo === false) return undefined
+  return { url: f.fileUrl, height }
 }
 
 /** The PeerTube video's own file, read from its server's public API on the tap: the largest no bigger than 720p. */
@@ -86,22 +95,14 @@ export async function peertubeVideo(v: Extract<VideoEmbed, { kind: 'peertube' }>
     signal: AbortSignal.timeout(10_000),
   }).catch(() => undefined)
   if (!res?.ok) throw cant()
-  const data = (await res.json().catch(() => ({}))) as {
-    nsfw?: boolean
-    aspectRatio?: number
-    previewPath?: string
-    files?: PeerTubeFile[]
-    streamingPlaylists?: { files?: PeerTubeFile[] }[]
-  }
-  const files = [...(data.files ?? []), ...(data.streamingPlaylists ?? []).flatMap((p) => p.files ?? [])].filter(
-    (f): f is { resolution: { id: number }; fileUrl: string } => typeof f.fileUrl === 'string' && f.fileUrl.startsWith('https://') && typeof f.resolution?.id === 'number' && f.resolution.id > 0,
-  )
+  const data = obj(await res.json().catch(() => undefined))
+  const files = [...list(data.files), ...list(data.streamingPlaylists).flatMap((p) => list(obj(p).files))].flatMap((f) => fileOf(f) ?? [])
   if (!files.length) throw cant()
-  const fits = files.filter((f) => f.resolution.id <= 720).sort((a, b) => b.resolution.id - a.resolution.id)
-  const pick = fits[0] ?? [...files].sort((a, b) => a.resolution.id - b.resolution.id)[0]
+  const fits = files.filter((f) => f.height <= 720).sort((a, b) => b.height - a.height)
+  const pick = fits[0] ?? [...files].sort((a, b) => a.height - b.height)[0]
   const aspect = typeof data.aspectRatio === 'number' && data.aspectRatio > 0.2 && data.aspectRatio < 5 ? data.aspectRatio : undefined
   const poster = typeof data.previewPath === 'string' && /^\/[^/]/.test(data.previewPath) ? `https://${v.host}${data.previewPath}` : undefined
-  return { src: pick.fileUrl, ...(poster ? { poster } : {}), ...(aspect ? { aspect } : {}), sensitive: !!data.nsfw }
+  return { src: pick.url, ...(poster ? { poster } : {}), ...(aspect ? { aspect } : {}), sensitive: !!data.nsfw }
 }
 
 /**
