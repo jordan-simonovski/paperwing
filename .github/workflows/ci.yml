@@ -46,9 +46,7 @@ jobs:
           retention-days: 14
 
   # Lighthouse on the built app: accessibility, best practices and layout shift fail the build;
-  # performance and SEO warn (lighthouserc.json). The reports go to Lighthouse CI's temporary public
-  # storage (only public pages are audited), which is what lets the GitHub App post a status check on
-  # the pull request; the raw runs are also kept as an artifact.
+  # performance and SEO warn (lighthouserc.json). Reports are kept as an artifact.
   lighthouse:
     runs-on: ubuntu-latest
     steps:
@@ -60,10 +58,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run check:lighthouse
-        env:
-          # The Lighthouse CI GitHub App's token: lhci reads it to post a status check on the pull request.
-          # Missing (a fork's pull request), lhci still runs and asserts; it just doesn't post.
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
