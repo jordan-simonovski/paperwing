@@ -116,7 +116,7 @@ export function PrivacyPage() {
           <p>
             A story that’s a YouTube, Vimeo or PeerTube video shows its preview picture, like any link. Nothing else from those sites loads until you press play. Then a YouTube video plays in
             YouTube’s privacy-enhanced player (youtube-nocookie.com), or a Vimeo video in Vimeo’s player with do-not-track set, in a sandboxed frame: YouTube or Vimeo sees that you played it, as it
-            would on its own site. A PeerTube video is read from its own server, straight from your browser, and plays as a plain video file.
+            would on its own site. A PeerTube video’s details are read from its own server, straight from your browser, and it plays as a plain video file from wherever that server keeps it.
           </p>
           <p>
             To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself

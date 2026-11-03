@@ -1,8 +1,8 @@
 // Videos a story links to, played in PaperWing on a tap. YouTube and Vimeo play in their own
 // players, loaded only when you press play: YouTube's privacy-enhanced one (youtube-nocookie.com)
 // and Vimeo's with do-not-track. These are the only third-party frames PaperWing allows
-// (vercel.json, frame-src). A PeerTube video plays as a plain file from its own server, the way a
-// Mastodon video does, so no player from anywhere else runs.
+// (vercel.json, frame-src). A PeerTube video plays as a plain file, from wherever its server keeps it,
+// the way a Mastodon video does, so no player from anywhere else runs.
 
 export type VideoEmbed = { kind: 'youtube'; id: string; start?: number } | { kind: 'vimeo'; id: string; hash?: string } | { kind: 'peertube'; host: string; id: string }
 

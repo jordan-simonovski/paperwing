@@ -64,6 +64,35 @@ export const VideoStory: Story = {
   },
 }
 
+const warnedVideo = story({ key: 'ln-warned-video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'The finale, reviewed', warning: 'Spoilers' })
+/** A story behind a content warning keeps its video behind it too: no picture or player until you choose. */
+export const WarnedVideo: Story = {
+  args: { itemKey: warnedVideo.key },
+  parameters: { app: { queries: seed(warnedVideo), route: at(warnedVideo.key) } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Content warning: Spoilers')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /from YouTube/ })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Show' }))
+    await expect(canvas.getByRole('button', { name: 'Play The finale, reviewed from YouTube' })).toBeVisible()
+  },
+}
+
+const ownVideo = story({
+  key: 'ln-own-video',
+  url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  title: 'A post with its own clip',
+  media: [{ kind: 'video', thumb: '/icon-512.png', playlist: '/clip.mp4', alt: 'A short clip' }],
+})
+/** A post that carries its own video plays that, not the video its link points to as well. */
+export const OwnVideoFirst: Story = {
+  args: { itemKey: ownVideo.key },
+  parameters: { app: { queries: seed(ownVideo), route: at(ownVideo.key) } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('heading', { name: ownVideo.title })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /from YouTube/ })).toBeNull()
+  },
+}
+
 export const ArticleTab: Story = {
   parameters: { app: { queries: seed(hn), route: at(hn.key, 'article') } },
 }
