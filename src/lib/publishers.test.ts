@@ -104,6 +104,17 @@ describe('how many feeds you can follow', () => {
     expect(JSON.stringify(sealed).length).toBeLessThanOrEqual(64_000)
   })
 
+  it('never lists a private address from anyone’s blogroll, even one published before it was kept off', () => {
+    const roll = cleanBlogroll({
+      feeds: [
+        { url: 'https://jvns.ca/atom.xml', label: 'Julia Evans' },
+        { url: 'https://gitlab.example/me.atom?feed_token=glft-secret', label: 'GitLab activity' },
+        { url: 'https://me:hunter2@intranet.example/rss', label: 'Intranet' },
+      ],
+    })
+    expect(roll?.feeds.map((f) => f.label)).toEqual(['Julia Evans'])
+  })
+
   it('groups your feeds by folder, loose ones first, folders in the order they first appear', () => {
     const groups = byFolder([feed(1, { folder: 'B' }), feed(2), feed(3, { folder: 'A' }), feed(4, { folder: 'B' })])
     expect(groups.map((g) => [g.name, g.feeds.map((f) => f.label)])).toEqual([

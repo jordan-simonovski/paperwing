@@ -26,6 +26,8 @@ describe('your public blogroll', () => {
         { url: 'https://gitlab.example/me.atom?feed_token=glft-secret', label: 'My GitLab activity' },
         { url: 'https://me:hunter2@intranet.example/rss', label: 'Intranet' },
         { url: 'https://letters.example/feed?api_key=s3cret', label: 'Paid letter' },
+        // An address the check can't read is never published.
+        { url: 'https://bad host.example/feed?feed_token=x', label: 'Unreadable' },
       ],
     })
     await publishBlogroll()

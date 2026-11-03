@@ -118,6 +118,12 @@ describe('OPML', () => {
     expect(skipped.unreadable).toBe(1)
   })
 
+  it('skips an address it can’t read without calling it private', () => {
+    const { feeds, skipped } = parseOpml('<opml><body><outline text="x" xmlUrl="https://bad host.example/feed"/><outline text="ok" xmlUrl="https://ok.example/feed"/></body></opml>')
+    expect(feeds.map((f) => f.label)).toEqual(['ok'])
+    expect(skipped).toEqual({ unreadable: 0, private: 0 })
+  })
+
   it('leaves the folder PaperWing’s own older exports put every feed in', () => {
     const { feeds } = parseOpml('<opml><body><outline text="Your feeds"><outline type="rss" text="A" xmlUrl="https://a.example/feed"/></outline></body></opml>')
     expect(feeds[0].folder).toBeUndefined()

@@ -51,6 +51,11 @@ export function parseOpml(text: string): { feeds: OpmlFeed[]; skipped: OpmlSkipp
       skipped.unreadable++
       continue
     }
+    try {
+      new URL(url)
+    } catch {
+      continue
+    }
     if (isPrivateAddress(url)) {
       skipped.private++
       continue

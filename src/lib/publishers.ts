@@ -53,13 +53,17 @@ export function byFolder<F extends PublisherFeed>(feeds: F[]): { name: string; f
 const SECRET_WORDS = new Set(['token', 'tokens', 'auth', 'key', 'apikey', 'secret', 'password', 'passwd', 'pass', 'pwd', 'sig', 'signature', 'credential', 'credentials'])
 const words = (name: string) => name.split(/[_\-.]+|(?<=[a-z])(?=[A-Z])/).map((w) => w.toLowerCase())
 
-/** A feed address that's a key to someone's account: a password in it, or a parameter named like a token. Never imported or published. */
+/**
+ * A feed address that's a key to someone's account: a password in it, or a parameter named like a
+ * token. Never imported, nor listed in a blogroll. One that can't be read counts as private: it's
+ * never shown to anyone on a guess.
+ */
 export function isPrivateAddress(url: string): boolean {
   let u: URL
   try {
     u = new URL(url)
   } catch {
-    return false
+    return true
   }
   return !!(u.username || u.password) || [...u.searchParams.keys()].some((k) => words(k).some((w) => SECRET_WORDS.has(w)))
 }
