@@ -31,6 +31,8 @@ import { FollowSite } from './FollowBlogs'
 import { StoryActions, useCommentActions } from './Social'
 import { SummaryCard } from './SummaryCard'
 import { MediaGallery } from './Media'
+import { thumbFor } from './Thumb'
+import { VideoEmbed } from './VideoEmbed'
 import { SourceIcon, StoryIcon } from './SourceIcon'
 import { scoreUnit, SOURCE_NAMES, sourceLabel } from './Source'
 import { WhyRanked } from './WhyRanked'
@@ -254,6 +256,9 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
               <ModerateOnBoard story={story} />
               <WhyRanked story={story} topics={topics} />
             </div>
+
+            {/* A video the story links to, played here on a tap; a post's own video plays with its post. */}
+            {!story.media?.some((m) => m.kind === 'video') && <VideoEmbed url={story.url} title={story.title} thumb={thumbFor(story)} />}
 
             <DiscussionBar story={story} alsoOn={alsoOn} coverage={coverage} onOpen={(k) => onOpen(k, 'discussion')} />
             <WebMentions url={story.url} now={now} />

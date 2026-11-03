@@ -53,6 +53,17 @@ export const Discussion: Story = {
   },
 }
 
+const video = story({ key: 'ln-video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title: 'A talk about the open web' })
+/** A story that is a video: it plays here on a tap, and until then nothing from YouTube loads. */
+export const VideoStory: Story = {
+  args: { itemKey: video.key },
+  parameters: { app: { queries: seed(video), route: at(video.key) } },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: 'Play A talk about the open web from YouTube' })).toBeVisible()
+    await expect(canvasElement.querySelector('iframe')).toBeNull()
+  },
+}
+
 export const ArticleTab: Story = {
   parameters: { app: { queries: seed(hn), route: at(hn.key, 'article') } },
 }

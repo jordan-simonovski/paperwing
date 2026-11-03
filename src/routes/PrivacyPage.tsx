@@ -114,6 +114,11 @@ export function PrivacyPage() {
             elsewhere in an address can’t be told apart from the rest of it, so check private feeds before importing or turning your blogroll on.
           </p>
           <p>
+            A story that’s a YouTube, Vimeo or PeerTube video shows its preview picture, like any link. Nothing else from those sites loads until you press play. Then a YouTube video plays in
+            YouTube’s privacy-enhanced player (youtube-nocookie.com), or a Vimeo video in Vimeo’s player with do-not-track set, in a sandboxed frame: YouTube or Vimeo sees that you played it, as it
+            would on its own site. A PeerTube video is read from its own server, straight from your browser, and plays as a plain video file.
+          </p>
+          <p>
             To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself
             isn’t stored.
           </p>
@@ -122,7 +127,7 @@ export function PrivacyPage() {
         <Part title="Services involved">
           <p>
             Vercel (hosting), Upstash (the sync and cache database), Anthropic (summaries, with your key), and the networks you read and sign in to: Hacker News, Lobsters, Lemmy, Bluesky, Mastodon and
-            the sites whose feeds you follow. Push notifications go through your browser maker’s push service.
+            the sites whose feeds you follow. YouTube, Vimeo and PeerTube servers, only when you press play on one of their videos. Push notifications go through your browser maker’s push service.
           </p>
         </Part>
 

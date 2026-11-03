@@ -148,7 +148,7 @@ What's new, and is the only production deploy: Vercel skips production builds fo
 
 ## Things to keep in mind
 
-- **No accounts, no tracking.** What PaperWing learns about you stays on your devices. Don't add analytics, third-party scripts or anything that sends reading behaviour to a server. If a feature needs server storage, it should be encrypted on the device first, the way sync is.
+- **No accounts, no tracking.** What PaperWing learns about you stays on your devices. Don't add analytics, third-party scripts or anything that sends reading behaviour to a server. If a feature needs server storage, it should be encrypted on the device first, the way sync is. The one exception is a video player you ask for: a YouTube or Vimeo video loads its own player (YouTube's privacy-enhanced one, Vimeo's with do-not-track) in a sandboxed frame only when you press play (`src/components/VideoEmbed.tsx`). Those two origins are the only ones in the CSP's `frame-src`, and `api/_lib/csp.test.ts` keeps it that way. Anything else plays as a plain file or links out.
 - **Fetching URLs on the server.** Any URL that comes from a request must go through `safeFetch` or `assertPublicUrl` in `api/_lib/http.ts`, which block private networks and redirect tricks.
 - **Showing HTML from elsewhere.** Always pass it through `sanitize()` in `src/lib/html.ts`. Links from posts go through `webUrl()` so only `http(s)` links are clickable.
 - **Costly endpoints** (anything that calls a paid API, writes to the database or fans out to many requests) need a rate limit keyed with `clientKey()`: `overLimit()` in `api/_lib/kv.ts`, which fails closed. Answers worth sharing between callers go through `cachedInKv()`.
