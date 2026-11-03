@@ -73,12 +73,35 @@ export function toggleJoin(board: { uri: string; name: string }) {
   set({ boards: boards.some((b) => b.uri === board.uri) ? boards.filter((b) => b.uri !== board.uri) : [...boards, { uri: board.uri, name: board.name }] })
 }
 
-/** Creates or updates a board in your own account. Returns its at:// URI. */
-export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'> & { createdAt?: string }, rkey = tid()): Promise<string> {
+/**
+ * Creates or updates a board in your own account. Returns its at:// URI. `handles` names its
+ * moderators (DID to handle) where they're known, so they show by name straight away.
+ */
+export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'> & { createdAt?: string }, rkey = tid(), handles: Record<string, string> = {}): Promise<string> {
   if (!useAtproto.getState().did) throw new Error('Sign in with Bluesky to make a board (Settings, Sources)')
-  const ref = await putRecord(BOARD_NSID, rkey, boardRecord(board))
-  void qc.invalidateQueries({ queryKey: keys.anyBoard })
-  void qc.invalidateQueries({ queryKey: keys.boards })
+  const record = boardRecord(board)
+  const ref = await putRecord(BOARD_NSID, rkey, record)
+  // The board list and the board's own details take a minute or two to catch up (the open
+  // network's index, then the edge's cache), and asking now would bring back what was there
+  // before. Put the saved board in both ourselves, keeping what only the server knows.
+  const { did, handle } = useAtproto.getState()
+  const viewOf = (old: BoardView | undefined): BoardView => {
+    const named = { ...old?.moderatorHandles, ...handles }
+    return {
+      ...old,
+      ...(record as unknown as Board),
+      uri: ref.uri,
+      owner: did!,
+      ownerHandle: handle ?? old?.ownerHandle,
+      moderatorHandles: Object.fromEntries((record as unknown as Board).moderators.flatMap((m) => (named[m] ? [[m, named[m]]] : []))),
+    }
+  }
+  qc.setQueryData<BoardView>(keys.board(did!, rkey), (old) => viewOf(old))
+  qc.setQueryData<BoardView[]>(keys.boards, (list) => {
+    if (!list) return list
+    const old = list.find((b) => b.uri === ref.uri)
+    return old ? list.map((b) => (b === old ? viewOf(old) : b)) : [viewOf(undefined), ...list]
+  })
   return ref.uri
 }
 
@@ -106,16 +129,17 @@ export async function keepOut(qc: QueryClient, list: string, did: string) {
 }
 
 /** Resolves handles to DIDs through Bluesky's public API, for naming moderators. */
-export async function resolveHandles(handles: string[]): Promise<string[]> {
-  const out: string[] = []
+/** Accounts by handle (or DID), in the order given, each with the handle it was found by. */
+export async function resolveHandles(handles: string[]): Promise<{ did: string; handle?: string }[]> {
+  const out: { did: string; handle?: string }[] = []
   for (const h of handles.map((x) => x.trim().replace(/^@/, '')).filter(Boolean)) {
     if (/^did:/.test(h)) {
-      out.push(h)
+      out.push({ did: h })
       continue
     }
     const res = await fetch(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(h)}`)
     if (!res.ok) throw new Error(`Couldn’t find @${h} on Bluesky`)
-    out.push(((await res.json()) as { did: string }).did)
+    out.push({ did: ((await res.json()) as { did: string }).did, handle: h })
   }
   return out
 }

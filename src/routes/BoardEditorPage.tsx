@@ -69,7 +69,9 @@ export function BoardEditorPage() {
   const save = async () => {
     setBusy(true)
     try {
-      const moderators = (await resolveHandles(mods.split(/[\s,]+/))).filter((m) => m !== did).slice(0, MAX_MODERATORS)
+      const found = (await resolveHandles(mods.split(/[\s,]+/))).filter((m) => m.did !== did).slice(0, MAX_MODERATORS)
+      const moderators = found.map((m) => m.did)
+      const handles = Object.fromEntries(found.flatMap((m) => (m.handle ? [[m.did, m.handle]] : [])))
       const list = existing?.blockList ?? (blockList ? await createBlockList(name.trim()) : undefined)
       const uri = await saveBoard(
         qc,
@@ -84,6 +86,7 @@ export function BoardEditorPage() {
           createdAt: existing?.createdAt,
         },
         rkey,
+        handles,
       )
       if (!existing) toggleJoin({ uri, name: name.trim() })
       toast(existing ? 'Board updated' : 'Your board is up. Share its link to invite people.')

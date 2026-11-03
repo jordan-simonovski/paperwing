@@ -61,8 +61,8 @@ export function PrivacyPage() {
           </p>
           <p>
             A post you write on PaperWing works the same way: its Bluesky post has the title, the start of your words and a link to it here, and the words themselves are in that public record in your
-            own account, where you can edit them. Each version of the words PaperWing’s server sees is kept in its database (Upstash), with when it first saw it, so anyone can read what a post said
-            before it was edited: the original and up to nine later versions, kept for a year after the post was last opened.
+            own account, where you can edit them. So that a fresh edit shows what it changed, PaperWing’s server keeps the versions of the words it sees in its database (Upstash) for a day after each
+            is replaced, along with when the post was last edited. All of it goes a day after the post was last opened, and straight away once you delete the words.
           </p>
           <p>
             The same goes for PaperWing’s social features, each only when you use it: items you share with a note, margin notes on articles, your blogroll (if you turn it on), and community boards you

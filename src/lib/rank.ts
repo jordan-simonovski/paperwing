@@ -259,8 +259,12 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
     const gravity = unscored(r) ? 1.3 : 1.5
     return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice) / Math.pow(ageH + 2, gravity)
   }
-  const ranks = new Map(order.map((r) => [r, rank(r)]))
-  return interleave(order, ranks)
+  // PaperWing's official announcement leads Hot wherever its front page is part of the list, the
+  // way it leads the front page: only the server pins, and only for its first few days.
+  const pinned = order.filter((r) => r.pinned)
+  const rest = pinned.length ? order.filter((r) => !r.pinned) : order
+  const ranks = new Map(rest.map((r) => [r, rank(r)]))
+  return [...pinned, ...interleave(rest, ranks)]
 }
 
 /** Each story already placed from a source costs that source this much on its next one. */

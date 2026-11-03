@@ -8,14 +8,15 @@ import { Agent, EnvHttpProxyAgent, fetch as undiciFetch, type Dispatcher, type R
 
 export const UA = 'Mozilla/5.0 (compatible; PaperWing/0.1; +https://github.com/paperwingio/paperwing)'
 
-export function json(data: unknown, maxAge = 300, status = 200): Response {
+/** JSON, cached at the edge for `maxAge` seconds and served stale for `stale` more while it refreshes (four times as long unless said). */
+export function json(data: unknown, maxAge = 300, status = 200, stale = maxAge * 4): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       // Vercel's CDN honours s-maxage, so upstreams see a request every few minutes at most.
       // maxAge 0 is a per-person answer (a sign-in, a sync): never stored anywhere.
-      'cache-control': status === 200 && maxAge > 0 ? `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 4}` : 'no-store',
+      'cache-control': status === 200 && maxAge > 0 ? `public, s-maxage=${maxAge}, stale-while-revalidate=${stale}` : 'no-store',
     },
   })
 }

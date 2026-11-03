@@ -46,6 +46,7 @@ describe('a self post’s body', () => {
     const got = await selfPostBody(KEY, t0)
     expect(got.body).toBe('Hello **world**')
     expect(got.versions).toEqual([{ body: 'Hello **world**', seenAt: t0 }])
+    expect(got.editedAt).toBeUndefined()
     expect(reads).toHaveBeenCalledWith(SUB)
   })
 
@@ -69,16 +70,49 @@ describe('a self post’s body', () => {
       { body: 'first', seenAt: t0 },
       { body: 'second', seenAt: minutes(5) },
     ])
+    expect(got.editedAt).toBe(minutes(5))
   })
 
-  it('keeps the original and the newest few, however often it’s edited', async () => {
+  it('keeps an earlier version for a day after it was replaced, and still says it was edited', async () => {
+    written('first', 'v1')
+    await selfPostBody(KEY, t0)
+    written('second', 'v2')
+    await selfPostBody(KEY, minutes(10))
+    expect((await selfPostBody(KEY, minutes(10 + 23 * 60))).versions.map((v) => v.body)).toEqual(['first', 'second'])
+    const later = await selfPostBody(KEY, minutes(10 + 25 * 60))
+    expect(later.versions.map((v) => v.body)).toEqual(['second'])
+    expect(later.editedAt).toBe(minutes(10))
+  })
+
+  it('forgets every version once its words are deleted, but not when its server is only down', async () => {
+    written('first', 'v1')
+    await selfPostBody(KEY, t0)
+    written('second', 'v2')
+    await selfPostBody(KEY, minutes(2))
+
+    const saved = repo[SUB]
+    repo = {}
+    reads.mockImplementationOnce(() => {
+      throw new Error('Upstream 502 for pds.example')
+    })
+    await expect(selfPostBody(KEY, minutes(4))).rejects.toThrow(/502/)
+    expect(await kv().get(`pw:self:${POST}`)).not.toBeNull()
+
+    await expect(selfPostBody(KEY, minutes(6))).rejects.toThrow(/deleted/)
+    expect(await kv().get(`pw:self:${POST}`)).toBeNull()
+    // Written again later, it starts a new history: nothing from before comes back.
+    repo[SUB] = saved
+    expect((await selfPostBody(KEY, minutes(8))).versions.map((v) => v.body)).toEqual(['second'])
+  })
+
+  it('keeps the newest few, however often it’s edited', async () => {
     for (let i = 0; i < VERSIONS_KEPT + 5; i++) {
       written(`v${i}`, `c${i}`)
       await selfPostBody(KEY, minutes(i * 2))
     }
     const { versions } = await selfPostBody(KEY, minutes(1000))
     expect(versions).toHaveLength(VERSIONS_KEPT)
-    expect(versions[0].body).toBe('v0')
+    expect(versions[0].body).toBe('v5')
     expect(versions.at(-1)!.body).toBe(`v${VERSIONS_KEPT + 4}`)
   })
 

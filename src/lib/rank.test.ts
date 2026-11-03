@@ -27,6 +27,16 @@ describe('canonicalUrl', () => {
 })
 
 describe('merge', () => {
+  it('leads Hot with an official announcement PaperWing pinned, however quiet it is so far', () => {
+    const busy = [s('hn-1', 'https://a.example/1', 900), s('hn-2', 'https://a.example/2', 400)]
+    const announcement = s('bs-welcome', null, 0, { source: 'bluesky', sourceLabel: 'PaperWing', pinned: true, comments: 0 })
+    const hot = merge([busy, [announcement]], { sort: 'hot', filters })
+    expect(hot[0].key).toBe('bs-welcome')
+    // Latest and Top keep their own order; hiding it still hides it.
+    expect(merge([busy, [announcement]], { sort: 'top', filters })[0].key).toBe('hn-1')
+    expect(merge([busy, [announcement]], { sort: 'hot', filters: { ...filters, hidden: { 'bs-welcome': 1 } } }).map((r) => r.key)).not.toContain('bs-welcome')
+  })
+
   it('keeps who shared a link, and their note, whichever copy leads the row', () => {
     const shared = s('ln-x', 'https://example.com/a', 0, { source: 'rss', hasThread: false, sharedBy: ['ann.example'], shareNote: 'Read this', followed: true })
     const hn = s('hn-1', 'https://example.com/a', 300, { comments: 80 })

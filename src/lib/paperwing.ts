@@ -39,7 +39,10 @@ export interface SelfPostVersion {
 /** A self post's words and the versions PaperWing has seen, oldest first (the last is the body). */
 export interface SelfPostBody {
   body: string
+  /** Earlier versions are kept for a day after they're replaced; the last is the body. */
   versions: SelfPostVersion[]
+  /** When it was last edited, if ever: it says so even once the earlier words are gone. */
+  editedAt?: number
 }
 
 /** How long a self post's body may be, in characters. */

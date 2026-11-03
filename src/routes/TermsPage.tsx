@@ -78,8 +78,8 @@ export function TermsPage() {
             so can the accounts behind them. That only affects PaperWing’s pages: your Bluesky post stays yours.
           </p>
           <p>
-            Posts you write here can be edited, and an edited post says so. The original and the newest nine versions PaperWing has seen stay readable on PaperWing. Edits made within a minute of each
-            other may show as one.
+            Posts you write here can be edited, and an edited post says so. For a day after an edit, what it said before stays readable on PaperWing. Edits made within a minute of each other may show
+            as one.
           </p>
           <p>
             <strong>Community boards</strong> are run by the people who start them. Their owners and moderators set their rules, can hide listings from their board and keep accounts out of it, and are
