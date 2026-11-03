@@ -96,13 +96,8 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               <Link className="row-domain inline-flex items-center gap-1" to={boardPath(s.board.uri)} onClick={(e) => e.stopPropagation()} aria-label={`in ${s.board.name}`}>
                 in {s.board.name}
               </Link>
-              {s.board.official ? <OfficialBadge size={13} /> : <JoinBoard board={s.board} />}
+              {s.board.official && <OfficialBadge size={13} />}
             </>
-          )}
-          {s.recommended && (
-            <span className="pinned-chip" title="From a board you haven’t joined. Turn suggestions off in Settings, Tuning.">
-              Suggested
-            </span>
           )}
           {s.pinned && (
             <span className="pinned-chip inline-flex items-center">
@@ -183,8 +178,15 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </p>
             )}
             {note}
-            {(s.topics.length > 0 || also.length > 0 || covered.length > 0) && (
+            {(s.topics.length > 0 || also.length > 0 || covered.length > 0 || s.recommended || (s.board && !s.board.official)) && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {/* A board's post: what it's for, and joining its board, down here where there's room on a phone. */}
+                {s.recommended && (
+                  <span className="pinned-chip ml-0" title="From a board you haven’t joined. Turn suggestions off in Settings, Tuning.">
+                    Suggested
+                  </span>
+                )}
+                {s.board && !s.board.official && <JoinBoard board={s.board} />}
                 {s.topics.slice(0, 2).map((t) => (
                   <TopicTag key={t} id={t} />
                 ))}
