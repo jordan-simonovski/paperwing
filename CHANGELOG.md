@@ -1,5 +1,29 @@
 # What's new
 
+## 0.11.0
+
+_Released 3 November 2026_
+
+### New
+
+- **Paste a link to follow its site.** Paste any address into Find (⌘K or /) and the first choice is to follow that site: PaperWing opens the publisher finder with it already looked up. Posting the link is still the next choice.
+- **Watch videos without leaving.** A story that's a YouTube, Vimeo or PeerTube video now plays right in the story when you press play. Until you do, only its preview picture loads; YouTube plays in its privacy-enhanced player and Vimeo with do-not-track, and PeerTube videos play as plain video files, with no player from anywhere else.
+
+### Improved
+
+- **The first time you do something, PaperWing says what it did.** Your first save, post, board joined, share, hidden story and press of j each get one line on what just happened: that saved stories read offline, that your post lives in your own Bluesky account, where a joined board shows up, and what the keyboard can do. Each says it once on a device, then never again.
+- **When an article can't be shown, the discussion is one tap away.** If the reader can't load a story's article, it now offers to read the discussion, with its comment count, as well as opening the original.
+- **Boards explain themselves before there are any.** With no community boards yet, Explore › Boards says what a board is, how it works and that it lives in your own Bluesky account, and offers to start the first one.
+- **Switching threads shows where you are in the conversation.** The red part of the discussion bar fills in from the start of the thread you pick. It stays still with Motion off or reduced motion.
+- **Every Explore section is easy to reach on a phone.** The section tabs fade at the edge to show there are more, the open one scrolls into view, and "Feeds" is now "Bluesky feeds" so it's clear where blogs and newsletters live (Publishers).
+- **Saved says so when you've read through your queue.** Once everything you saved is finished, Pip closes the book and points you to the archive, instead of the empty-queue tips meant for someone who hasn't saved anything yet.
+- **Calmer details on stories and pages.** Story and list details are spaced apart instead of joined by dots, and small labels are in normal sentence case rather than capitals.
+
+### Fixes
+
+- **Following a site works even when its Standard.site link can't be checked, and Standard.site publications show their newest posts.** If a site names both an ordinary feed and a Standard.site publication that can't be verified, the publisher finder offers the feed instead of an error. Publications with long archives now show their latest posts rather than their oldest. Mixes read in Bluesky keep loading when a publication is busy or down, and fill it in a minute later.
+- **Sharing no longer says a story is on PaperWing when it isn't.** If your Bluesky post went out but couldn't be listed on PaperWing, the confirmation still said "Shared to Bluesky and PaperWing". It now says only Bluesky.
+
 ## 0.10.0
 
 _Released 3 November 2026_
