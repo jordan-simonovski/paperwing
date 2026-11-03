@@ -35,6 +35,16 @@ export const NewBoard: Story = {
 }
 
 /** Editing your board: the form starts from what it says now. */
+/** A board can take words and links only: posts with pictures are left off it. */
+export const NoPicturesOption: Story = {
+  play: async ({ canvas }) => {
+    const box = canvas.getByRole('checkbox', { name: /No pictures/ })
+    await expect(box).not.toBeChecked()
+    await userEvent.click(box)
+    await expect(box).toBeChecked()
+  },
+}
+
 export const EditBoard: Story = {
   parameters: { app: { atproto: signedIn, route: editing, fetch: { '/api/feed?src=boardinfo': board } } },
   play: async ({ canvas }) => {

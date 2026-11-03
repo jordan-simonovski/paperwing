@@ -26,6 +26,7 @@ export function BoardEditorPage() {
   const [mods, setMods] = useState('')
   const [blockList, setBlockList] = useState(true)
   const [modsOnly, setModsOnly] = useState(false)
+  const [noImages, setNoImages] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function BoardEditorPage() {
     )
     setBlockList(!!existing.blockList)
     setModsOnly(!!existing.modsOnly)
+    setNoImages(!!existing.noImages)
   }, [existing])
 
   if (!did)
@@ -83,6 +85,7 @@ export function BoardEditorPage() {
           moderators,
           blockList: blockList ? list : undefined,
           modsOnly: modsOnly || !!existing?.official,
+          noImages,
           createdAt: existing?.createdAt,
         },
         rkey,
@@ -162,6 +165,10 @@ export function BoardEditorPage() {
           <span className="text-[0.9375rem] text-ink-2">
             Only moderators post here. Anyone can still vote and reply.{existing?.official ? ' Always, for an official board.' : ' Good for announcements and curated boards.'}
           </span>
+        </label>
+        <label className="flex items-start gap-3">
+          <input type="checkbox" className="mt-1 size-4 accent-[var(--ink)]" checked={noImages} onChange={(e) => setNoImages(e.target.checked)} />
+          <span className="text-[0.9375rem] text-ink-2">No pictures: words and links only. Posts carrying pictures are left off the board.</span>
         </label>
         <label className="flex items-start gap-3">
           <input type="checkbox" className="mt-1 size-4 accent-[var(--ink)]" checked={blockList} disabled={!!existing?.blockList} onChange={(e) => setBlockList(e.target.checked)} />

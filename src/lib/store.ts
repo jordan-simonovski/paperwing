@@ -103,6 +103,8 @@ export interface Prefs {
   boardPicks: boolean
   /** PaperWing's announcements: off, they're left out of For you and never pinned. */
   announcements: boolean
+  /** Every picture you post needs a description before it can go. */
+  requireAlt: boolean
   /** Your feeds shown on your PaperWing profile as a blogroll (io.paperwing.blogroll). */
   blogrollPublic: boolean
   interests: Interest[]
@@ -143,6 +145,7 @@ export const SYNCED_PREFS = [
   'boards',
   'boardPicks',
   'announcements',
+  'requireAlt',
   'mutedWords',
   'mutedDomains',
   'labelers',
@@ -181,6 +184,7 @@ export const usePrefs = create<Prefs>()(
       boards: [],
       boardPicks: true,
       announcements: true,
+      requireAlt: true,
       interests: [],
       mutedWords: [],
       mutedDomains: [],

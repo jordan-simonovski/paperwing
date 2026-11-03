@@ -5,6 +5,14 @@ const OWNER = 'did:plc:oooooooooooooooooooooooo'
 const MOD = 'did:plc:mmmmmmmmmmmmmmmmmmmmmmmm'
 const ANYONE = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa'
 
+describe('a board that takes no pictures', () => {
+  it('survives being saved and read back', () => {
+    expect(cleanBoard(boardRecord({ name: 'Words only', moderators: [], noImages: true }))?.noImages).toBe(true)
+    expect(cleanBoard(boardRecord({ name: 'Open', moderators: [] }))?.noImages).toBeUndefined()
+    expect(cleanBoard({ ...boardRecord({ name: 'Odd', moderators: [] }), noImages: 'yes' })?.noImages).toBeUndefined()
+  })
+})
+
 describe('a board where only moderators post', () => {
   it('survives being saved and read back', () => {
     const saved = cleanBoard(boardRecord({ name: 'Announcements', moderators: [MOD], modsOnly: true }))

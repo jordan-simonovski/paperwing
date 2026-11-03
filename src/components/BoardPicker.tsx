@@ -7,13 +7,13 @@ import { TOPICS } from '../lib/topics'
 // Where a listing goes on PaperWing: no board, one of your community boards, or a topic board. On a
 // community board, a tick puts it on the front page too. Shared by sharing a link and writing a post.
 
-/** Whether you can't post on this board (only its moderators do), and its name. */
-export function useBoardShut(board: string): { shut: boolean; name?: string } {
+/** Whether you can't post on this board (only its moderators do), its name, and whether it takes pictures. */
+export function useBoardShut(board: string): { shut: boolean; name?: string; noImages?: boolean } {
   const parts = board.startsWith('at://') ? boardParts(board) : undefined
   const { data: picked } = useBoard(parts?.did, parts?.rkey)
   const me = useAtproto((a) => a.did)
   // Every official board is moderators-only: say so rather than fail.
-  return { shut: !!picked && !canPost(picked, picked.owner, me ?? '', !!picked.official), name: picked?.name }
+  return { shut: !!picked && !canPost(picked, picked.owner, me ?? '', !!picked.official), name: picked?.name, noImages: !!picked?.noImages }
 }
 
 interface Props {

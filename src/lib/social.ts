@@ -103,6 +103,8 @@ export interface Board {
   blockList?: string
   /** Only its owner and moderators post (official boards always). Anyone can still vote and reply. */
   modsOnly?: boolean
+  /** Takes words and links, not pictures: posts carrying pictures are left off it. */
+  noImages?: boolean
   createdAt: string
 }
 
@@ -132,6 +134,7 @@ export function cleanBoard(raw: unknown): Board | undefined {
     moderators,
     ...(blockList ? { blockList } : {}),
     ...(r.modsOnly === true ? { modsOnly: true } : {}),
+    ...(r.noImages === true ? { noImages: true } : {}),
     createdAt: date(r.createdAt),
   }
 }
@@ -145,6 +148,7 @@ export const boardRecord = (b: Omit<Board, 'createdAt'> & { createdAt?: string }
   moderators: b.moderators,
   ...(b.blockList ? { blockList: b.blockList } : {}),
   ...(b.modsOnly ? { modsOnly: true } : {}),
+  ...(b.noImages ? { noImages: true } : {}),
   site: 'https://paperwing.io',
   createdAt: b.createdAt ?? new Date().toISOString(),
 })

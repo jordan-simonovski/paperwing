@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { postMedia, selfPostOf, sharedLink } from './bskyPost'
+import { postMedia, postWords, selfPostOf, sharedLink } from './bskyPost'
 import { selfPostUrl } from './paperwing'
 import { kindOf } from './rank'
 
@@ -22,6 +22,24 @@ describe('sharedLink', () => {
     const other = { ...self, uri: 'at://did:plc:ukwly4246zmbi537o4u36pff/app.bsky.feed.post/3m2abcdefghik' }
     expect(sharedLink(other)).toBe(selfPostUrl(uri))
     expect(selfPostOf(other)).toBe(false)
+  })
+  it('a picture post is a self post too: its words link to its own page', () => {
+    const uri = 'at://did:plc:ukwly4246zmbi537o4u36pff/app.bsky.feed.post/3m2abcdefghij'
+    const pictures = {
+      uri,
+      record: { text: 'Our new kitchen\n\npaperwing.io', facets: [link(selfPostUrl(uri))] },
+      embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'A kitchen' }] },
+    }
+    expect(selfPostOf(pictures)).toBe(true)
+    expect(sharedLink(pictures)).toBeUndefined()
+    expect(postMedia(pictures)?.[0]).toMatchObject({ kind: 'image', alt: 'A kitchen' })
+    // Its words without the link back to the page they're shown on.
+    expect(postWords(pictures)).toBe('Our new kitchen')
+    expect(postWords({ uri: 'at://did:plc:x/app.bsky.feed.post/3m2abcdefghik', record: { text: 'Look\n\npaperwing.io' } })).toBe('Look\n\npaperwing.io')
+    // A self post with its card has no link back in its words: words that end with the name are its own.
+    const own = 'at://did:plc:x/app.bsky.feed.post/3m2abcdefghil'
+    const card = { uri: own, record: { text: 'Why I moved my blog to paperwing.io' }, embed: { $type: 'app.bsky.embed.external#view', external: { uri: selfPostUrl(own) } } }
+    expect(postWords(card)).toBe('Why I moved my blog to paperwing.io')
   })
   it('ignores links to other Bluesky posts', () => {
     expect(sharedLink({ record: { text: 'x', facets: [link('https://bsky.app/profile/a/post/1')] } })).toBeUndefined()

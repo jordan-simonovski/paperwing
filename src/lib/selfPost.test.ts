@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const DID = 'did:plc:ukwly4246zmbi537o4u36pff'
 const writes: { op: string; collection: string; rkey?: string; record: Record<string, unknown> }[] = []
 const own: Record<string, { uri: string; cid: string; value: Record<string, unknown> }> = {}
-let scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
+let scope = 'atproto blob:image/* repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
 let failSubmission = 0
+const uploads: Blob[] = []
 /** The server writes the record but the answer never arrives. */
 let loseAnswer = false
 /** How many reads of your own records fail before one answers. */
@@ -16,6 +17,7 @@ vi.mock('./atproto', async (orig) => {
     useAtproto: { getState: () => ({ did: DID, handle: 'me.example', scope }) },
     canWrite: real.canWrite,
     canUpdate: real.canUpdate,
+    canUpload: real.canUpload,
     createRecord: async (collection: string, record: Record<string, unknown>, rkey?: string) => {
       if (collection === 'io.paperwing.submission' && failSubmission-- > 0) throw new Error('PDS hiccup')
       const uri = `at://${DID}/${collection}/${rkey ?? '3m2zzzzzzzzzz'}`
@@ -30,6 +32,10 @@ vi.mock('./atproto', async (orig) => {
       const uri = `at://${DID}/${collection}/${rkey}`
       own[uri] = { uri, cid: 'bafy2', value: { $type: collection, ...record } }
       return { uri: `at://${DID}/${collection}/${rkey}`, cid: 'bafy2' }
+    },
+    uploadBlob: async (bytes: Blob) => {
+      uploads.push(bytes)
+      return { $type: 'blob', ref: { $link: `bafyimg${uploads.length}` }, mimeType: bytes.type || 'image/jpeg', size: bytes.size }
     },
     getOwnRecord: async (collection: string, rkey: string) => {
       if (failReads-- > 0) throw new Error('Read timed out')
@@ -48,8 +54,9 @@ const { parseStoryKey } = await import('./storyKey')
 beforeEach(() => {
   writes.length = 0
   for (const k of Object.keys(own)) delete own[k]
-  scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
+  scope = 'atproto blob:image/* repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
   failSubmission = 0
+  uploads.length = 0
   loseAnswer = false
   failReads = 0
 })
@@ -118,6 +125,82 @@ describe('writing a self post', () => {
     await expect(writeSelfPost({ title: ' ', body: 'B' })).rejects.toThrow(/title/)
     await expect(writeSelfPost({ title: 'T', body: ' ' })).rejects.toThrow(/Write something/)
     expect(writes).toHaveLength(0)
+  })
+})
+
+describe('posting pictures', () => {
+  const picture = (alt: string) => ({ blob: new Blob(['jpeg'], { type: 'image/jpeg' }), width: 1600, height: 1200, alt })
+
+  it('uploads them to your own account as a Bluesky image post, described, with a link back to its page here', async () => {
+    const { key, story } = await writeSelfPost({ title: 'Our new kitchen', body: '', board: 'food', images: [picture('A green tiled kitchen'), picture('The window over the sink')] })
+    expect(uploads).toHaveLength(2)
+    const post = writes.find((w) => w.collection === 'app.bsky.feed.post')!
+    const uri = `at://${DID}/app.bsky.feed.post/${post.rkey}`
+    expect(post.record.embed).toEqual({
+      $type: 'app.bsky.embed.images',
+      images: [
+        { image: expect.objectContaining({ ref: { $link: 'bafyimg1' } }), alt: 'A green tiled kitchen', aspectRatio: { width: 1600, height: 1200 } },
+        { image: expect.objectContaining({ ref: { $link: 'bafyimg2' } }), alt: 'The window over the sink', aspectRatio: { width: 1600, height: 1200 } },
+      ],
+    })
+    // Pictures leave no room for a link card: the link back is in the words, as a link.
+    const text = post.record.text as string
+    expect(text.startsWith('Our new kitchen')).toBe(true)
+    const facets = post.record.facets as { index: { byteStart: number; byteEnd: number }; features: { uri: string }[] }[]
+    const link = facets.find((f) => f.features[0].uri === selfPostUrl(uri))!
+    expect(new TextDecoder().decode(new TextEncoder().encode(text).slice(link.index.byteStart, link.index.byteEnd))).toBe('paperwing.io')
+    // Words are optional with pictures; the listing is written all the same.
+    expect(writes.find((w) => w.collection === 'io.paperwing.submission')?.record).toMatchObject({ url: selfPostUrl(uri), board: 'food' })
+    expect(story).toMatchObject({ key, media: [expect.objectContaining({ kind: 'image', alt: 'A green tiled kitchen' }), expect.objectContaining({ alt: 'The window over the sink' })] })
+    expect(story.selfPost).toBeUndefined()
+  })
+
+  it('needs every picture described, unless you’ve turned that off', async () => {
+    await expect(writeSelfPost({ title: 'T', body: '', images: [picture('Described'), picture('  ')], requireAlt: true })).rejects.toThrow(/Describe/)
+    expect(uploads).toHaveLength(0)
+    await writeSelfPost({ title: 'T', body: '', images: [picture('')], requireAlt: false })
+    expect(uploads).toHaveLength(1)
+  })
+
+  it('carries a content warning as Bluesky’s own self-label', async () => {
+    await writeSelfPost({ title: 'T', body: 'B', images: [picture('A')], label: 'graphic-media' })
+    expect(writes.find((w) => w.collection === 'app.bsky.feed.post')!.record.labels).toEqual({ $type: 'com.atproto.label.defs#selfLabels', values: [{ val: 'graphic-media' }] })
+  })
+
+  it('links back at the right place whatever the title is written in, within Bluesky’s 300', async () => {
+    await writeSelfPost({ title: 'Café 🍳 kitchen, ünïcode', body: 'Ça va? 🙂 '.repeat(60), images: [picture('A')] })
+    const post = writes.find((w) => w.collection === 'app.bsky.feed.post')!
+    const text = post.record.text as string
+    expect([...new Intl.Segmenter().segment(text)].length).toBeLessThanOrEqual(300)
+    expect(text.endsWith('\n\npaperwing.io')).toBe(true)
+    const [link] = post.record.facets as { index: { byteStart: number; byteEnd: number } }[]
+    expect(new TextDecoder().decode(new TextEncoder().encode(text).slice(link.index.byteStart, link.index.byteEnd))).toBe('paperwing.io')
+  })
+
+  it('saves a picture post’s listing again without words, never posting twice', async () => {
+    failSubmission = 2
+    const err = (await writeSelfPost({ title: 'T', body: '', images: [picture('A')] }).catch((e: unknown) => e)) as InstanceType<typeof WordsNotSaved>
+    expect(err).toBeInstanceOf(WordsNotSaved)
+    const { story } = await saveWords(err.pending, '')
+    expect(writes.map((w) => w.collection)).toEqual(['app.bsky.feed.post', 'io.paperwing.submission'])
+    expect(story.media).toHaveLength(1)
+  })
+
+  it('needs the permission to upload pictures, asking before anything is posted', async () => {
+    scope = 'atproto repo:app.bsky.feed.post?action=create repo:io.paperwing.submission?action=create&action=update'
+    await expect(writeSelfPost({ title: 'T', body: 'B', images: [picture('A')] })).rejects.toThrow(/Settings, Sources/)
+    expect(uploads).toHaveLength(0)
+    expect(writes).toHaveLength(0)
+  })
+
+  it('puts a content warning only on pictures', async () => {
+    await writeSelfPost({ title: 'T', body: 'B', label: 'nudity' })
+    expect(writes.find((w) => w.collection === 'app.bsky.feed.post')!.record.labels).toBeUndefined()
+  })
+
+  it('takes four at most, and words or pictures, not neither', async () => {
+    await expect(writeSelfPost({ title: 'T', body: '', images: Array.from({ length: 5 }, () => picture('A')) })).rejects.toThrow(/four/)
+    await expect(writeSelfPost({ title: 'T', body: '', images: [] })).rejects.toThrow(/Write something/)
   })
 })
 

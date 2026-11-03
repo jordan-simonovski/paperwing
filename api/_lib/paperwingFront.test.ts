@@ -57,6 +57,10 @@ const boards: Record<string, unknown> = {
   [SHAKY]: { name: 'Shaky', moderators: [], createdAt: hoursAgo(100) },
   [SLOW]: { name: 'Slow', moderators: [], createdAt: hoursAgo(100) },
 }
+/** Listings whose posts carry pictures. */
+const pictured = new Set<string>()
+/** Listings whose posts their authors put a content warning on. */
+const selfLabelled = new Set<string>()
 const likes: Record<string, number> = { plain: 50, boardfront: 20, news: 0, boardonly: 90, fakenews: 500, hiddenone: 400, unmoderated: 300, keptout: 600, slowboard: 700 }
 
 vi.mock('./http.js', async (orig) => ({
@@ -90,6 +94,8 @@ vi.mock('./atlinks.js', () => ({
         cid: 'c',
         author: { did: u.split('/')[2], handle: 'h' },
         record: { text: n, createdAt: hoursAgo(ages[n] ?? 1) },
+        ...(pictured.has(n) ? { embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'A picture' }] } } : {}),
+        ...(selfLabelled.has(n) ? { labels: [{ src: u.split('/')[2], uri: u, val: 'nudity' }] } : {}),
         likeCount: likes[n] ?? 0,
         replyCount: 0,
         indexedAt: hoursAgo(ages[n] ?? 1),
@@ -123,6 +129,30 @@ describe('the PaperWing front page', () => {
     expect(stories.some((s) => s.pinned)).toBe(false)
     expect(stories.find((s) => s.title === 'boardfront')?.board).toEqual({ uri: KITCHEN, name: 'Home Cooking', official: false })
     expect(stories.find((s) => s.title === 'plain')?.board).toBeUndefined()
+  })
+
+  it('keeps a post its author put a content warning on off the front page', async () => {
+    selfLabelled.add('plain')
+    try {
+      ;(await import('./kv.js')).resetMemoryKv()
+      expect((await front('new')).map((s) => s.title)).not.toContain('plain')
+    } finally {
+      selfLabelled.clear()
+    }
+  })
+
+  it('keeps a picture post off the front page when its board takes no pictures', async () => {
+    pictured.add('boardfront')
+    const before = boards[KITCHEN]
+    try {
+      expect((await front('new')).map((s) => s.title)).toContain('boardfront')
+      boards[KITCHEN] = { ...(before as object), noImages: true }
+      ;(await import('./kv.js')).resetMemoryKv()
+      expect((await front('new')).map((s) => s.title)).not.toContain('boardfront')
+    } finally {
+      pictured.clear()
+      boards[KITCHEN] = before
+    }
   })
 
   it('marks an official board’s listing, and keeps its newest at the top for a few days', async () => {

@@ -100,6 +100,7 @@ export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'>
       moderators: record.moderators,
       blockList: record.blockList,
       modsOnly: record.modsOnly,
+      noImages: record.noImages,
       createdAt: record.createdAt,
       uri: ref.uri,
       owner: did!,
