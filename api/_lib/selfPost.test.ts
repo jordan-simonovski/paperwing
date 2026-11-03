@@ -123,6 +123,30 @@ describe('a self post’s body', () => {
     expect(await kv().get(`pw:self:${POST}`)).not.toBeNull()
   })
 
+  it('keeps a did:web author’s history when their own host can’t say who they are', async () => {
+    const WEB = 'did:web:blog.example'
+    const post = `at://${WEB}/app.bsky.feed.post/3m2abcdefghij`
+    repo[`at://${WEB}/io.paperwing.submission/3m2abcdefghij`] = {
+      cid: 'v1',
+      value: {
+        ...(repo[SUB]?.value as object),
+        post: { uri: post, cid: 'p' },
+        url: 'https://paperwing.io/t/paperwing/x',
+        title: 'T',
+        body: 'first',
+        site: 'https://paperwing.io',
+        createdAt: '2026-11-02T10:00:00Z',
+      },
+    }
+    const key = storyKey({ kind: 'bs', uri: post })
+    await selfPostBody(key, t0)
+    reads.mockImplementationOnce(() => {
+      throw new Error('Upstream 400 for blog.example')
+    })
+    await expect(selfPostBody(key, minutes(2))).rejects.toThrow(/blog\.example/)
+    expect(await kv().get(`pw:self:${post}`)).not.toBeNull()
+  })
+
   it('forgets every version once its words are deleted, but not when its server is only down', async () => {
     written('first', 'v1')
     await selfPostBody(KEY, t0)

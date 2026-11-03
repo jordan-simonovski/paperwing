@@ -31,9 +31,15 @@ const recent = (versions: SelfPostVersion[], now: number) => versions.filter((v,
 
 /**
  * The author's server said the record isn't there (not that it's down): RecordNotFound is a 400.
- * A 400 from looking the account up (the PLC directory) says nothing about the words.
+ * A 400 from looking the account up (the PLC directory, or a did:web author's own host) says
+ * nothing about the words.
  */
-const deleted = (err: unknown) => err instanceof Error && /\bUpstream 400 for (?!plc\.directory\b)/.test(err.message)
+function deleted(err: unknown, did: string): boolean {
+  const m = err instanceof Error ? /\bUpstream 400 for (\S+)/.exec(err.message) : null
+  if (!m) return false
+  const lookup = did.startsWith('did:web:') ? decodeURIComponent(did.slice(8).split(':')[0]) : 'plc.directory'
+  return m[1] !== lookup && m[1] !== 'plc.directory'
+}
 
 /** When it was last edited: the later of what's kept here (or what an older history shows) and what its record says. */
 function lastEdit(kept: Kept | undefined, recorded?: string): number | undefined {
@@ -85,7 +91,7 @@ export async function selfPostBody(key: string, now = Date.now()): Promise<SelfP
         .catch(() => {})
     throw new NotSelfPost(message)
   }
-  const record = await getRecord<unknown>(at).catch((err: unknown) => (deleted(err) ? forget('It was deleted') : Promise.reject(err)))
+  const record = await getRecord<unknown>(at).catch((err: unknown) => (deleted(err, uri.split('/')[2]) ? forget('It was deleted') : Promise.reject(err)))
   const sub = cleanSubmission(record.value)
   // Only the post's own record speaks for it.
   if (!sub?.body || sub.post.uri !== uri) return forget('That isn’t a self post')
