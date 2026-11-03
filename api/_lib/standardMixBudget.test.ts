@@ -66,4 +66,15 @@ describe('native publishers in public mix feeds', () => {
     await call(atproto, bluesky('ggggggggggggg'), { headers })
     expect(await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, MIX_FAN_OUT_PER_MINUTE)).toBe(false)
   })
+
+  it('keeps a mix that went without nothing for the full ten minutes', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      expect((await call(atproto, bluesky('hhhhhhhhhhhhh'), { headers })).status).toBe(200)
+      vi.setSystemTime(Date.now() + 61_000)
+      expect(await kv().get(`rd:mixfeed:${did}:hhhhhhhhhhhhh`)).not.toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
