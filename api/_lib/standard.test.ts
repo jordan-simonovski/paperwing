@@ -182,7 +182,7 @@ describe('Standard.site publications', () => {
     })
     net
       .get('https://standard-pds.example')
-      .intercept({ path: (p) => p.includes('reverse=true') && !p.includes('cursor=') })
+      .intercept({ path: (p) => !p.includes('reverse=') && !p.includes('cursor=') })
       .reply(200, { records: [record('hidden', '/hidden', { labels: { values: [{ val: 'porn' }] } }), record('unverified', '/unverified')], cursor: 'page-two' })
     net
       .get('https://standard-pds.example')

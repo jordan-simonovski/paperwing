@@ -5,7 +5,8 @@ import { useMediaQuery } from '../lib/hooks'
 import { navCommitted, navStart } from '../lib/diag'
 import { armHeadline, pretextOn } from '../lib/pretext'
 import { useActivity } from '../lib/store'
-import { keysBelongElsewhere } from '../lib/ui'
+import { firstTime } from '../lib/firsts'
+import { keysBelongElsewhere, toast } from '../lib/ui'
 import type { Story } from '../lib/types'
 import type { PaneTab } from './ItemPane'
 import { hideStory, toggleArchived, toggleSaved, toggleWatch } from './StoryRow'
@@ -141,6 +142,8 @@ export function useListKeys(stories: Story[], itemKey: string | undefined, base:
           if (e.key === 'ArrowDown' && !itemKey && document.activeElement !== document.body) return
           e.preventDefault()
           move(idx < 0 ? 0 : 1)
+          // Someone reading by keyboard: the two keys that open up the rest.
+          if (e.key === 'j' && firstTime('keys')) toast('Reading by keyboard: / jumps anywhere, and ? lists every shortcut.')
           break
         case 'k':
         case 'ArrowUp':

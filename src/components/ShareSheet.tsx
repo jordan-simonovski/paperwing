@@ -1,11 +1,12 @@
 import { Check, ExternalLink, Loader2, Send, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { shareTargets, useAccounts } from '../lib/accounts'
 import { canWrite, useAtproto } from '../lib/atproto'
 import { blueskyText, mastodonText, SHARE_LIMITS, shareLink, shareStory, type ShareNetwork, type ShareResult } from '../lib/compose'
 import { domainOf } from '../lib/format'
 import { graphemes } from '../lib/facets'
+import { firstTime } from '../lib/firsts'
 import { usePrefs } from '../lib/store'
 import { SUBMISSION_NSID } from '../lib/paperwing'
 import { topicsForStory, TOPICS } from '../lib/topics'
@@ -30,6 +31,8 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
   const lemmy = !!accounts.lemmy
   const canList = useAtproto((a) => canWrite(a.scope, SUBMISSION_NSID) !== false)
   const communities = usePrefs((p) => p.communities)
+  const joinedBoards = usePrefs((p) => p.boards)
+  const navigate = useNavigate()
   const link = shareLink(story) ?? ''
 
   const [title, setTitle] = useState(story.title)
@@ -70,7 +73,23 @@ export function ShareSheet({ story, board: given, onClose }: { story: Story; boa
       })
       setResults(out)
       const good = out.filter((r) => r.ok).length
-      if (good === out.length) toast(good === 1 ? `Shared to ${NAMES[out[0].network]}${out[0].note?.includes('PaperWing') ? ' and PaperWing' : ''}` : `Shared to ${good} places`)
+      if (good === out.length) {
+        const listed = out.some((r) => r.listed)
+        const said = good === 1 ? `Shared to ${NAMES[out[0].network]}${listed ? ' and PaperWing' : ''}` : `Shared to ${good} places`
+        // The first listing on PaperWing points at community boards: where a listing finds the people who care about its subject.
+        if (!listed || !firstTime('share')) toast(said)
+        else if (onCommunityBoard) toast(`${said}. It’s listed on ${joinedBoards.find((b) => b.uri === board)?.name ?? 'the board'}, where the people who joined it will find it.`)
+        else
+          toast(`${said}. Next time, try a community board: people gather there around one subject.`, {
+            action: {
+              label: 'Find a board',
+              run: () => {
+                onClose()
+                void navigate('/explore/boards')
+              },
+            },
+          })
+      }
     } catch (err) {
       toast((err as Error).message, { tone: 'error' })
     } finally {

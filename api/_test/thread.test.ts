@@ -44,7 +44,7 @@ describe('a Frontpage thread through the thread function', () => {
   it('counts against the caller’s fan-out allowance: it asks every commenter’s server', async () => {
     const ask = () => call(GET, '/api/thread?src=frontpage&id=fp-nope', { headers: { 'x-forwarded-for': '203.0.113.9' } })
     // A Frontpage thread costs 3 of the allowance.
-    for (let i = 0; i < FAN_OUT_PER_MINUTE / 3; i++) expect((await ask()).status).not.toBe(429)
+    for (let i = 0; i < Math.floor(FAN_OUT_PER_MINUTE / 3); i++) expect((await ask()).status).not.toBe(429)
     expect((await ask()).status).toBe(429)
   })
 })

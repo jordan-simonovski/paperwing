@@ -1,4 +1,6 @@
+import { QueueCleared } from '../components/FeedState'
 import { SaveFromClipboardButton } from '../components/SaveFromApps'
+import { usePretext } from '../lib/pretext'
 import { Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
@@ -181,6 +183,16 @@ export function SavedPage() {
       })),
     [watched],
   )
+  // Pip hops only when the queue empties while you're here, not every time you come back to an empty one.
+  const pretext = usePretext()
+  const [lastQueue, setLastQueue] = useState(counts.queue)
+  const [justCleared, setJustCleared] = useState(false)
+  if (ready && counts.queue !== lastQueue) {
+    setLastQueue(counts.queue)
+    setJustCleared(lastQueue > 0 && counts.queue === 0)
+  }
+  // The hop is for the moment it happened: coming back from the archive doesn't replay it.
+  if (justCleared && view !== 'queue') setJustCleared(false)
   const listed = view === 'watching' && !searching ? watchRows : stories
   const { cursor, open } = useListKeys(listed, itemKey, '/saved')
 
@@ -314,7 +326,10 @@ export function SavedPage() {
               ))}
             </div>
           )}
-          {ready && !stories.length && !(view === 'watching' && !searching) && (
+          {ready && !stories.length && view === 'queue' && !searching && counts.archive > 0 && (
+            <QueueCleared archived={counts.archive} settle={justCleared && pretext} onArchive={() => setParam('view', 'archive')} />
+          )}
+          {ready && !stories.length && !(view === 'watching' && !searching) && !(view === 'queue' && !searching && counts.archive > 0) && (
             <p className="px-6 py-16 text-center text-ink-3">
               {searching ? (
                 'Nothing you have saved mentions that.'

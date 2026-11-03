@@ -5,7 +5,8 @@ test('a saved story waits under Saved, even after a reload', async ({ page }) =>
   await gotoFeed(page)
 
   await row(page, 'The Web We Lost').getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.getByText(/^Saved to your queue/)).toBeVisible()
+  // The first save on a device says what saving does.
+  await expect(page.getByText(/^Saved to your queue.*reads offline too\.$/)).toBeVisible()
   await expect(row(page, 'The Web We Lost').getByRole('button', { name: 'Remove from saved' })).toBeVisible()
 
   await navigate(page, /^Saved/)

@@ -6,7 +6,7 @@ import { linking, posts, variants } from './atlinks.js'
 import { postTime, type PostView } from './bsky.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
-import { cachedInKv } from './kv.js'
+import { cachedInKv, type Payer } from './kv.js'
 import { newsSearch, rss } from './sources.js'
 import { standardFeed, StandardRateLimit } from './standard.js'
 
@@ -33,7 +33,7 @@ const APPVIEW = 'https://public.api.bsky.app'
 export class MixSourceError extends Error {}
 
 /** Recent link stories from a mix's non-Bluesky sources: a few from each, newest first. */
-export async function linkStories(sources: MixSource[], request?: Request): Promise<Story[]> {
+export async function linkStories(sources: MixSource[], payer?: Payer, onSkipped?: () => void): Promise<Story[]> {
   const jobs: (() => Promise<Story[]>)[] = []
   let limited: StandardRateLimit | undefined
   let failedNative = false
@@ -42,7 +42,7 @@ export async function linkStories(sources: MixSource[], request?: Request): Prom
     else if (s.kind === 'standard')
       jobs.push(async () => {
         try {
-          return await standardFeed(s.url, s.label, request)
+          return await standardFeed(s.url, s.label, payer)
         } catch (err) {
           if (err instanceof StandardRateLimit) limited = err
           else failedNative = true
@@ -83,7 +83,9 @@ export async function linkStories(sources: MixSource[], request?: Request): Prom
     }
   }
   const results = await pool(jobs.slice(0, 16), 6, (job) => job())
-  if (limited) throw limited
+  // A reader over their allowance is told so; a mix Bluesky reads goes without what it can't afford this minute.
+  if (limited && payer instanceof Request) throw limited
+  if (limited) onSkipped?.()
   if (failedNative && results.every((r) => r === undefined)) throw new MixSourceError('Mix publishers could not be read')
   const seen = new Set<string>()
   return results
@@ -100,7 +102,7 @@ async function bestPostFor(url: string): Promise<string[]> {
   return uris
 }
 
-async function buildMixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
+async function buildMixFeed(did: string, rkey: string, payer?: Payer, onSkipped?: () => void): Promise<string[]> {
   const { mix } = await readMix(`at://${did}/${MIX_NSID}/${rkey}`)
   const feeds = mix.sources.filter((s): s is Extract<MixSource, { kind: 'bskyFeed' }> => s.kind === 'bskyFeed').slice(0, 6)
   const [fromFeeds, links] = await Promise.all([
@@ -112,7 +114,7 @@ async function buildMixFeed(did: string, rkey: string, request?: Request): Promi
         { timeoutMs: 8000 },
       ),
     ),
-    linkStories(mix.sources, request).catch((err: unknown) => {
+    linkStories(mix.sources, payer, onSkipped).catch((err: unknown) => {
       if (err instanceof MixSourceError) return err
       throw err
     }),
@@ -140,7 +142,12 @@ async function buildMixFeed(did: string, rkey: string, request?: Request): Promi
     .map((p) => p.uri)
 }
 
-/** A mix's feed, from the cache when it's under ten minutes old. */
-export async function mixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
-  return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey, request))
+/** A mix's feed, from the cache when it's under ten minutes old; one built without a source it couldn't afford, for a minute. */
+export async function mixFeed(did: string, rkey: string, payer?: Payer): Promise<string[]> {
+  let partial = false
+  return cachedInKv(
+    `rd:mixfeed:${did}:${rkey}`,
+    () => (partial ? 60 : 600),
+    () => buildMixFeed(did, rkey, payer, () => (partial = true)),
+  )
 }
