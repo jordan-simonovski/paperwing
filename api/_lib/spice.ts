@@ -55,7 +55,7 @@ interface AlgoliaItem {
 }
 interface LemmyComment {
   comment: { id: number; content: string; path: string; removed: boolean; deleted: boolean }
-  creator: { name: string }
+  creator: { name: string; actor_id: string }
 }
 interface DevtoComment {
   id_code?: string
@@ -64,10 +64,17 @@ interface DevtoComment {
   children?: DevtoComment[]
 }
 
+/** A commenter as the reader names them: `name`, or `name@instance` for someone from elsewhere. */
+const lemmyName = (u: LemmyComment['creator'], via: string) => {
+  const host = URL.canParse(u.actor_id) ? new URL(u.actor_id).hostname : via
+  return host === via ? u.name : `${u.name}@${host}`
+}
+
 /** Lemmy returns comments flat, each with its ancestry in `path` ("0.12.34"); rebuilt into a tree. */
-export function lemmyTree(views: LemmyComment[]): SpiceComment[] {
+export function lemmyTree(views: LemmyComment[], via: string): SpiceComment[] {
   const byId = new Map<string, SpiceComment>()
-  for (const v of views) byId.set(String(v.comment.id), { id: String(v.comment.id), author: v.creator.name, text: v.comment.removed || v.comment.deleted ? '' : v.comment.content, children: [] })
+  for (const v of views)
+    byId.set(String(v.comment.id), { id: String(v.comment.id), author: lemmyName(v.creator, via), text: v.comment.removed || v.comment.deleted ? '' : v.comment.content, children: [] })
   const roots: SpiceComment[] = []
   for (const v of views) {
     const ids = v.comment.path.split('.')
@@ -116,7 +123,7 @@ export async function fetchDiscussion(key: string): Promise<Discussion> {
       fetchJson<{ post_view: { post: { name: string; body?: string } } }>(`https://${lm.via}/api/v3/post?id=${lm.id}`),
       fetchJson<{ comments: LemmyComment[] }>(`https://${lm.via}/api/v3/comment/list?post_id=${lm.id}&max_depth=8&sort=Top&type_=All`),
     ])
-    return { title: post_view.post.name, text: post_view.post.body ?? '', comments: lemmyTree(comments) }
+    return { title: post_view.post.name, text: post_view.post.body ?? '', comments: lemmyTree(comments, lm.via) }
   }
   const dv = keyId(key, 'dv')
   if (dv) {
@@ -377,7 +384,7 @@ export function gradeFrom({ state, sources }: Pick<Built, 'state' | 'sources'>, 
     political: r2(a.political.noul),
     // One person saying the headline is wrong is an opinion; two is worth a look.
     disputed: disputed.length >= 2 ? disputed.slice(0, MAX_REFS) : [],
-    answers: a.items.asks_help.noul >= YES ? refs('answers_').slice(0, MAX_REFS) : [],
+    answers: (a.items.asks_help?.noul ?? 0) >= YES ? refs('answers_').slice(0, MAX_REFS) : [],
   }
   return { ...g, level: levelOf(g), insights, comments, at: now, v: GRADE_VERSION }
 }
@@ -444,7 +451,11 @@ export async function askJev(state: SpiceState, apiKey: string): Promise<JevAnsw
   const [thread, replies, tops] = await Promise.all([
     systemOne(state, THREAD_QUESTIONS, apiKey),
     Object.keys(perReply).length ? systemOne({ story: state.story }, perReply, apiKey) : {},
-    systemOne({ story: state.story }, topQuestions(state), apiKey),
+    // Optional: if these fail, the thread still gets its chillies, just without Disputed or Answered.
+    systemOne({ story: state.story }, topQuestions(state), apiKey).catch((err: unknown) => {
+      console.warn('spice: per-comment questions failed', err instanceof Error ? err.message : err)
+      return {}
+    }),
   ])
   return { ...(thread as Omit<JevAnswers, 'items'>), items: { ...replies, ...tops } as JevAnswers['items'] }
 }

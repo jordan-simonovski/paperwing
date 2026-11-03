@@ -97,13 +97,20 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
       { replace: true },
     )
 
-  // A comment named above the tabs: the thread only listens for jumps while it's on screen.
+  // A comment named above the tabs: the thread only listens for jumps once it's on screen, so the
+  // jump waits for the Discussion tab and the loaded thread. The tree's own effects run before this
+  // one, so it's listening by then.
+  const [jump, setJump] = useState<string>()
   const jumpTo = (commentId: string) => {
-    if (tab === 'discussion') return revealComment(commentId)
-    setTab('discussion')
-    // ponytail: a fixed wait for the tree to mount; an event the tree reads on mount if this ever misses.
-    window.setTimeout(() => revealComment(commentId), 250)
+    if (tab !== 'discussion') setTab('discussion')
+    setJump(commentId)
   }
+  const threadLoaded = !!thread.data
+  useEffect(() => {
+    if (!jump || tab !== 'discussion' || !threadLoaded) return
+    revealComment(jump)
+    setJump(undefined)
+  }, [jump, tab, threadLoaded])
 
   const savedMeta = useLibrary((l) => l.items[itemKey])
   const saved = !!savedMeta

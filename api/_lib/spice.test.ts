@@ -148,9 +148,17 @@ describe('spice grading', () => {
   })
 
   it('rebuilds Lemmy threads from their paths', () => {
-    const v = (id: number, path: string, name = `u${id}`) => ({ comment: { id, content: `c${id}`, path, removed: false, deleted: false }, creator: { name } })
-    const tree = lemmyTree([v(1, '0.1'), v(2, '0.1.2'), v(3, '0.3'), v(4, '0.1.2.4'), v(5, '0.9.5')])
+    const v = (id: number, path: string, name = `u${id}`, host = 'lemmy.world') => ({
+      comment: { id, content: `c${id}`, path, removed: false, deleted: false },
+      creator: { name, actor_id: `https://${host}/u/${name}` },
+    })
+    const tree = lemmyTree([v(1, '0.1'), v(2, '0.1.2'), v(3, '0.3', 'sam', 'beehaw.org'), v(4, '0.1.2.4'), v(5, '0.9.5')], 'lemmy.world')
     expect(tree.map((c) => c.text)).toEqual(['c1', 'c3'])
+    // Ids and names as the reader shows them: someone from another instance keeps it.
+    expect(tree.map((c) => [c.id, c.author])).toEqual([
+      ['1', 'u1'],
+      ['3', 'sam@beehaw.org'],
+    ])
     expect(tree[0].children[0].children[0].text).toBe('c4')
   })
 
@@ -217,6 +225,7 @@ describe('/api/spice', () => {
   type JevBody = { state: { comments?: unknown[] }; questions: Record<string, unknown> }
   const jevBodies: JevBody[] = []
   let dropOne = false
+  let dropTop = false
   beforeAll(async () => {
     process.env.SYNC_MEMORY = '1'
     process.env.TYPESAFE_API_KEY = 'ts-test'
@@ -238,7 +247,7 @@ describe('/api/spice', () => {
           })
         // Per reply: pushing back, not hostile; one answer missing when a test asks for it.
         const answers = Object.fromEntries(Object.keys(body.questions).map((q) => [q, { noul: q.startsWith('push_') ? 0.8 : 0.1 }]))
-        if (dropOne) delete answers[Object.keys(answers)[0]]
+        if (dropOne || (dropTop && body.questions.asks_help)) delete answers[Object.keys(answers)[0]]
         return Response.json({ answers })
       }
       throw new Error(`unexpected fetch ${url}`)
@@ -262,6 +271,16 @@ describe('/api/spice', () => {
     const done = await get('hn-1~30')
     expect(done.pending).toEqual([])
     expect(done.grades['hn-1']).toMatchObject({ level: 2, comments: 30, insights: { political: 0.9, disputed: [], answers: [] } })
+  })
+
+  it('keeps the chillies when only the per-comment questions fail', async () => {
+    dropTop = true
+    await get('hn-5~30')
+    await Promise.allSettled(background)
+    dropTop = false
+    const { kv } = await import('./kv')
+    const g = JSON.parse((await kv().get('rd:spice:hn-5'))!) as SpiceGrade
+    expect(g).toMatchObject({ level: 2, insights: { political: 0.9, disputed: [], answers: [] } })
   })
 
   it('stores nothing when Jev leaves out an answer', async () => {

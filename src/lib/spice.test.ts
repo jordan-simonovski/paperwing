@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useSpiceStore, wantSpice } from './spice'
+import { describeMood, useSpiceStore, wantSpice } from './spice'
 import type { SpiceGrade, SpiceResponse } from './spiceTypes'
 
 const grade: SpiceGrade = { level: 2, heat: 2, confidence: 0.9, split: 0.6, pushback: 0.6, hostile: 0, sharp: 0.7, flame: 0, comments: 300, at: 0, v: 1 }
@@ -39,5 +39,13 @@ describe('spice grades on the device', () => {
     await vi.advanceTimersByTimeAsync(100)
     expect(fetch).toHaveBeenCalledTimes(2)
     expect(useSpiceStore.getState().grades[story.key]).toEqual(grade)
+  })
+})
+
+describe('what a discussion is like', () => {
+  it('names only the moods Jev is fairly sure of', () => {
+    const base = { sad: 0.1, delighted: 0.1, warm: 0.1, political: 0.1, disputed: [], answers: [] }
+    expect(describeMood(base)).toEqual([])
+    expect(describeMood({ ...base, sad: 0.98, warm: 0.7, political: 0.69 })).toEqual(['Sad', 'Wholesome'])
   })
 })
