@@ -38,8 +38,8 @@ export function TopicsBody() {
       </label>
 
       <section className="mt-6">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-3">Sources</h2>
-        <div className="mt-2 flex flex-wrap gap-2 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none]">
+        <h2 className="text-[0.8125rem] font-semibold text-ink-3">Sources</h2>
+        <div className="mt-2 flex flex-wrap gap-2 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)]">
           {sourceChannels(followed).map((c) => (
             <Link key={c.id} to={`/t/${c.id}`} className="chip h-9 flex-none gap-2 px-3.5 text-[0.875rem]">
               <SourceChannelIcon mark={c.mark} />

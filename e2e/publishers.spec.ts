@@ -21,3 +21,13 @@ test('following a Standard.site publication reads its native feed and keeps it a
   const prefs = await page.evaluate(() => JSON.parse(localStorage.getItem('readout:prefs')!).state.customFeeds)
   expect(prefs).toContainEqual({ url: publication.url, label: publication.title, site: publication.site, format: 'standard' })
 })
+
+test('pasting a site into the palette offers to follow it, and finds its feed', async ({ page }) => {
+  await page.goto('/t/for-you')
+  await page.keyboard.press('/')
+  await page.getByRole('combobox').fill(publication.url)
+  await page.getByRole('option', { name: /Follow this site/ }).click()
+  await expect(page).toHaveURL(/\/explore\/publishers\?follow=/)
+  await expect(page.getByRole('textbox', { name: 'Site to follow' })).toHaveValue(/lab\.leaflet\.pub/)
+  await expect(page.getByRole('group', { name: publication.title, exact: true }).getByRole('button', { name: 'Follow', exact: true })).toBeVisible()
+})

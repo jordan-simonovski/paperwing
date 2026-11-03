@@ -23,7 +23,7 @@ function dealFrom(opener: HTMLElement, panel: HTMLElement) {
         { transform: `translate(${ox - (r.left + r.width / 2)}px, ${oy - (r.top + r.height / 2)}px) scale(0.3)`, opacity: 0 },
         { transform: 'none', opacity: 1 },
       ],
-      { duration: 420, delay: i * 16, easing: 'cubic-bezier(.2,.9,.25,1.15)', fill: 'backwards' },
+      { duration: 420, delay: i * 16, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'backwards' },
     )
   })
 }

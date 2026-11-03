@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { compact } from '../lib/format'
 import { useDiscussions } from '../lib/hooks'
+import { usePretext } from '../lib/pretext'
 import type { Story } from '../lib/types'
 import { sourceLabel } from './Source'
 import { StoryIcon } from './SourceIcon'
@@ -26,6 +27,8 @@ export function usePlaces(story: Story, alsoOn: Story[] = [], coverage: Story[] 
 
 export function DiscussionBar({ story, alsoOn = [], coverage = [], onOpen }: { story: Story; alsoOn?: Story[]; coverage?: Story[]; onOpen: (key: string) => void }) {
   const places = usePlaces(story, alsoOn, coverage)
+  // The thread being read fills in red from its start; still with Motion off or reduced motion.
+  const moving = usePretext()
 
   if (places.length < 2) return null
   const total = places.reduce((n, s) => n + (s.comments ?? 0), 0)
@@ -35,7 +38,7 @@ export function DiscussionBar({ story, alsoOn = [], coverage = [], onOpen }: { s
       <p className="mb-2 text-[0.8125rem] text-ink-2">
         {places.some((p) => coverage.includes(p)) ? 'This story is discussed' : 'Posted'} in {places.length} places, <span className="num">{compact(total)}</span> comments in all
       </p>
-      <div className="dbar">
+      <div className={`dbar${moving ? ' moving' : ''}`}>
         {places.map((s) => (
           <button
             key={s.key}

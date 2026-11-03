@@ -61,3 +61,12 @@ export const Search: Story = {
     await expect(canvas.getByText('No board matches “knitting”.')).toBeVisible()
   },
 }
+
+/** No boards yet: what one is, and the way to start the first. */
+export const NoBoardsYet: Story = {
+  parameters: { app: { queries: [[['boards'], []]] } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('No community boards yet')).toBeVisible()
+    await expect(canvas.getByRole('link', { name: /Start the first one/ })).toHaveAttribute('href', '/boards')
+  },
+}

@@ -2,8 +2,8 @@ import { keys } from '../lib/query'
 import { CouldntReach } from '../components/FeedState'
 import { useQuery } from '@tanstack/react-query'
 import { Check, Heart, Loader2, Plus, Search, Users } from 'lucide-react'
-import { useDeferredValue, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { mixChannel, unfollowMix } from '../lib/mixes'
 import { BoardDirectory } from '../components/BoardDirectory'
 import { toast } from '../lib/ui'
@@ -21,7 +21,7 @@ const TABS = [
   { id: 'mixes', label: 'Mixes' },
   { id: 'boards', label: 'Boards' },
   { id: 'communities', label: 'Communities' },
-  { id: 'feeds', label: 'Feeds' },
+  { id: 'feeds', label: 'Bluesky feeds' },
   { id: 'publishers', label: 'Publishers' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
@@ -82,8 +82,10 @@ function Communities() {
               <Avatar src={c.icon} fallback={c.title || c.name} />
               <Link to={`/t/c:${c.name}`} className="min-w-0 flex-1">
                 <p className="truncate text-[0.9375rem] font-semibold">{c.title}</p>
-                <p className="truncate text-[0.8125rem] text-ink-3">
-                  c/{c.name} · {compact(c.subscribers)} members · {compact(c.active)} active this month
+                <p className="meta">
+                  <span>c/{c.name}</span>
+                  <span>{compact(c.subscribers)} members</span>
+                  <span>{compact(c.active)} active this month</span>
                 </p>
                 {c.description && <p className="mt-1 line-clamp-2 text-[0.8125rem] text-ink-2">{c.description}</p>}
               </Link>
@@ -127,8 +129,11 @@ function BlueskyFeedsTab() {
                 ) : (
                   <p className="truncate text-[0.9375rem] font-semibold">{f.name}</p>
                 )}
-                <p className="flex items-center gap-1 truncate text-[0.8125rem] text-ink-3">
-                  by @{f.by} · <Heart size={11} /> {compact(f.likes)}
+                <p className="meta">
+                  <span>by @{f.by}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Heart size={11} aria-label="likes" /> {compact(f.likes)}
+                  </span>
                 </p>
                 {f.description && <p className="mt-1 line-clamp-2 text-[0.8125rem] text-ink-2">{f.description}</p>}
               </div>
@@ -145,6 +150,9 @@ function BlueskyFeedsTab() {
 
 function Publishers() {
   const followed = usePrefs((s) => s.followed)
+  // A site sent here to follow (the palette's "Follow this site").
+  const [params] = useSearchParams()
+  const follow = params.get('follow') ?? ''
   const sections = (Object.keys(CLUSTERS) as ClusterId[]).filter((c) => CLUSTERS[c].pack === 'general')
   return (
     <>
@@ -153,7 +161,7 @@ function Publishers() {
         it.
       </p>
       <div className="mt-6">
-        <FeedFinder />
+        <FeedFinder key={follow} initial={follow} />
       </div>
       {sections.map((c) => (
         <section key={c} className="mt-10">
@@ -210,8 +218,9 @@ function Mixes() {
             <div key={m.id} className="flex items-center gap-3 border-b border-line py-3">
               <Link to={`/t/${mixChannel(m)}`} className="min-w-0 flex-1">
                 <p className="truncate text-[0.9375rem] font-semibold">{m.name || 'Untitled mix'}</p>
-                <p className="truncate text-[0.8125rem] text-ink-3">
-                  {m.sources.length} sources · {m.feed ? 'published, and a Bluesky feed' : m.published ? 'published' : 'private'}
+                <p className="meta">
+                  <span>{m.sources.length} sources</span>
+                  <span>{m.feed ? 'published, and a Bluesky feed' : m.published ? 'published' : 'private'}</span>
                 </p>
               </Link>
               <Link className="btn h-8 flex-none px-3" to={`/mixes/${m.id}`}>
@@ -232,8 +241,9 @@ function Mixes() {
             <div key={m.uri} className="flex items-center gap-3 border-b border-line py-3">
               <Link to={`/t/${mixChannel(m)}`} className="min-w-0 flex-1">
                 <p className="truncate text-[0.9375rem] font-semibold">{m.name}</p>
-                <p className="truncate text-[0.8125rem] text-ink-3">
-                  by @{m.by} · {m.sources.length} sources
+                <p className="meta">
+                  <span>by @{m.by}</span>
+                  <span>{m.sources.length} sources</span>
                 </p>
               </Link>
               <button className="btn h-8 flex-none px-3" onClick={() => unfollowMix(m.uri)}>
@@ -249,12 +259,19 @@ function Mixes() {
 
 export function ExplorePage() {
   const { tab = 'topics' } = useParams()
+  // On a phone the tabs run past the edge: keep the open one in view, and the fade says there's more.
+  const tabs = useRef<HTMLElement>(null)
+  useEffect(() => void tabs.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }), [tab])
   if (!TABS.some((t) => t.id === tab)) return <Navigate to="/explore" replace />
   return (
     <div className="wide-col">
       <div className="mx-auto max-w-[72rem] px-4 py-8 md:px-8">
         <h1 className="text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em]">Explore</h1>
-        <nav className="seg mt-4 max-w-full overflow-x-auto" aria-label="What to explore">
+        <nav
+          ref={tabs}
+          className="seg mt-4 max-w-full overflow-x-auto [scrollbar-width:none] max-[899px]:[mask-image:linear-gradient(to_right,black_calc(100%-1.5rem),transparent)]"
+          aria-label="What to explore"
+        >
           {TABS.map((t) => (
             <Link key={t.id} to={t.id === 'topics' ? '/explore' : `/explore/${t.id}`} replace aria-current={tab === t.id ? 'page' : undefined}>
               {t.id === 'communities' && <Users size={14} />}

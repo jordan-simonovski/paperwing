@@ -164,20 +164,27 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
               className="icon-btn"
               onClick={() => toggleWatch(story)}
               aria-pressed={watching}
+              aria-label="Watch replies"
               title={watching ? 'Watching: new replies show up in Saved. Click to stop (w)' : 'Watch this discussion for new replies (w)'}
             >
               {watching ? <BellRing size={17} /> : <Bell size={17} />}
             </button>
           )}
           {saved && (
-            <button className="icon-btn" onClick={() => void toggleArchived(story)} aria-pressed={archived} title={archived ? 'Archived. Click to move back to your queue (e)' : 'Archive (e)'}>
+            <button
+              className="icon-btn"
+              onClick={() => void toggleArchived(story)}
+              aria-pressed={archived}
+              aria-label="Archive"
+              title={archived ? 'Archived. Click to move back to your queue (e)' : 'Archive (e)'}
+            >
               {archived ? <ArchiveRestore size={17} /> : <Archive size={17} />}
             </button>
           )}
-          <button className="icon-btn" onClick={() => void toggleSaved(story)} aria-pressed={saved} title={saved ? 'Saved. Click to remove (s)' : 'Save to your queue (s)'}>
+          <button className="icon-btn" onClick={() => void toggleSaved(story)} aria-pressed={saved} aria-label="Save" title={saved ? 'Saved. Click to remove (s)' : 'Save to your queue (s)'}>
             {pending ? <Loader2 size={17} className="spin" /> : saved ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}
           </button>
-          <button className="icon-btn" onClick={() => useComposer.getState().open({ kind: 'links', story: story })} title="Share">
+          <button className="icon-btn" onClick={() => useComposer.getState().open({ kind: 'links', story: story })} title="Share" aria-label="Share">
             <Share2 size={17} />
           </button>
           {story.discussionUrl && (
@@ -187,7 +194,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
             </a>
           )}
           {story.url && (
-            <a className="icon-btn" href={story.url} target="_blank" rel="noopener noreferrer" title="Open the original (o)">
+            <a className="icon-btn" href={story.url} target="_blank" rel="noopener noreferrer" title="Open the original (o)" aria-label="Open the original">
               <ArrowUpRight size={17} />
             </a>
           )}
@@ -332,7 +339,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                   <Elsewhere story={story} onOpen={(k) => onOpen(k, 'discussion')} now={now} alsoOn={alsoOn} />
                 </div>
               ))}
-            {tab === 'article' && <ArticleView story={story} />}
+            {tab === 'article' && <ArticleView story={story} onDiscussion={threadable ? () => setTab('discussion') : undefined} />}
             {tab === 'related' && <RelatedView story={story} onOpen={(k) => onOpen(k)} now={now} alsoOn={alsoOn} coverage={coverage} />}
           </div>
         </div>

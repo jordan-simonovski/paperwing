@@ -39,8 +39,8 @@ export function ReleaseNotes({ release, current }: { release: Release; current?:
       </div>
       {release.sections.map((s) => (
         <div key={s.title} className="mt-5">
-          <h3 className="flex items-center gap-2 text-[0.8125rem] font-bold uppercase tracking-[0.06em] text-ink-3">
-            <span className={`inline-block rounded-full px-2 py-0.5 text-[0.6875rem] normal-case tracking-normal ${MARK[s.kind] ?? MARK.improved}`}>{s.title}</span>
+          <h3 className="flex items-center gap-2 text-[0.8125rem] font-bold text-ink-3">
+            <span className={`inline-block rounded-full px-2 py-0.5 text-[0.6875rem] ${MARK[s.kind] ?? MARK.improved}`}>{s.title}</span>
           </h3>
           <ul className="mt-3 space-y-3.5">
             {s.changes.map((c) => (

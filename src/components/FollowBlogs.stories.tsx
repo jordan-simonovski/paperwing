@@ -60,7 +60,7 @@ export const StandardPublication: Story = {
   play: async ({ canvas }) => {
     await userEvent.type(canvas.getByRole('textbox', { name: 'Site to follow' }), 'lab.leaflet.pub')
     await userEvent.click(canvas.getByRole('button', { name: 'Find' }))
-    await expect(await canvas.findByText('lab.leaflet.pub · Standard.site publication')).toBeVisible()
+    await expect(await canvas.findByText('Standard.site publication')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
     await expect(usePrefs.getState().customFeeds).toContainEqual({ url: 'https://lab.leaflet.pub', label: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', format: 'standard' })
   },

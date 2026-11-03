@@ -81,7 +81,7 @@ function Editor({ initial }: { initial: Mix }) {
   return (
     <div className="wide-col">
       <div className="mx-auto max-w-[48rem] px-4 pb-24 pt-8 md:px-8">
-        <p className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-3">Mix</p>
+        <p className="text-[0.8125rem] font-semibold text-ink-3">Mix</p>
         <input
           className="mt-1 w-full border-b-2 border-line bg-transparent pb-1 text-[1.875rem] font-bold leading-tight tracking-[-0.02em] placeholder:text-ink-3 focus:border-ink focus:outline-none"
           value={mix.name}

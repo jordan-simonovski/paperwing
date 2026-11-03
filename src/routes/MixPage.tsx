@@ -18,14 +18,13 @@ export function MixPage() {
   return (
     <div className="wide-col grid place-items-start px-4 py-10 md:px-8">
       <div className="mx-auto w-full max-w-[40rem]">
-        <p className="text-[0.8125rem] font-semibold uppercase tracking-wide text-ink-3">PaperWing mix</p>
         {!valid && <p className="mt-3 text-[0.9375rem] text-signal">That isn’t a mix link.</p>}
         {found.isPending && valid && <Loader2 size={20} className="spin mt-4 text-ink-3" />}
         {found.isError && <p className="mt-3 text-[0.9375rem] text-signal">Couldn’t load this mix: {(found.error as Error).message}</p>}
         {found.data && (
           <>
-            <h1 className="mt-1 text-[1.875rem] font-bold leading-tight tracking-[-0.02em]">{found.data.mix.name}</h1>
-            <p className="mt-1 text-[0.9375rem] text-ink-2">by @{found.data.handle ?? found.data.did}</p>
+            <h1 className="text-[1.875rem] font-bold leading-tight tracking-[-0.02em]">{found.data.mix.name}</h1>
+            <p className="mt-1 text-[0.9375rem] text-ink-2">A PaperWing mix by @{found.data.handle ?? found.data.did}</p>
             {found.data.mix.description && <p className="mt-4 whitespace-pre-line text-[0.9375rem] leading-relaxed">{found.data.mix.description}</p>}
             <h2 className="mt-6 text-[1rem] font-bold">
               What’s in it <span className="num font-normal text-ink-3">{found.data.mix.sources.length}</span>
