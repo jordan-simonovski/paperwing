@@ -60,9 +60,28 @@ export const StandardPublication: Story = {
   play: async ({ canvas }) => {
     await userEvent.type(canvas.getByRole('textbox', { name: 'Site to follow' }), 'lab.leaflet.pub')
     await userEvent.click(canvas.getByRole('button', { name: 'Find' }))
-    await expect(await canvas.findByText('lab.leaflet.pub · Standard.site publication')).toBeVisible()
+    await expect(await canvas.findByText('Standard.site publication')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
     await expect(usePrefs.getState().customFeeds).toContainEqual({ url: 'https://lab.leaflet.pub', label: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', format: 'standard' })
+  },
+}
+
+/** Given a site (a link pasted into Find): it's looked up straight away, with no typing or Find press. */
+export const LooksUpASiteItWasGiven: Story = {
+  render: () => <FeedFinder initial="https://lab.leaflet.pub" />,
+  parameters: { app: { fetch: { 'src=discover': [{ url: 'https://lab.leaflet.pub', title: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', posts: 0, format: 'standard' }] } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('textbox', { name: 'Site to follow' })).toHaveValue('https://lab.leaflet.pub')
+    await expect(await canvas.findByText('Standard.site publication')).toBeVisible()
+  },
+}
+
+/** Given nothing, it waits to be asked. */
+export const WaitsWithoutASite: Story = {
+  render: () => <FeedFinder initial="" />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('textbox', { name: 'Site to follow' })).toHaveValue('')
+    await expect(canvas.queryByText(/Looking|No feed found/)).toBeNull()
   },
 }
 

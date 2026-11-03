@@ -12,7 +12,7 @@ export function FeedList() {
     <div className="max-w-lg space-y-3">
       {byFolder(feeds).map((g) => (
         <section key={g.name || 'loose'}>
-          {g.name && <h3 className="pt-1 text-[0.75rem] font-semibold tracking-wide text-ink-3 uppercase">{g.name}</h3>}
+          {g.name && <h3 className="pt-1 text-[0.8125rem] font-semibold text-ink-3">{g.name}</h3>}
           <ul aria-label={g.name || 'Your feeds'}>
             {g.feeds.map((f) => (
               <li key={f.url} className="flex items-center gap-3 py-1">

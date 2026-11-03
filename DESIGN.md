@@ -67,6 +67,16 @@ typography:
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.6
+  secondary:
+    fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, sans-serif"
+    fontSize: "0.9375rem"
+    fontWeight: 400
+    lineHeight: 1.6
+  state:
+    fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, sans-serif"
+    fontSize: "1.125rem"
+    fontWeight: 700
+    lineHeight: 1.3
   ui:
     fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, sans-serif"
     fontSize: "0.875rem"
@@ -231,6 +241,8 @@ A near-neutral, faintly warm greyscale doing almost all the work, with one red a
 - **Row title** (650, 1.0625rem, 1.32, `text-wrap: pretty`): story titles in lists. Read stories drop to 400 in Read grey.
 - **Reading** (400, 1.1875rem, 1.7, max 38rem): article text in the reader. Prose headings 700, 1.25, -0.01em.
 - **Body** (400, 1rem, 1.6): comments and inline prose.
+- **Secondary** (400, 0.9375rem, 1.6, Ink 2 or Ink 3): the sentence under a heading, card and sheet descriptions, empty-state explanations, field help.
+- **State** (700, 1.125rem, 1.3): the one-line heading of an empty, failed or finished state ("Queue cleared", "No reader view for this one").
 - **UI** (600, 0.875rem): buttons, chips, segmented controls, rail links.
 - **Meta** (400, 0.8125rem, Ink 3): row headers, timestamps, labels; numbers tabular.
 

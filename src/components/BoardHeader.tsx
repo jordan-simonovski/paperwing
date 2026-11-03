@@ -41,13 +41,16 @@ export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri
   return (
     <header className="px-3 pt-3 md:px-4 md:pt-4">
       <div className="rounded-[18px] bg-panel p-4 md:p-5">
-        <p className="flex items-center gap-1.5 text-[0.8125rem] font-semibold uppercase tracking-[0.08em] text-ink-3">
-          <Users size={13} /> Community board{topic ? ` · ${topic.label}` : ''}
-        </p>
-        <h1 className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[1.5rem] font-bold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+        <h1 className="flex flex-wrap items-center gap-x-2 text-[1.5rem] font-bold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
           {board.name}
           {board.official && <OfficialBadge size={18} label />}
         </h1>
+        <p className="meta mt-1">
+          <span className="inline-flex items-center gap-1.5">
+            <Users size={13} aria-hidden /> Community board
+          </span>
+          {topic && <span>{topic.label}</span>}
+        </p>
         {board.description && <p className="mt-1.5 whitespace-pre-line text-[0.9375rem] leading-relaxed text-ink-2">{board.description}</p>}
         <div className="mt-3 flex flex-wrap gap-2">
           <button className={`btn h-9 text-[0.8125rem] ${joined ? 'following' : 'btn-primary'}`} onClick={() => toggleJoin({ uri, name: board.name })} aria-pressed={joined}>

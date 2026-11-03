@@ -79,12 +79,13 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
         aria-current={selected || undefined}
       >
         <div className="row-head">
-          <StoryIcon story={s} size={16} />
-          <span className="row-source">{sourceLabel(s)}</span>
+          <span className="row-by">
+            <StoryIcon story={s} size={16} />
+            <span className="row-source">{sourceLabel(s)}</span>
+          </span>
           {/* A PaperWing listing is someone's pick: who, with a way to their profile. */}
           {s.sourceLabel === 'PaperWing' && s.author && (
             <>
-              <span aria-hidden>·</span>
               <Link className="row-domain" to={profilePath(s.author)} onClick={(e) => e.stopPropagation()} title={`@${s.author}’s profile`}>
                 @{s.author}
               </Link>
@@ -92,13 +93,12 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
           )}
           {/* A board's listing on the front page: which board, like a subreddit's name. */}
           {s.board && (
-            <>
-              <span aria-hidden>·</span>
-              <Link className="row-domain inline-flex items-center gap-1" to={boardPath(s.board.uri)} onClick={(e) => e.stopPropagation()} aria-label={`in ${s.board.name}`}>
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <Link className="row-domain" to={boardPath(s.board.uri)} onClick={(e) => e.stopPropagation()} aria-label={`in ${s.board.name}`}>
                 in {s.board.name}
               </Link>
               {s.board.official && <OfficialBadge size={13} />}
-            </>
+            </span>
           )}
           {s.pinned && (
             <span className="pinned-chip inline-flex items-center">
@@ -108,14 +108,12 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </button>
             </span>
           )}
-          <span aria-hidden>·</span>
           {/* The full date is only for hovering, and formatting it for every row costs on phones: set it on the way in. */}
           <time dateTime={new Date(s.createdAt).toISOString()} onPointerEnter={(e) => (e.currentTarget.title ||= fullDate(s.createdAt))}>
             {timeAgo(s.createdAt, now)}
           </time>
           {domain && (
             <>
-              <span aria-hidden>·</span>
               <a className="row-domain" href={s.url!} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Open the original">
                 {domain}
               </a>

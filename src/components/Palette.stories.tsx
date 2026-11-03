@@ -60,10 +60,12 @@ export const DottedWordsAreNotLinks: Story = {
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body)
     await userEvent.type(page.getByRole('combobox'), 'node.js')
-    await expect(page.getAllByRole('option')[0]).not.toHaveTextContent('Post this link')
+    await expect(page.getAllByRole('option')[0]).not.toHaveTextContent(/Follow this site|Post this link/)
     await userEvent.clear(page.getByRole('combobox'))
     await userEvent.type(page.getByRole('combobox'), 'example.com/post')
-    await expect(page.getAllByRole('option')[0]).toHaveTextContent('Post this link')
+    // A pasted address: follow the site first, or post the link.
+    await expect(page.getAllByRole('option')[0]).toHaveTextContent('Follow this site')
+    await expect(page.getAllByRole('option')[1]).toHaveTextContent('Post this link')
   },
 }
 
