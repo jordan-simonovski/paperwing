@@ -1,5 +1,19 @@
 # What's new
 
+## 0.9.0
+
+_Released 3 November 2026_
+
+### New
+
+- **Alt text is required.** A post can't go until every picture is described. Turn this off under Settings, Sources, Posting, and boards can choose to take no pictures at all.
+- **Follow Discourse and Standard.site.** Paste a forum, category, tag or publication address in Explore’s publisher finder to follow it. Add these publishers to mixes and read their posts alongside your other feeds.
+- **Post pictures.** Add up to four pictures to a post from Write a post, each with a description for people who can't see it. They go to your own Bluesky account as a picture post, resized on your device first with location details removed.
+
+### Fixes
+
+- **PaperWing upvotes reach Bluesky.** When signed in, tapping the up arrow on a listing sends a Bluesky like even if you already voted locally or an earlier attempt failed.
+
 ## 0.8.0
 
 _Released 3 November 2026_
