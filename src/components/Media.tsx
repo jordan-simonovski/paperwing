@@ -3,7 +3,7 @@ import type { Media } from '../lib/types'
 
 // Safari (and so every iOS browser and the installed PWA) plays Bluesky's HLS video natively.
 // Elsewhere the poster links out rather than pulling in a 100KB player. Plain files (Mastodon) play anywhere.
-const nativeHls = typeof document !== 'undefined' && !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl')
+export const nativeHls = typeof document !== 'undefined' && !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl')
 
 interface Props {
   media: Media[]

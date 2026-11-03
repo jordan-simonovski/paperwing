@@ -49,7 +49,8 @@ path. A guard that fails closed has a test proving it fails closed.
   people to an empty space.
 - **The CSP** in `vercel.json` hashes the inline script in `index.html`; `api/_lib/csp.test.ts` fails
   when they drift. New third-party origins don't go in the CSP (`CONTRIBUTING.md`, "No accounts, no
-  tracking").
+  tracking"). The only exception is `frame-src`: YouTube's privacy-enhanced player and Vimeo's,
+  loaded on a tap and sandboxed (`src/lib/videoEmbed.ts`). `csp.test.ts` pins it to those two.
 - **What's stored or sent** changes the privacy and terms pages in the same change.
 
 ## Performance
