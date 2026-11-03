@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { canWrite, deleteRecord, putRecord, useAtproto } from './atproto'
+import { isPrivateAddress } from './publishers'
 import { BLOGROLL_NSID, MAX_BLOGROLL } from './social'
 import { usePrefs } from './store'
 import { toast } from './ui'
@@ -11,7 +12,11 @@ import { toast } from './ui'
 export async function publishBlogroll() {
   const { customFeeds } = usePrefs.getState()
   await putRecord(BLOGROLL_NSID, 'self', {
-    feeds: customFeeds.slice(0, MAX_BLOGROLL).map((f) => ({ url: f.url, label: f.label, ...(f.site ? { site: f.site } : {}), ...(f.format ? { format: f.format } : {}) })),
+    // A private feed's address is a key to someone's account: it never goes public, however it was followed.
+    feeds: customFeeds
+      .filter((f) => !isPrivateAddress(f.url))
+      .slice(0, MAX_BLOGROLL)
+      .map((f) => ({ url: f.url, label: f.label, ...(f.site ? { site: f.site } : {}), ...(f.format ? { format: f.format } : {}) })),
     updatedAt: new Date().toISOString(),
   })
 }

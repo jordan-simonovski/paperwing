@@ -45,6 +45,25 @@ export function byFolder<F extends PublisherFeed>(feeds: F[]): { name: string; f
   return [...groups].map(([name, feeds]) => ({ name, feeds })).filter((g) => g.feeds.length)
 }
 
+/**
+ * Words that make a query parameter a key to someone's account, wherever they sit in its name
+ * (feed_token, private-token, X-Amz-Signature, authToken). Catching too much only means adding a
+ * feed by hand, or leaving it off a public blogroll. A secret in the path (/private/<id>.rss) can't be told apart.
+ */
+const SECRET_WORDS = new Set(['token', 'tokens', 'auth', 'key', 'apikey', 'secret', 'password', 'passwd', 'pass', 'pwd', 'sig', 'signature', 'credential', 'credentials'])
+const words = (name: string) => name.split(/[_\-.]+|(?<=[a-z])(?=[A-Z])/).map((w) => w.toLowerCase())
+
+/** A feed address that's a key to someone's account: a password in it, or a parameter named like a token. Never imported or published. */
+export function isPrivateAddress(url: string): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  return !!(u.username || u.password) || [...u.searchParams.keys()].some((k) => words(k).some((w) => SECRET_WORDS.has(w)))
+}
+
 export interface FoundFeed {
   url: string
   title: string

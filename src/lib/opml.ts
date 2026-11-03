@@ -2,7 +2,7 @@
 // your feeds into PaperWing; exporting takes them, and the publishers behind your topics, anywhere
 // else. Parsed with a small tolerant reader rather than an XML library: OPML in the wild is messy.
 
-import type { PublisherFeed } from './publishers'
+import { isPrivateAddress, type PublisherFeed } from './publishers'
 export type OpmlFeed = PublisherFeed
 
 /** What an import left out, and why. */
@@ -18,13 +18,6 @@ const ATTR = /([a-zA-Z:]+)\s*=\s*("([^"]*)"|'([^']*)')/g
 const TAG = /<outline\b(?:[^<>"']|"[^"]*"|'[^']*'){0,4000}>|<\/outline\s*>/gi
 /** Feed kinds PaperWing can't read: FreshRSS's scraped pages (HTML+XPath, XML+XPath) and JSON feeds. Readers mark ordinary feeds every which way. */
 const UNREADABLE = /xpath|json/i
-/**
- * Words that make a query parameter a key to someone's account, wherever they sit in its name
- * (feed_token, private-token, X-Amz-Signature, authToken). Catching too much only means adding a
- * feed by hand. A secret in the path (/private/<id>.rss) can't be told apart.
- */
-const SECRET_WORDS = new Set(['token', 'tokens', 'auth', 'key', 'apikey', 'secret', 'password', 'passwd', 'pass', 'pwd', 'sig', 'signature', 'credential', 'credentials'])
-const words = (name: string) => name.split(/[_\-.]+|(?<=[a-z])(?=[A-Z])/).map((w) => w.toLowerCase())
 /** The folder PaperWing's own exports used to put every followed feed in: no folder at all. */
 const OLD_EXPORT_FOLDER = 'Your feeds'
 const decode = (s: string) =>
@@ -35,8 +28,6 @@ const decode = (s: string) =>
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
-const isPrivate = (u: URL) => !!(u.username || u.password) || [...u.searchParams.keys()].some((k) => words(k).some((w) => SECRET_WORDS.has(w)))
 
 /** Every feed in an OPML file (outlines with an xmlUrl), once each, web links only, each with its folder. */
 export function parseOpml(text: string): { feeds: OpmlFeed[]; skipped: OpmlSkipped } {
@@ -60,13 +51,7 @@ export function parseOpml(text: string): { feeds: OpmlFeed[]; skipped: OpmlSkipp
       skipped.unreadable++
       continue
     }
-    let address: URL
-    try {
-      address = new URL(url)
-    } catch {
-      continue
-    }
-    if (isPrivate(address)) {
+    if (isPrivateAddress(url)) {
       skipped.private++
       continue
     }
