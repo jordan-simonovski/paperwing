@@ -477,8 +477,6 @@ const SPOILER_CLIP = 1500
 /** Characters of comment text per request: several requests at once keep each well inside Jev's context. */
 const SPOILER_CHUNK = 90_000
 const SPOILER_YES = 0.5
-/** A grade's `insights.fiction` at or above this gets its comments checked. */
-export const FICTION_YES = 0.7
 
 /** Every comment with words, at any depth (a spoiler can be anywhere), each clipped. */
 export function spoilerComments(tree: SpiceComment[]): Pick<SpiceComment, 'id' | 'author' | 'text'>[] {
@@ -522,7 +520,14 @@ export async function checkSpoilers(key: string, apiKey: string, now = Date.now(
   return { ids: all.filter((_, i) => answers[`spoiler_${i}`].noul >= SPOILER_YES).map((c) => c.id), comments: count(comments), at: now }
 }
 
-/** Checked again once a thread has grown by a fifth (at least ten comments), and not within half an hour. */
+/**
+ * Checked again once a thread has grown by a fifth (at least ten comments), and not within half an
+ * hour. Growth is measured against the most it had, by the server's count or the reader's: a
+ * source that sends the server fewer comments than it has (Lemmy stops at 300) would otherwise
+ * look grown on every ask.
+ */
 export function needsSpoilerCheck(held: SpoilerCheck | undefined, comments: number, now = Date.now()): boolean {
-  return !held || (comments >= held.comments + Math.max(10, held.comments * 0.2) && now - held.at > 30 * 60_000)
+  if (!held) return true
+  const had = Math.max(held.comments, held.asked ?? 0)
+  return comments >= had + Math.max(10, had * 0.2) && now - held.at > 30 * 60_000
 }

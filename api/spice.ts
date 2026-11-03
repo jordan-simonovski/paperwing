@@ -1,8 +1,8 @@
 import { waitUntil } from '@vercel/functions'
-import { spiceMin, type SpiceGrade, type SpiceResponse, type SpoilerCheck, type SpoilerResponse } from '../src/lib/spiceTypes.js'
+import { FICTION_YES, spiceMin, type SpiceGrade, type SpiceResponse, type SpoilerCheck, type SpoilerResponse } from '../src/lib/spiceTypes.js'
 import { clientKey, fail, json, today } from './_lib/http.js'
 import { kv, kvConfigured, overLimit } from './_lib/kv.js'
-import { askJev, buildState, checkSpoilers, fetchDiscussion, FICTION_YES, GRADE_VERSION, JEV_MODEL, levelOf, needsGrade, needsSpoilerCheck, quiet, gradeFrom, validKey } from './_lib/spice.js'
+import { askJev, buildState, checkSpoilers, fetchDiscussion, GRADE_VERSION, JEV_MODEL, levelOf, needsGrade, needsSpoilerCheck, quiet, gradeFrom, validKey } from './_lib/spice.js'
 
 // GET /api/spice?keys=hn-123~240,lb-abc~55: the spice grades known for those stories (each key
 // with the comment count the client sees). Stories that are big enough and ungraded, or have grown
@@ -55,7 +55,7 @@ async function spoilers(asked: string, request: Request, apiKey: string): Promis
   }
   waitUntil(
     checkSpoilers(key, apiKey)
-      .then((c) => store.set(spoilerKey(key), JSON.stringify(c), KEEP_SECONDS))
+      .then((c) => store.set(spoilerKey(key), JSON.stringify({ ...c, asked: comments } satisfies SpoilerCheck), KEEP_SECONDS))
       .catch(failed(key)),
   )
   return json({ ids, pending: true } satisfies SpoilerResponse, 0)

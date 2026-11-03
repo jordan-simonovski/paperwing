@@ -8,6 +8,9 @@ export type SpiceLevel = 0 | 1 | 2 | 3
  * Lemmy threads run smaller than HN's and argue just as hard, so they need fewer.
  */
 export const SPICE_MIN: Record<string, number> = { hn: 25, bs: 25, lb: 12, lm: 15, dv: 20 }
+/** A grade's `insights.fiction` at or above this gets its comments checked for spoilers, on the server and in the reader. */
+export const FICTION_YES = 0.7
+
 export const spiceMin = (key: string): number | undefined => SPICE_MIN[key.slice(0, 2)]
 
 export interface SpiceGrade {
@@ -64,8 +67,9 @@ export interface SpiceInsights {
 export interface SpoilerCheck {
   /** Comment ids, as the reader's thread has them, that likely give the plot away. */
   ids: string[]
-  /** Comments in the thread when checked. */
+  /** Comments in the thread when checked, as the server fetched it and as the reader counted it. */
   comments: number
+  asked?: number
   at: number
 }
 

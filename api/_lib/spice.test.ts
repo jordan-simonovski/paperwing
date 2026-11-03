@@ -246,6 +246,11 @@ describe('spice grading', () => {
     expect(needsSpoilerCheck(held, 115, now)).toBe(false)
     expect(needsSpoilerCheck(held, 120, now)).toBe(true)
     expect(needsSpoilerCheck({ ...held, at: now - 60e3 }, 500, now)).toBe(false)
+    // A source that sends the server fewer comments than the reader counts (Lemmy stops at 300)
+    // is measured against what the reader counted when it was checked, not checked forever.
+    const capped = { ids: [], comments: 300, asked: 520, at: now - 3600e3 }
+    expect(needsSpoilerCheck(capped, 530, now)).toBe(false)
+    expect(needsSpoilerCheck(capped, 640, now)).toBe(true)
   })
 
   it('puts heated discussions first and keeps hot order otherwise', () => {
@@ -361,6 +366,36 @@ describe('/api/spice', () => {
     expect(await spoilers('hn-9~5000')).toEqual({ ids: [], pending: false })
     expect(await spoilers('hn-404~5000')).toEqual({ ids: [], pending: false })
     expect(jevBodies).toHaveLength(asked + 1)
+  })
+
+  it('checks spoilers only within the lock, the reader’s share and the day’s budget', async () => {
+    const { kv } = await import('./kv')
+    const { clientKey, today } = await import('./http')
+    const fiction = grade({ v: GRADE_VERSION, insights: { sad: 0, delighted: 0, warm: 0, political: 0, fiction: 0.9, disputed: [], answers: [] } })
+    const ask = async (key: string, from = '198.51.100.1') =>
+      (await (await spice.GET(new Request(`https://readout.test/api/spice?spoilers=${key}~40`, { headers: { 'x-forwarded-for': from } }))).json()) as SpoilerResponse
+    const asked = jevBodies.length
+
+    // Someone is already checking this thread: wait for them.
+    await kv().set('rd:spice:hn-21', JSON.stringify(fiction), 600)
+    await kv().set('rd:spoiler-lock:hn-21', '1', 300)
+    expect(await ask('hn-21')).toEqual({ ids: [], pending: true })
+
+    // The day's budget is spent: nothing starts, and the lock is let go for whoever comes next.
+    await kv().set('rd:spice:hn-22', JSON.stringify(fiction), 600)
+    await kv().set(`rd:spoiler-budget:${today()}`, '100000', 600)
+    expect(await ask('hn-22')).toEqual({ ids: [], pending: false })
+    expect(Number(await kv().get('rd:spoiler-lock:hn-22'))).toBe(0)
+
+    // This reader has used their share: nothing starts for them either.
+    await kv().set(`rd:spoiler-budget:${today()}`, '0', 600)
+    await kv().set('rd:spice:hn-23', JSON.stringify(fiction), 600)
+    const reader = new Request('https://readout.test/', { headers: { 'x-forwarded-for': '198.51.100.9' } })
+    await kv().set(`rd:spice-caller:${clientKey(reader)}:${today()}`, '100000', 600)
+    expect(await ask('hn-23', '198.51.100.9')).toEqual({ ids: [], pending: false })
+
+    await Promise.allSettled(background)
+    expect(jevBodies).toHaveLength(asked)
   })
 
   it('rests a source that rate-limited the server', async () => {

@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { keys } from './query'
 import { usePrefs } from './store'
-import { spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceResponse, type SpoilerResponse } from './spiceTypes'
+import { FICTION_YES, spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceResponse, type SpoilerResponse } from './spiceTypes'
 import type { Story } from './types'
 
 // Spice grades for the stories on screen, from /api/spice. Rows ask for their story as they
@@ -116,8 +116,6 @@ export function describeMood(i: SpiceInsights): string[] {
   return MOODS.filter(([k]) => i[k] >= 0.7).map(([, name]) => name)
 }
 
-/** How sure the grade must be that a thread is about fiction before its comments are checked (as on the server). */
-const FICTION_YES = 0.7
 const NO_SPOILERS: ReadonlySet<string> = new Set()
 
 /**
@@ -139,6 +137,8 @@ export function useSpoilers(story: Pick<Story, 'key' | 'source' | 'comments'> | 
       if (!res.ok) throw new Error(`Spoiler check failed (${res.status})`)
       return (await res.json()) as Partial<SpoilerResponse>
     },
+    // A new comment count asks again; the folds stay until the answer comes (or for good, offline).
+    placeholderData: keepPreviousData,
     refetchInterval: (q) => (q.state.data?.pending && q.state.dataUpdateCount < 6 ? 15_000 : false),
     staleTime: 5 * 60_000,
   })
