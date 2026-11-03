@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { call, fakeUpstreams, memoryStore } from '../_test/harness'
-import { fanOutLimited, FAN_OUT_PER_MINUTE, MIX_FAN_OUT_PER_MINUTE, overLimit } from './kv'
+import { fanOutLimited, FAN_OUT_PER_MINUTE, kv, MIX_FAN_OUT_PER_MINUTE, overLimit } from './kv'
 import { GET as rss } from '../rss'
 import { GET as atproto } from '../atproto'
 
@@ -47,5 +47,23 @@ describe('native publishers in public mix feeds', () => {
     expect(res.status).toBe(200)
     // Turned away at the ceiling before its author was charged anything.
     expect(await overLimit(`rd:fanout:mix:${fresh}`, 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE)).toBe(false)
+  })
+
+  it('keeps a mix served without a publication for a minute, not ten, so it fills in once there’s room', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      await overLimit(`rd:fanout:mix:${did}`, 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE)
+      expect((await call(atproto, bluesky('fffffffffffff'), { headers })).status).toBe(200)
+      vi.setSystemTime(Date.now() + 61_000)
+      expect(await kv().get(`rd:mixfeed:${did}:fffffffffffff`)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('leaves the shared ceiling alone when the author is already over their own allowance', async () => {
+    await overLimit(`rd:fanout:mix:${did}`, 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE)
+    await call(atproto, bluesky('ggggggggggggg'), { headers })
+    expect(await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, MIX_FAN_OUT_PER_MINUTE)).toBe(false)
   })
 })

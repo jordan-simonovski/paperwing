@@ -98,7 +98,14 @@ export function QueueCleared({ archived, settle = false, onArchive }: { archived
       <Pip variant="done" className={`mx-auto block size-24 ${settle ? 'pip-settle' : ''}`} />
       <p className="mt-1 text-[1.125rem] font-bold">Queue cleared</p>
       <p className="mx-auto mt-2 max-w-sm text-[0.9375rem] text-ink-3">
-        Nothing left waiting. The next story you save lands here, and the <span className="num">{archived}</span> you’ve finished are in the archive.
+        Nothing left waiting. The next story you save lands here, and{' '}
+        {archived === 1 ? (
+          'the one you’ve finished is in the archive.'
+        ) : (
+          <>
+            the <span className="num">{archived}</span> you’ve finished are in the archive.
+          </>
+        )}
       </p>
       <button className="btn mt-5" onClick={onArchive}>
         Open the archive

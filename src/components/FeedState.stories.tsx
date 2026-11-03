@@ -61,6 +61,15 @@ export const QueueReadThrough: StoryObj<typeof QueueCleared> = {
   },
 }
 
+/** One finished story reads as one, not "the 1 … are". */
+export const QueueReadThroughOne: StoryObj<typeof QueueCleared> = {
+  render: (args) => <QueueCleared {...args} />,
+  args: { archived: 1, onArchive: fn() },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText(/the one you’ve finished is in the archive/)).toBeVisible()
+  },
+}
+
 export const AllCaughtUp: StoryObj<typeof FeedEmpty> = {
   render: (args) => <FeedEmpty {...args} />,
   args: { filtered: false, allRead: true, onClearFilter: fn(), onRefresh: fn() },

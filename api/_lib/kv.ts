@@ -183,7 +183,7 @@ export function resetMemoryKv(): void {
  * `build()`, kept in KV for `seconds` so the next caller in that window gets the same answer
  * without asking upstream again. Without a store it just builds; a store that fails is skipped.
  */
-export async function cachedInKv<T>(key: string, seconds: number, build: () => Promise<T>): Promise<T> {
+export async function cachedInKv<T>(key: string, seconds: number | (() => number), build: () => Promise<T>): Promise<T> {
   if (kvConfigured()) {
     const hit = await kv()
       .get(key)
@@ -193,7 +193,7 @@ export async function cachedInKv<T>(key: string, seconds: number, build: () => P
   const value = await build()
   if (kvConfigured())
     await kv()
-      .set(key, JSON.stringify(value), seconds)
+      .set(key, JSON.stringify(value), typeof seconds === 'function' ? seconds() : seconds)
       .catch(() => {})
   return value
 }
@@ -229,6 +229,13 @@ export type Payer = Request | { mix: string }
 /** Counts `cost` against a fan-out allowance; true when this call goes over it. Fails closed. */
 export async function fanOutLimited(payer: Payer, cost: number): Promise<boolean> {
   if (payer instanceof Request) return overLimit(`rd:fanout:${clientKey(payer)}`, 60, FAN_OUT_PER_MINUTE, cost)
-  // The shared ceiling first: past it, no author is charged for a read that won't happen.
-  return (await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, cost)) || overLimit(`rd:fanout:mix:${payer.mix}`, 60, FAN_OUT_PER_MINUTE, cost)
+  // The author's own allowance first, so an author already over it can't use up everyone's ceiling.
+  const own = `rd:fanout:mix:${payer.mix}`
+  if (await overLimit(own, 60, FAN_OUT_PER_MINUTE, cost)) return true
+  if (!(await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, cost))) return false
+  // Turned away at the ceiling: the author gets back what a read that won't happen cost them.
+  await kv()
+    .bump(own, 60, -cost)
+    .catch(() => {})
+  return true
 }
