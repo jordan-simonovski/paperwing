@@ -1,5 +1,29 @@
 # What's new
 
+## 0.12.0
+
+_Released 3 November 2026_
+
+### New
+
+- **Spoilers stay folded.** In a discussion about a film, show, book or game, comments that may give the plot away are folded as "Possible spoiler" until you tap Show. Turn it off in Settings, Appearance.
+- **Paste a Bluesky feed, a person, a Lemmy community or a board to open it.** Paste its link into Find (⌘K or /) and the first choice opens it in PaperWing, ready to follow or join. Other sites still get "Follow this site".
+- **Rows say when your taste moved them.** In Hot, a story your votes and saves clearly lifted says so ("Up for you: you like Space"), and one they sank says why. It only appears where your taste shapes the order, never in Latest or Top.
+- **The reader says what a discussion is like.** Beside the chillies, busy threads can now show Sad, Happy, Wholesome or Politically charged, Disputed when several people say the headline is wrong, and Answered when a question in the post gets answers. Tap Disputed or Answered to see who, and tap a name to jump to their comment. The chillies setting in Settings, Appearance turns these off too.
+
+### Improved
+
+- **Chillies tell a sharp argument from a busy thread.** Every reply is now judged against the comment it answers, so the chillies count how many people actually push back and how many turn personal, instead of guessing from the thread as a whole. A long, friendly thread stays calm, and tapping the chillies in the reader says what made a discussion heated. "Piling on" is no longer given as a reason.
+- **A board that doesn't load offers to try again.** The board page now has a Try again button when it can't be reached, and Explore › Boards shows one way to start a board when there are none yet.
+- **Calmer details on more screens.** Activity, profiles, quoted posts, mixes, moderation, margin notes, post history and Settings space their details instead of joining them with dots.
+- **Small touches of motion and colour.** Switching channels, the header's colour glides to the next topic's instead of snapping. Pulling to refresh on a phone, Pip leans in and stands up straight when letting go will refresh. Activity's like, repost and follow badges use PaperWing's own colours and stay legible in dark mode. Motion stays off with Motion off or reduced motion.
+- **A shorter welcome tour.** It's five steps instead of nine: your topics, your own sites, how For you is ordered, your accounts, and sync. Saving, sharing and posting now explain themselves the first time you use them, boards and mixes explain themselves where they live, and your own AI key is in Settings.
+
+### Fixes
+
+- **Chillies judge the whole discussion.** On big threads the chillies only looked at the first argument under the top comment, so a calm thread could show as heated and the reverse. They now read across the top sixteen conversations, and threads already graded are graded again.
+- **PaperWing posts say PaperWing.** Opening a PaperWing post, or meeting one in a Bluesky feed, showed it as a Bluesky post because that's where it's stored. It's now shown as PaperWing's own, and the link out still says it opens on Bluesky.
+
 ## 0.11.0
 
 _Released 3 November 2026_
