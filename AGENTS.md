@@ -4,7 +4,8 @@ Repo-wide rules for coding agents (Claude Code reads this through `CLAUDE.md`). 
 `GLOSSARY.md`: name modules, tests and copy with them. How the code is laid out, the
 safety rules and the house style are in `CONTRIBUTING.md`; read it first. Design references are in
 `.claude/skills/`: `codebase-design` for module shape (deep modules, seams, adapters), `tdd` for the test loop,
-`improve-codebase-architecture` for finding refactors, `ce-code-review` for review. `codebase-health` holds the
+`improve-codebase-architecture` for finding refactors, `ce-code-review` for review, `stacked-prs` for
+any change that depends on another open pull request. `codebase-health` holds the
 security invariants, performance budgets, accessibility rules and shared helpers: read it before touching an endpoint,
 anything that fetches or renders outside content, or UI, and whenever a hook, budget or check fails.
 

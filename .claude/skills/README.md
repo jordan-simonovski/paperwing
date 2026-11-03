@@ -20,6 +20,9 @@ collapse when you're nearby.
 `ship` is PaperWing's own too: the gate before any push or pull request (checks, changesets, then the
 review below, then fixing what it raises).
 
+`stacked-prs` is PaperWing's own: when a change depends on another open pull request, how to open,
+update and merge the two as a GitHub stack with `gh stack`, and how the ship gate applies to each layer.
+
 `ce-code-review` is different: a pointer to the pinned Compound Engineering review
 (EveryInc/compound-engineering-plugin, MIT), whose assets live byte-for-byte in
 `.compound-engineering/vendor/` with their own licence. See
