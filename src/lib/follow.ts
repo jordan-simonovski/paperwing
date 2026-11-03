@@ -6,7 +6,7 @@ import { feed } from './sources/http'
 import { useActivity, usePrefs } from './store'
 import { isTechTopic, TOPICS } from './topics'
 import { toast } from './ui'
-import type { FoundFeed } from './publishers'
+import { addFeeds, type FoundFeed } from './publishers'
 export type { FoundFeed } from './publishers'
 
 // Following a blog from anywhere: its feed is found from any link to it (api/_lib/discover.ts),
@@ -60,10 +60,15 @@ export function useSiteFeeds(url: string | null | undefined, enabled = true) {
   return useQuery({ ...discoverQuery(url ?? ''), enabled: enabled && !!host })
 }
 
+/** What following more says once your feeds are full. */
+export const FEEDS_FULL = 'Your feeds are full: unfollow one under Settings, Sources to follow another'
+
 export function follow(feed: FoundFeed) {
   const { customFeeds, set } = usePrefs.getState()
   if (customFeeds.some((f) => f.url === feed.url)) return
-  set({ customFeeds: [...customFeeds, { url: feed.url, label: feed.title, site: feed.site, ...(feed.format ? { format: feed.format } : {}) }] })
+  const { feeds, left } = addFeeds(customFeeds, [{ url: feed.url, label: feed.title, site: feed.site, ...(feed.format ? { format: feed.format } : {}) }])
+  if (left) return toast(FEEDS_FULL, { tone: 'error' })
+  set({ customFeeds: feeds })
   toast(`Following ${feed.title}. New posts show in ${followsTech(usePrefs.getState().followed) ? 'Blogs' : 'Publishers'}.`, {
     action: { label: 'Undo', run: () => usePrefs.getState().set({ customFeeds: usePrefs.getState().customFeeds.filter((f) => f.url !== feed.url) }) },
   })

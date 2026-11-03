@@ -1,11 +1,11 @@
 import { BookOpen, Check, ChevronDown, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { follow } from '../lib/follow'
+import { FEEDS_FULL, follow } from '../lib/follow'
 import { plural } from '../lib/format'
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
 import { AddToMix } from './AddToMix'
-import { publisherRef, type PublisherFeed } from '../lib/publishers'
+import { addFeeds, publisherRef, type PublisherFeed } from '../lib/publishers'
 
 type Feed = PublisherFeed
 
@@ -18,9 +18,11 @@ export function Blogroll({ feeds, who, mine }: { feeds: Feed[]; who: string; min
   const missing = feeds.filter((f) => !followed.has(f.url))
   const followAll = () => {
     const { customFeeds, set } = usePrefs.getState()
-    set({ customFeeds: [...customFeeds, ...missing] })
-    toast(`Following ${plural(missing.length, 'blog')} from ${who}’s blogroll`, {
-      action: { label: 'Undo', run: () => usePrefs.getState().set({ customFeeds: usePrefs.getState().customFeeds.filter((f) => !missing.some((m) => m.url === f.url)) }) },
+    const { feeds, added, left } = addFeeds(customFeeds, missing)
+    if (!added.length) return toast(FEEDS_FULL, { tone: 'error' })
+    set({ customFeeds: feeds })
+    toast(`Following ${plural(added.length, 'blog')} from ${who}’s blogroll${left ? `, ${left} left out: your feeds are full` : ''}`, {
+      action: { label: 'Undo', run: () => usePrefs.getState().set({ customFeeds: usePrefs.getState().customFeeds.filter((f) => !added.some((m) => m.url === f.url)) }) },
     })
   }
   return (
