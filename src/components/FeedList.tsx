@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { usePrefs } from '../lib/store'
 import type { CustomFeed } from '../lib/store'
-import { byFolder } from './OpmlTools'
+import { byFolder } from '../lib/publishers'
 
 /** The feeds you follow, in the folders they came in from another reader; ones followed here come first. */
 export function FeedList() {

@@ -108,7 +108,8 @@ export function PrivacyPage() {
           </p>
           <p>
             Importing an OPML file from another reader reads it on your device. The feeds it holds, and the names of the folders they were in, join your feed settings and encrypted sync; folder names
-            never go into your public blogroll. An import leaves out feeds whose address holds a password or token, so they don’t reach PaperWing unless you add one yourself.
+            never go into your public blogroll. An import leaves out feeds whose address holds a password, or a token in a part of it it can recognise, so those don’t reach PaperWing unless you add
+            one yourself. A secret hidden elsewhere in an address can’t be told apart from the rest of it, so check private feeds before importing.
           </p>
           <p>
             To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself

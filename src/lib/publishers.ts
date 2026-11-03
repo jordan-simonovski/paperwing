@@ -36,6 +36,13 @@ export function addFeeds(current: PublisherFeed[], incoming: PublisherFeed[]): {
   return { feeds, added, left: fresh.length - added.length }
 }
 
+/** Your feeds by folder, loose ones first, then each folder in the order it first appears: the groups Settings shows and an export writes. */
+export function byFolder<F extends PublisherFeed>(feeds: F[]): { name: string; feeds: F[] }[] {
+  const groups = new Map<string, F[]>([['', []]])
+  for (const f of feeds) groups.set(f.folder ?? '', [...(groups.get(f.folder ?? '') ?? []), f])
+  return [...groups].map(([name, feeds]) => ({ name, feeds })).filter((g) => g.feeds.length)
+}
+
 export interface FoundFeed {
   url: string
   title: string

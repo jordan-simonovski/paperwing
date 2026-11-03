@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addFeeds, FEEDS_BYTES, MAX_FEEDS, publisherRef } from './publishers'
+import { addFeeds, byFolder, FEEDS_BYTES, MAX_FEEDS, publisherRef } from './publishers'
 import { mixSourceFor, resolveChannel } from './channels'
 import { cleanMix } from './mixSources'
 import { mixFeedRefs } from './mixes'
@@ -69,6 +69,15 @@ describe('how many feeds you can follow', () => {
     expect(JSON.stringify(feeds).length).toBeLessThanOrEqual(FEEDS_BYTES)
     expect(left).toBe(MAX_FEEDS - feeds.length)
     expect(left).toBeGreaterThan(0)
+  })
+
+  it('groups your feeds by folder, loose ones first, folders in the order they first appear', () => {
+    const groups = byFolder([feed(1, { folder: 'B' }), feed(2), feed(3, { folder: 'A' }), feed(4, { folder: 'B' })])
+    expect(groups.map((g) => [g.name, g.feeds.map((f) => f.label)])).toEqual([
+      ['', ['Blog 2']],
+      ['B', ['Blog 1', 'Blog 4']],
+      ['A', ['Blog 3']],
+    ])
   })
 
   it('following one more when they’re full says so and follows nothing', () => {

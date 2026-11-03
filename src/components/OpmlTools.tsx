@@ -3,8 +3,8 @@ import { useRef, useState } from 'react'
 import { followsTech } from '../lib/channels'
 import { plural } from '../lib/format'
 import { download } from '../lib/importExport'
-import { buildOpml, parseOpml, type OpmlFeed, type OpmlSkipped } from '../lib/opml'
-import { addFeeds, MAX_FEEDS } from '../lib/publishers'
+import { buildOpml, parseOpml, type OpmlSkipped } from '../lib/opml'
+import { addFeeds, byFolder, MAX_FEEDS } from '../lib/publishers'
 import { usePrefs } from '../lib/store'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { toast } from '../lib/ui'
@@ -14,13 +14,6 @@ interface Imported extends OpmlSkipped {
   folders: number
   already: number
   left: number
-}
-
-/** Your feeds by folder, loose ones first: the groups an export writes. */
-export function byFolder(feeds: OpmlFeed[]): { name: string; feeds: OpmlFeed[] }[] {
-  const groups = new Map<string, OpmlFeed[]>([['', []]])
-  for (const f of feeds) groups.set(f.folder ?? '', [...(groups.get(f.folder ?? '') ?? []), f])
-  return [...groups].map(([name, feeds]) => ({ name, feeds })).filter((g) => g.feeds.length)
 }
 
 /** Moving feeds in and out with OPML, the format every feed reader speaks. */

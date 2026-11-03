@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent } from 'storybook/test'
+import { expect, userEvent, waitFor } from 'storybook/test'
+import { MAX_FEEDS } from '../lib/publishers'
 import { usePrefs } from '../lib/store'
+import { useUI } from '../lib/ui'
 import { Blogroll } from './Blogroll'
 
 const feeds = [
@@ -27,6 +29,30 @@ export const FollowAll: Story = {
     await userEvent.click(canvas.getByRole('button', { expanded: false }))
     await userEvent.click(canvas.getByRole('button', { name: /Follow all 2/ }))
     await expect(usePrefs.getState().customFeeds.map((f) => f.url)).toEqual(feeds.map((f) => f.url))
+  },
+}
+
+const followed = (n: number) => Array.from({ length: n }, (_, i) => ({ url: `https://blog${i}.example/feed`, label: `Blog ${i}` }))
+
+/** With room for one more, Follow all follows what fits and says how many it left out. */
+export const FollowAllNearlyFull: Story = {
+  parameters: { app: { prefs: { customFeeds: followed(MAX_FEEDS - 1) } } },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { expanded: false }))
+    await userEvent.click(canvas.getByRole('button', { name: /Follow all 3/ }))
+    await expect(usePrefs.getState().customFeeds).toHaveLength(MAX_FEEDS)
+    await waitFor(() => expect(useUI.getState().toasts.at(-1)?.message).toMatch(/2 left out: your feeds are full/))
+  },
+}
+
+/** With your feeds full, Follow all follows nothing and says why. */
+export const FollowAllWhenFull: Story = {
+  parameters: { app: { prefs: { customFeeds: followed(MAX_FEEDS) } } },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { expanded: false }))
+    await userEvent.click(canvas.getByRole('button', { name: /Follow all 3/ }))
+    await expect(usePrefs.getState().customFeeds).toHaveLength(MAX_FEEDS)
+    await waitFor(() => expect(useUI.getState().toasts.at(-1)?.message).toMatch(/Your feeds are full/))
   },
 }
 

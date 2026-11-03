@@ -55,6 +55,60 @@ describe('OPML', () => {
     expect(skipped).toEqual({ unreadable: 3, private: 2 })
   })
 
+  it('files a feed under the folder it’s nearest, and none once its folders close', () => {
+    const { feeds } = parseOpml(`<opml><body>
+      <outline text="Outer">
+        <outline text="Inner"><outline text="A" xmlUrl="https://a.example/feed"/></outline>
+        <outline><outline text="B" xmlUrl="https://b.example/feed"/></outline>
+        <outline text="C" xmlUrl="https://c.example/feed"><outline text="D" xmlUrl="https://d.example/feed"/></outline>
+      </outline>
+      <outline text="E" xmlUrl="https://e.example/feed"/>
+    </body></opml>`)
+    expect(feeds.map((f) => [f.label, f.folder])).toEqual([
+      ['A', 'Inner'],
+      ['B', 'Outer'],
+      ['C', 'Outer'],
+      ['D', 'Outer'],
+      ['E', undefined],
+    ])
+  })
+
+  it('keeps out every kind of key in an address, and reads its own formats', () => {
+    const outline = (url: string, extra = '') => `<outline text="x" ${extra} xmlUrl="${url}"/>`
+    const { feeds, skipped } = parseOpml(
+      `<opml><body>${[
+        outline('https://a.example/rss?api_key=1'),
+        outline('https://b.example/rss?sig=1&amp;page=2'),
+        outline('https://c.example/rss?Passwd=1'),
+        outline('https://g.example/rss?feed_token=1'),
+        outline('https://h.example/rss?private-token=1'),
+        outline('https://i.example/rss?X-Amz-Signature=1'),
+        outline('https://j.example/rss?authToken=1'),
+        outline('https://d.example/rss?page=2&amp;sort=new'),
+        outline('https://e.example/journal', 'type="standard"'),
+        outline('https://f.example/c/help/7.rss', 'type="rss" paperwingFormat="discourse"'),
+      ].join('')}</body></opml>`,
+    )
+    expect(skipped.private).toBe(7)
+    expect(feeds.map((f) => [f.url, f.format])).toEqual([
+      ['https://d.example/rss?page=2&sort=new', undefined],
+      ['https://e.example/journal', 'standard'],
+      ['https://f.example/c/help/7.rss', 'discourse'],
+    ])
+  })
+
+  it('shrugs off hostile files: a tag too long to be an outline, one never closed, and a huge file', () => {
+    const long = `<outline text="${'x'.repeat(50_000)}" xmlUrl="https://long.example/feed"/>`
+    const unclosed = '<outline text="Never closed" xmlUrl="https://open.example/feed"'
+    const huge = '<outline text="F">'.repeat(20_000)
+    const started = performance.now()
+    const { feeds } = parseOpml(`<opml><body>${long}<outline text="ok" xmlUrl="https://ok.example/feed"/>${unclosed}${huge}</body></opml>`)
+    // A long value is read and cut short, not left to run on.
+    expect(feeds.map((f) => f.url)).toEqual(['https://long.example/feed', 'https://ok.example/feed'])
+    expect(feeds[0].label).toHaveLength(120)
+    expect(performance.now() - started).toBeLessThan(1000)
+  })
+
   it('leaves the folder PaperWing’s own older exports put every feed in', () => {
     const { feeds } = parseOpml('<opml><body><outline text="Your feeds"><outline type="rss" text="A" xmlUrl="https://a.example/feed"/></outline></body></opml>')
     expect(feeds[0].folder).toBeUndefined()

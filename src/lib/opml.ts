@@ -18,8 +18,13 @@ const ATTR = /([a-zA-Z:]+)\s*=\s*("([^"]*)"|'([^']*)')/g
 const TAG = /<outline\b(?:[^<>"']|"[^"]*"|'[^']*'){0,400}>|<\/outline\s*>/gi
 /** The feed kinds PaperWing reads: unmarked, RSS or Atom, and its own Standard.site publications. */
 const READABLE = new Set(['', 'rss', 'atom', 'standard'])
-/** A query parameter that makes a feed address a key to someone's account. */
-const SECRET = /^(token|access_?token|auth|key|api_?key|secret|password|passwd|sig|signature)$/i
+/**
+ * Words that make a query parameter a key to someone's account, wherever they sit in its name
+ * (feed_token, private-token, X-Amz-Signature, authToken). Catching too much only means adding a
+ * feed by hand. A secret in the path (/private/<id>.rss) can't be told apart.
+ */
+const SECRET_WORDS = new Set(['token', 'tokens', 'auth', 'key', 'apikey', 'secret', 'password', 'passwd', 'pass', 'pwd', 'sig', 'signature', 'credential', 'credentials'])
+const words = (name: string) => name.split(/[_\-.]+|(?<=[a-z])(?=[A-Z])/).map((w) => w.toLowerCase())
 /** The folder PaperWing's own exports used to put every followed feed in: no folder at all. */
 const OLD_EXPORT_FOLDER = 'Your feeds'
 const decode = (s: string) =>
@@ -31,7 +36,7 @@ const decode = (s: string) =>
     .replace(/&amp;/g, '&')
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-const isPrivate = (u: URL) => !!(u.username || u.password) || [...u.searchParams.keys()].some((k) => SECRET.test(k))
+const isPrivate = (u: URL) => !!(u.username || u.password) || [...u.searchParams.keys()].some((k) => words(k).some((w) => SECRET_WORDS.has(w)))
 
 /** Every feed in an OPML file (outlines with an xmlUrl), once each, web links only, each with its folder. */
 export function parseOpml(text: string): { feeds: OpmlFeed[]; skipped: OpmlSkipped } {

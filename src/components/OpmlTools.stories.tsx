@@ -54,3 +54,21 @@ export const NearlyFull: Story = {
     await expect(said).toHaveTextContent(`2 left out: you follow ${MAX_FEEDS} feeds, as many as PaperWing keeps.`)
   },
 }
+
+/** Importing what you already follow says so, and still says what it would have left out. */
+export const AlreadyFollowing: Story = {
+  parameters: {
+    app: {
+      prefs: {
+        customFeeds: ['https://jvns.ca/atom.xml', 'https://danluu.com/atom.xml', 'https://sam.example/rss'].map((url) => ({ url, label: url })),
+      },
+    },
+  },
+  play: async ({ canvas }) => {
+    await userEvent.upload(canvas.getByLabelText('Choose an OPML file'), file())
+    const said = await canvas.findByRole('status')
+    await expect(said).toHaveTextContent('You already follow all of those.')
+    await expect(said).toHaveTextContent('2 skipped: PaperWing reads RSS and Atom feeds')
+    await expect(usePrefs.getState().customFeeds).toHaveLength(3)
+  },
+}
