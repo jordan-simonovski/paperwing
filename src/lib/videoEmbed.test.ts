@@ -153,7 +153,12 @@ describe('a PeerTube video', () => {
   })
 
   it('never picks a file that’s only sound', async () => {
-    answer({ files: [{ resolution: { id: 720 }, fileUrl: 'https://tilvids.com/a-720.mp4', hasVideo: false }, { resolution: { id: 480 }, fileUrl: 'https://tilvids.com/x-480.mp4' }] })
+    answer({
+      files: [
+        { resolution: { id: 720 }, fileUrl: 'https://tilvids.com/a-720.mp4', hasVideo: false },
+        { resolution: { id: 480 }, fileUrl: 'https://tilvids.com/x-480.mp4' },
+      ],
+    })
     expect((await peertubeVideo(video)).src).toBe('https://tilvids.com/x-480.mp4')
   })
 
