@@ -4,7 +4,7 @@ import { Pip } from '../components/Pip'
 // What PaperWing keeps, where, and who sees it. Written to match the code: if something here
 // changes in the app (a new server store, a new service), this page changes with it.
 
-const UPDATED = '2 November 2026'
+const UPDATED = '3 November 2026'
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -58,6 +58,10 @@ export function PrivacyPage() {
           <p>
             Posting, voting and sharing happen only when you ask. Stories you list on PaperWing are ordinary public Bluesky posts with a small public record in your own Bluesky account (the link, its
             title, the board you chose and whether it goes on the front page too); you can delete them on Bluesky like any post.
+          </p>
+          <p>
+            When you’re signed in with Bluesky, upvoting someone else’s PaperWing listing also likes its Bluesky post under your account. Taking the upvote back removes that like. Downvotes aren’t
+            published.
           </p>
           <p>
             A post you write on PaperWing works the same way: its Bluesky post has the title, the start of your words and a link to it here, and the words themselves are in that public record in your

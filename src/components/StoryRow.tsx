@@ -244,8 +244,8 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
 })
 
 /**
- * Up and down, Reddit-style, around the source's own score. Votes stay on this device: they don't
- * reach Hacker News or anywhere else, they teach the ranking what you want more and less of.
+ * Up and down around the source's own score: taste stays here, and up also votes on the network
+ * where the reader is signed in.
  */
 export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1 }) {
   const cast = useActivity((a) => a.vote)
@@ -255,8 +255,11 @@ export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1
   const voted = useVoted(target)
   const platform = target && { on: voted, label: target.label, toggle: () => castVote(target, !voted) }
   const press = (dir: 1 | -1) => {
-    const up = dir === 1 && vote !== 1
-    cast(s, dir)
+    const up = dir === 1 && !(platform ? platform.on : vote === 1)
+    if (dir === -1) cast(s, dir)
+    else if (up) {
+      if (vote !== 1) cast(s, 1)
+    } else if (vote) cast(s, vote)
     if (platform && up !== platform.on) platform.toggle().catch((err: Error) => toast(err.message, { tone: 'error' }))
   }
   const upOn = vote === 1 || !!platform?.on

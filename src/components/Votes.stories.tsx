@@ -24,6 +24,24 @@ export const BlueskyLikes: Story = { args: { story: story({ source: 'bluesky', s
 /** Signed in to Hacker News, the up arrow is a real HN upvote as well. */
 export const SignedInToHackerNews: Story = { parameters: { app: { hn: { user: READER.handle, cookie: 'x', votes: {} } } } }
 
+export const SignedInToBluesky: Story = {
+  args: {
+    story: story({ source: 'bluesky', sourceLabel: 'PaperWing', author: 'alice.example', ref: { uri: 'at://did:plc:alice/app.bsky.feed.post/1', cid: 'bafy-post' } }),
+  },
+  parameters: { app: { atproto: { did: READER.did, handle: READER.handle } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Upvote on PaperWing (a Bluesky like)' })).toHaveAttribute('aria-pressed', 'false')
+  },
+}
+
+export const LocalVoteBeforeSigningIn: Story = {
+  ...SignedInToBluesky,
+  args: { ...SignedInToBluesky.args, vote: 1 },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Upvote on PaperWing (a Bluesky like)' })).toHaveAttribute('aria-pressed', 'true')
+  },
+}
+
 export const DownvoteIsLocal: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Less like this' }))
