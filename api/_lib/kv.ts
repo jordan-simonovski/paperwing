@@ -226,14 +226,24 @@ export const MIX_FAN_OUT_PER_MINUTE = 600
 /** Who pays for fan-out: the caller, or the author of a mix that Bluesky is reading. */
 export type Payer = Request | { mix: string }
 
+/** A did:web's host name, as its document is fetched: decoded, without port or path, lower case. */
+function webHost(did: string): string {
+  const rest = did.slice('did:web:'.length)
+  try {
+    return decodeURIComponent(rest).split(/[:/]/)[0].toLowerCase()
+  } catch {
+    return rest.split(/[:%]/)[0].toLowerCase()
+  }
+}
+
 /** Whether fan-out is on a mix author's account rather than the caller's. */
 export const forMix = (payer: Payer | undefined): payer is { mix: string } => !!payer && 'mix' in payer
 
 /** Counts `cost` against a fan-out allowance; true when this call goes over it. Fails closed. */
 export async function fanOutLimited(payer: Payer, cost: number): Promise<boolean> {
   if (!forMix(payer)) return overLimit(`rd:fanout:${clientKey(payer)}`, 60, FAN_OUT_PER_MINUTE, cost)
-  // A did:web account costs nothing to make: every one on a site shares that site's allowance.
-  const author = payer.mix.startsWith('did:web:') ? payer.mix.split(':').slice(0, 3).join(':') : payer.mix
+  // A did:web account costs nothing to make: every one on a site (any path, any port) shares that site's allowance.
+  const author = payer.mix.startsWith('did:web:') ? `did:web:${webHost(payer.mix)}` : payer.mix
   // The author's own allowance first, so an author already over it can't use up everyone's ceiling.
   const own = `rd:fanout:mix:${author}`
   if (await overLimit(own, 60, FAN_OUT_PER_MINUTE, cost)) return true

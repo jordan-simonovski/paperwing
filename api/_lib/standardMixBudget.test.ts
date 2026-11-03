@@ -138,6 +138,9 @@ describe('native publishers in public mix feeds', () => {
   it('gives every did:web account on one site a single allowance between them', async () => {
     await overLimit('rd:fanout:mix:did:web:minted.example', 60, FAN_OUT_PER_MINUTE, FAN_OUT_PER_MINUTE)
     expect(await fanOutLimited({ mix: 'did:web:minted.example:u2' }, 8)).toBe(true)
+    // Ports, encoded or not, are the same site.
+    expect(await fanOutLimited({ mix: 'did:web:minted.example%3A8443' }, 8)).toBe(true)
+    expect(await fanOutLimited({ mix: 'did:web:MINTED.example%3a1:u3' }, 8)).toBe(true)
     expect(await fanOutLimited({ mix: 'did:plc:pppppppppppppppppppppppp' }, 8)).toBe(false)
   })
 

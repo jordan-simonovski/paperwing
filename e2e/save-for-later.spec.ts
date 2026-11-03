@@ -35,7 +35,11 @@ test.describe('with motion on', () => {
     await expect(row(page, 'The Web We Lost')).toBeVisible()
     // Archive it from the keyboard, with focus off the nav link that was just tapped.
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
-    await page.keyboard.press('j')
+    // The list's keys are live a moment after it renders: move until the row is the one selected.
+    await expect(async () => {
+      await page.keyboard.press('j')
+      await expect(row(page, 'The Web We Lost')).toHaveAttribute('aria-current', 'true', { timeout: 500 })
+    }).toPass()
     await page.keyboard.press('e')
     await expect(page.getByText('Queue cleared')).toBeVisible()
     await expect(page.locator('.pip-settle')).toHaveCount(1)
