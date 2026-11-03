@@ -1,6 +1,6 @@
 import { AddToMix } from './AddToMix'
 import { Check, Loader2, Plus, Search } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { findFeeds, follow, isFollowed, useFollowedHosts, useSiteFeeds, useSuggestedBlogs, type FoundFeed } from '../lib/follow'
 import { ago } from '../lib/format'
 import type { Story } from '../lib/types'
@@ -25,16 +25,18 @@ export function FollowSite({ story }: { story: Story }) {
   )
 }
 
-export function FeedRow({ feed, note }: { feed: FoundFeed; note?: string }) {
+/** `note` replaces the site line; `detail` sits beside it. Meta items are spaced, not joined by dots. */
+export function FeedRow({ feed, note, detail }: { feed: FoundFeed; note?: string; detail?: string }) {
   const hosts = useFollowedHosts()
   const following = isFollowed(feed, hosts)
   return (
     <div className="flex items-center gap-3 py-1.5" role="group" aria-label={feed.title}>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.9375rem] font-semibold">{feed.title}</p>
-        <p className="truncate text-[0.8125rem] text-ink-3">
-          {note ?? feed.site}
-          {feed.latest ? ` · last post ${ago(feed.latest)}` : ''}
+        <p className="meta">
+          <span className="min-w-0 truncate">{note ?? feed.site}</span>
+          {detail && <span>{detail}</span>}
+          {feed.latest ? <span>last post {ago(feed.latest)}</span> : null}
         </p>
       </div>
       <AddToMix source={publisherRef({ ...feed, label: feed.title })} label={feed.title} iconOnly className="icon-btn size-8 flex-none" />
@@ -53,9 +55,12 @@ export function FeedRow({ feed, note }: { feed: FoundFeed; note?: string }) {
   )
 }
 
-/** Settings: paste any link to a site (homepage, a post, or the feed) and follow what it publishes. */
-export function FeedFinder() {
-  const [draft, setDraft] = useState('')
+/**
+ * Paste any link to a site (homepage, a post, or the feed) and follow what it publishes.
+ * `initial`: a site to look up straight away (a link pasted into the palette, say).
+ */
+export function FeedFinder({ initial = '' }: { initial?: string }) {
+  const [draft, setDraft] = useState(initial)
   const [state, setState] = useState<{ status: 'idle' | 'looking' | 'done' | 'failed'; feeds: FoundFeed[]; error?: string }>({ status: 'idle', feeds: [] })
   const find = async () => {
     const url = draft.trim()
@@ -67,6 +72,9 @@ export function FeedFinder() {
       setState({ status: 'failed', feeds: [], error: err instanceof Error ? err.message : 'Couldn’t reach that site' })
     }
   }
+  // Arriving with a site: look it up once, as if Find had been pressed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => void (initial && find()), [])
   return (
     <div className="max-w-lg space-y-2">
       <form
@@ -93,7 +101,7 @@ export function FeedFinder() {
       {state.status === 'done' && !state.feeds.length && <p className="text-[0.8125rem] text-ink-3">No feed found there. Some sites don’t publish one, or block apps from reading it.</p>}
       {state.status === 'failed' && <p className="text-[0.8125rem] text-signal">{state.error}</p>}
       {state.feeds.map((f) => (
-        <FeedRow key={f.url} feed={f} note={`${f.site} · ${f.format === 'standard' ? 'Standard.site publication' : `${f.posts} recent posts`}`} />
+        <FeedRow key={f.url} feed={f} detail={f.format === 'standard' ? 'Standard.site publication' : `${f.posts} recent posts`} />
       ))}
     </div>
   )

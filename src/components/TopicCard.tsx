@@ -115,7 +115,7 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
             <span className="min-w-0 flex-1 truncate">
               {near.slice(0, 3).map((r, i) => (
                 <span key={r.id}>
-                  {i > 0 && <span className="opacity-40"> · </span>}
+                  {i > 0 && ', '}
                   <Link to={`/t/${r.id}`} className="font-semibold underline-offset-2 hover:underline">
                     {r.label}
                   </Link>

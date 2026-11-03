@@ -36,8 +36,9 @@ const NEW_FEED_URL = 'https://bsky.app/profile/paperwing.io/feed/paperwing-new'
 function Heading({ kicker, title, children }: { kicker: string; title: string; children?: React.ReactNode }) {
   return (
     <header>
-      <p className="text-[0.8125rem] font-semibold uppercase tracking-[0.08em] text-ink-3">{kicker}</p>
-      <h1 className="mt-2 text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] md:text-[2.125rem]">{title}</h1>
+      {/* The heading leads; which step this is sits under it, in sentence case (DESIGN.md: no eyebrows). */}
+      <h1 className="text-[1.875rem] font-bold leading-[1.1] tracking-[-0.02em] md:text-[2.125rem]">{title}</h1>
+      <p className="mt-1.5 text-[0.875rem] font-semibold text-ink-3">{kicker}</p>
       {children && <div className="mt-3 max-w-xl space-y-2 text-[0.9375rem] leading-relaxed text-ink-2">{children}</div>}
     </header>
   )

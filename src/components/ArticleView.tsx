@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { MarginNotes } from './MarginNotes'
-import { AlertTriangle, ArrowUpRight, Minus, Plus } from 'lucide-react'
+import { compact } from '../lib/format'
+import { AlertTriangle, ArrowUpRight, MessageSquare, Minus, Plus } from 'lucide-react'
 import { useArticle } from '../lib/hooks'
 import { sanitize } from '../lib/html'
 import { usePrefs } from '../lib/store'
@@ -27,7 +28,8 @@ export function TextSizeControl() {
   )
 }
 
-export function ArticleView({ story }: { story: Story }) {
+/** `onDiscussion`, when the story has one: a way on when the article can't be read here. */
+export function ArticleView({ story, onDiscussion }: { story: Story; onDiscussion?: () => void }) {
   const article = useArticle(story.url, story.key, true)
   const prose = useRef<HTMLDivElement>(null)
 
@@ -62,9 +64,17 @@ export function ArticleView({ story }: { story: Story }) {
         <AlertTriangle className="mx-auto mb-3 text-ink-3" size={22} />
         <p className="text-[1.125rem] font-bold">No reader view for this one</p>
         <p className="mt-2 text-[0.9375rem] text-ink-3">{article.error.message}. Some sites block fetching, render with JavaScript, or are PDFs.</p>
-        <a className="btn mt-5" href={story.url} target="_blank" rel="noopener noreferrer">
-          Open original <ArrowUpRight size={14} />
-        </a>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {onDiscussion && (
+            <button className="btn btn-primary" onClick={onDiscussion}>
+              <MessageSquare size={15} /> Read the discussion
+              {!!story.comments && <span className="num font-normal opacity-80">{compact(story.comments)}</span>}
+            </button>
+          )}
+          <a className="btn" href={story.url} target="_blank" rel="noopener noreferrer">
+            Open original <ArrowUpRight size={14} />
+          </a>
+        </div>
       </div>
     )
   }

@@ -61,3 +61,21 @@ export const Search: Story = {
     await expect(canvas.getByText('No board matches “knitting”.')).toBeVisible()
   },
 }
+
+/** No boards yet: what one is, and the way to start the first. */
+export const NoBoardsYet: Story = {
+  parameters: { app: { queries: [[['boards'], []]] } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('No community boards yet')).toBeVisible()
+    await expect(canvas.getByRole('link', { name: /Start the first one/ })).toHaveAttribute('href', '/boards')
+  },
+}
+
+/** The boards didn't load: say so and offer a retry, rather than "no boards yet". */
+export const BoardsDidNotLoad: Story = {
+  parameters: { app: { queries: [], fetch: {} } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/Couldn’t reach the boards/, {}, { timeout: 5000 })).toBeVisible()
+    await expect(canvas.queryByText('No community boards yet')).toBeNull()
+  },
+}

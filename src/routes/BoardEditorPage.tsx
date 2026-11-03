@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, Users } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { CouldntReach } from '../components/FeedState'
@@ -111,10 +111,7 @@ export function BoardEditorPage() {
         }}
       >
         <header>
-          <p className="flex items-center gap-1.5 text-[0.8125rem] font-semibold uppercase tracking-[0.08em] text-ink-3">
-            <Users size={13} /> Community board
-          </p>
-          <h1 className="mt-2 text-[1.875rem] font-bold leading-tight tracking-[-0.02em]">{existing ? 'Edit your board' : 'Start a board'}</h1>
+          <h1 className="text-[1.875rem] font-bold leading-tight tracking-[-0.02em]">{existing ? 'Edit your board' : 'Start a board'}</h1>
           <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-2">
             A space for a community, with its own rules and moderators. It lives in your Bluesky account, so it’s yours: if PaperWing went away, the board and everything listed on it would still
             exist. Votes and comments are Bluesky likes and replies.

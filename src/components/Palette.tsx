@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Bookmark, CalendarDays, Users, CornerDownLeft, Hash, Layers, Link2, Moon, Newspaper, Plus, Search, Settings, SlidersHorizontal, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Bell, Bookmark, CalendarDays, Users, CornerDownLeft, Hash, Layers, Link2, Moon, Newspaper, Plus, Rss, Search, Settings, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { allTopics, findTopic, sourceChannels } from '../lib/channels'
@@ -117,7 +117,11 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
     // A pasted link: post it.
     // Only what's plainly an address: "node.js" or "llama.cpp" is a topic, not a site to post.
     const pasted = /^https?:\/\/|\S\/\S/i.test(query) ? linkFrom(query) : undefined
-    if (pasted) out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <Link2 size={15} />, run: () => postLink({ url: pasted }) })
+    if (pasted) {
+      // Most links people paste are a site they'd like to keep reading: following comes first.
+      out.push({ id: 'follow-pasted', group: 'Actions', label: <>Follow this site</>, hint: pasted, icon: <Rss size={15} />, run: go(`/explore/publishers?follow=${encodeURIComponent(pasted)}`) })
+      out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <Link2 size={15} />, run: () => postLink({ url: pasted }) })
+    }
     const hits = searchTopics(query, topics).slice(0, 6)
     for (const h of hits)
       out.push({ id: `topic:${h.topic.id}`, group: 'Topics', label: h.topic.label, hint: h.via ? `matches “${h.via}”` : h.topic.blurb, icon: dot(h.topic.hue), run: go(`/t/${h.topic.id}`) })

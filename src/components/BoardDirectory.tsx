@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { activityLabel, byActivity, findBoards } from '../lib/boardFinder'
 import { boardPath, toggleJoin, useAllBoards } from '../lib/boards'
 import { usePrefs } from '../lib/store'
+import { CouldntReach } from './FeedState'
 import { OfficialBadge } from './OfficialBadge'
 
 /**
@@ -11,7 +12,7 @@ import { OfficialBadge } from './OfficialBadge'
  * own above all), or the newest, and searchable by name and what they're about.
  */
 export function BoardDirectory() {
-  const { data: all = [], isPending } = useAllBoards()
+  const { data: all = [], isPending, isError, refetch } = useAllBoards()
   const joined = usePrefs((p) => p.boards)
   const [order, setOrder] = useState<'active' | 'new'>('active')
   const [query, setQuery] = useState('')
@@ -47,8 +48,22 @@ export function BoardDirectory() {
       )}
       {isPending ? (
         <p className="mt-6 text-ink-3">Finding boards…</p>
+      ) : isError && !all.length ? (
+        // A load that failed isn't an empty directory: say so, with a way to try again.
+        <CouldntReach what="the boards" onRetry={() => void refetch()} />
       ) : all.length === 0 ? (
-        <p className="mt-6 text-ink-3">No community boards yet. Start the first one.</p>
+        <div className="mt-6 rounded-[18px] bg-panel p-5">
+          <p className="text-[1.125rem] font-bold">No community boards yet</p>
+          <p className="mt-1 text-[0.9375rem] text-ink-2">A board gathers people around one subject. Whoever starts it sets the rules and picks the moderators.</p>
+          <ul className="mt-3 space-y-1.5 text-[0.9375rem] text-ink-2">
+            <li>Its posts show in For you for everyone who joins.</li>
+            <li>Posts, votes and comments are Bluesky posts, likes and replies.</li>
+            <li>It lives in your own Bluesky account, so it stays yours with or without PaperWing.</li>
+          </ul>
+          <Link className="btn btn-primary mt-4" to="/boards">
+            <Plus size={15} /> Start the first one
+          </Link>
+        </div>
       ) : shown.length === 0 ? (
         <p className="mt-6 text-ink-3">No board matches “{q}”.</p>
       ) : (
@@ -64,9 +79,9 @@ export function BoardDirectory() {
                   {b.official && <OfficialBadge size={15} label />}
                 </h3>
                 {b.description && <p className="mt-1 line-clamp-3 text-[0.875rem] text-ink-2">{b.description}</p>}
-                <p className="mt-2 text-[0.8125rem] text-ink-3">
-                  {b.official ? 'Run by PaperWing' : b.ownerHandle ? `Started by @${b.ownerHandle}` : 'Community board'}
-                  {b.active !== undefined && ` · ${activityLabel(b.active)}`}
+                <p className="meta mt-2">
+                  <span>{b.official ? 'Run by PaperWing' : b.ownerHandle ? `Started by @${b.ownerHandle}` : 'Community board'}</span>
+                  {b.active !== undefined && <span>{activityLabel(b.active)}</span>}
                 </p>
                 <div className="mt-3 flex gap-2">
                   <button className={`btn h-9 text-[0.8125rem] ${isIn ? 'following' : 'btn-primary'}`} onClick={() => toggleJoin(b)} aria-pressed={isIn}>

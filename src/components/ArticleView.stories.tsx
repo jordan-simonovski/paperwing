@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent } from 'storybook/test'
+import { expect, fn, userEvent } from 'storybook/test'
 import { usePrefs } from '../lib/store'
 import type { Article } from '../lib/types'
 import { story } from '../test/fixtures'
@@ -47,6 +47,16 @@ export const NoReaderView: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByText('No reader view for this one', {}, { timeout: 5000 })).toBeVisible()
     await expect(canvas.getByRole('link', { name: /Open original/ })).toHaveAttribute('href', 'https://example.com/blocked')
+  },
+}
+
+/** The article can't be read here but people are talking about it: the discussion comes first. */
+export const NoReaderViewWithDiscussion: Story = {
+  args: { story: story({ url: 'https://example.com/blocked', comments: 18 }), onDiscussion: fn() },
+  parameters: { app: { queries: [], fetch: {} } },
+  play: async ({ args, canvas }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /Read the discussion/ }, { timeout: 5000 }))
+    await expect(args.onDiscussion).toHaveBeenCalled()
   },
 }
 
