@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent } from 'storybook/test'
-import type { SpiceGrade } from '../lib/spiceTypes'
+import { expect, fn, userEvent } from 'storybook/test'
+import type { SpiceGrade, SpiceInsights } from '../lib/spiceTypes'
 import { NOW } from '../test/fixtures'
-import { Chillies, SpiceDetail, SpiceMark } from './Spice'
+import { Chillies, SpiceDetail, SpiceMark, ThreadNotes } from './Spice'
 
 const places = [{ key: 'hn-41234567', source: 'hn' as const, comments: 412 }]
 const grade = (level: SpiceGrade['level'], extra: Partial<SpiceGrade> = {}): SpiceGrade => ({
@@ -65,3 +65,60 @@ export const Calm: Story = { parameters: graded(grade(0)) }
 
 /** Turned off in Settings: nothing shows even when graded. */
 export const SpiceOff: Story = { parameters: { app: { ...graded(grade(3)).app, prefs: { spice: false } } } }
+
+// What the discussion is like, from the open thread's own grade.
+const insights = (extra: Partial<SpiceInsights>): SpiceInsights => ({ sad: 0.1, delighted: 0.1, warm: 0.1, political: 0.1, disputed: [], answers: [], ...extra })
+const jump = fn()
+const notes: Story = { render: () => <ThreadNotes story={places[0]} onJump={jump} /> }
+
+export const SadAndWholesome: Story = {
+  ...notes,
+  parameters: graded(grade(0, { insights: insights({ sad: 0.98, warm: 0.8 }) })),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Sad')).toBeVisible()
+    await expect(canvas.getByText('Wholesome')).toBeVisible()
+    await expect(canvas.queryByText('Happy')).toBeNull()
+  },
+}
+
+export const DisputedHeadline: Story = {
+  ...notes,
+  parameters: graded(
+    grade(2, {
+      insights: insights({
+        political: 0.95,
+        disputed: [
+          { id: '41234601', author: 'pg' },
+          { id: '41234655', author: 'dang' },
+        ],
+      }),
+    }),
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Politically charged')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Disputed' }))
+    await expect(canvas.getByText(/headline is wrong/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'dang' }))
+    await expect(jump).toHaveBeenCalledWith('41234655')
+  },
+}
+
+export const AnsweredQuestion: Story = {
+  ...notes,
+  parameters: graded(grade(0, { insights: insights({ answers: [{ id: '41234700', author: 'tptacek' }] }) })),
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Answered' })
+    await userEvent.click(button)
+    await expect(button).toHaveAttribute('aria-expanded', 'true')
+    await expect(canvas.getByRole('button', { name: 'tptacek' })).toBeVisible()
+  },
+}
+
+// Nothing Jev is sure of: no notes at all.
+export const NothingToNote: Story = {
+  ...notes,
+  parameters: graded(grade(0, { insights: insights({}) })),
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('.pill')).toBeNull()
+  },
+}

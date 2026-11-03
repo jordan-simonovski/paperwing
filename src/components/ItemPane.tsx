@@ -20,11 +20,11 @@ import { toast } from '../lib/ui'
 import { isWatching, useWatch } from '../lib/watch'
 import { landHeadline } from '../lib/pretext'
 import { ArticleView } from './ArticleView'
-import { CommentTree, nextThread, Spine } from './CommentTree'
+import { CommentTree, nextThread, revealComment, Spine } from './CommentTree'
 import { DiscussionBar, usePlaces } from './DiscussionBar'
 import { WebMentions } from './WebMentions'
 import { ModerateOnBoard } from './ModerateOnBoard'
-import { SpiceDetail } from './Spice'
+import { SpiceDetail, ThreadNotes } from './Spice'
 import { QuoteCard } from './QuoteCard'
 import { SelfPostBody } from './SelfPostBody'
 import { FollowSite } from './FollowBlogs'
@@ -96,6 +96,14 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
       },
       { replace: true },
     )
+
+  // A comment named above the tabs: the thread only listens for jumps while it's on screen.
+  const jumpTo = (commentId: string) => {
+    if (tab === 'discussion') return revealComment(commentId)
+    setTab('discussion')
+    // ponytail: a fixed wait for the tree to mount; an event the tree reads on mount if this ever misses.
+    window.setTimeout(() => revealComment(commentId), 250)
+  }
 
   const savedMeta = useLibrary((l) => l.items[itemKey])
   const saved = !!savedMeta
@@ -267,6 +275,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                 </button>
               )}
               <SpiceDetail places={[story, ...(alsoOn ?? [])]} />
+              <ThreadNotes story={story} onJump={jumpTo} />
               <StoryActions story={story} root={thread.data?.story.ref ?? story.ref} />
               <ModerateOnBoard story={story} />
               <WhyRanked story={story} topics={topics} />

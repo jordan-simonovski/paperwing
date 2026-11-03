@@ -23,9 +23,10 @@ const gradeKey = (key: string) => `rd:spice:${key}`
 
 async function grade(key: string, apiKey: string) {
   const store = kv()
-  const { title, comments } = await fetchDiscussion(key)
-  const { state, total } = buildState(title, comments)
-  const g: SpiceGrade = total < (spiceMin(key) ?? Infinity) || state.comments.length < 8 ? quiet(total) : gradeFrom(state, await askJev(state, apiKey), total)
+  const { title, text, comments } = await fetchDiscussion(key)
+  const built = buildState(title, comments, text)
+  const { state, total } = built
+  const g: SpiceGrade = total < (spiceMin(key) ?? Infinity) || state.comments.length < 8 ? quiet(total) : gradeFrom(built, await askJev(state, apiKey), total)
   await store.set(gradeKey(key), JSON.stringify(g), KEEP_SECONDS)
 }
 

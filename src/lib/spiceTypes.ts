@@ -24,6 +24,8 @@ export interface SpiceGrade {
   pushback: number
   /** How many different people insult, mock or belittle someone they reply to. */
   hostile: number
+  /** What else the discussion is like; missing on grades from before it was asked, and on quiet ones. */
+  insights?: SpiceInsights
   /** Comments in the thread when it was graded. */
   comments: number
   at: number
@@ -36,4 +38,22 @@ export interface SpiceResponse {
   grades: Record<string, SpiceGrade>
   /** Keys being graded now: worth asking about again in a little while. */
   pending: string[]
+}
+
+/** A comment to jump to: its id at the source, as the reader's thread has it. */
+export interface SpiceRef {
+  id: string
+  author: string
+}
+
+export interface SpiceInsights {
+  /** How likely (0 to 1) commenters grieve, are delighted, are warm to each other, argue politics. */
+  sad: number
+  delighted: number
+  warm: number
+  political: number
+  /** Top-level comments saying the title or main claim is wrong: set only when two or more people do. */
+  disputed: SpiceRef[]
+  /** Answers to what the post asks readers: set only when it asks something. */
+  answers: SpiceRef[]
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { spiceMin, type SpiceGrade, type SpiceLevel, type SpiceResponse } from './spiceTypes'
+import { spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceResponse } from './spiceTypes'
 import type { Story } from './types'
 
 // Spice grades for the stories on screen, from /api/spice. Rows ask for their story as they
@@ -98,4 +98,16 @@ const NAMES: Record<SpiceLevel, string> = { 0: 'Calm', 1: 'Lively', 2: 'Heated',
 export function describeSpice(g: SpiceGrade): { name: string; reasons: string[] } {
   const reasons = [g.split >= 0.7 && 'split into sides', g.pushback >= 0.5 && 'lots of pushback', (g.hostile >= 2 || g.flame >= 0.4) && 'some personal attacks'].filter((r): r is string => !!r)
   return { name: NAMES[g.level], reasons }
+}
+
+const MOODS: [keyof Pick<SpiceInsights, 'sad' | 'delighted' | 'warm' | 'political'>, string][] = [
+  ['sad', 'Sad'],
+  ['delighted', 'Happy'],
+  ['warm', 'Wholesome'],
+  ['political', 'Politically charged'],
+]
+
+/** What a discussion is like, in a word or two each: only what Jev is fairly sure of. */
+export function describeMood(i: SpiceInsights): string[] {
+  return MOODS.filter(([k]) => i[k] >= 0.7).map(([, name]) => name)
 }

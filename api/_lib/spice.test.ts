@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { spicyOrder, describeSpice } from '../../src/lib/spice'
 import type { SpiceGrade, SpiceResponse } from '../../src/lib/spiceTypes'
-import { buildState, GRADE_VERSION, gradeFrom, lemmyTree, levelOf, needsGrade, replyQuestions, validKey, type SpiceComment } from './spice'
+import { buildState, GRADE_VERSION, gradeFrom, lemmyTree, levelOf, needsGrade, replyQuestions, topQuestions, validKey, type JevAnswers, type SpiceComment } from './spice'
 
 // The background grade runs as soon as it's handed over; tests wait for it by polling.
 const background: Promise<unknown>[] = []
@@ -30,7 +30,17 @@ vi.mock('./http.js', async (orig) => ({
   },
 }))
 
-const c = (author: string, text: string, children: SpiceComment[] = []): SpiceComment => ({ author, text, children })
+// Thread-wide answers for a sad, warm thread; tests add the per-comment ones.
+const answers: Omit<JevAnswers, 'items'> = {
+  tone: { score: 1.9, confidence: 0.6, probabilities: { '0': 0, '1': 0.3, '2': 0.6, '3': 0.1 } },
+  split: { noul: 0.8 },
+  sad: { noul: 0.9 },
+  delighted: { noul: 0.1 },
+  warm: { noul: 0.75 },
+  political: { noul: 0.05 },
+}
+let made = 0
+const c = (author: string, text: string, children: SpiceComment[] = []): SpiceComment => ({ id: `c${++made}`, author, text, children })
 const grade = (over: Partial<SpiceGrade>): SpiceGrade => ({ level: 0, heat: 0, confidence: 1, split: 0, pushback: 0, hostile: 0, sharp: 0, flame: 0, comments: 100, at: 0, ...over })
 
 describe('spice grading', () => {
@@ -156,14 +166,43 @@ describe('spice grading', () => {
   })
 
   it('counts pushback as a share of replies and hostility by people', () => {
-    const { state } = buildState('A story', [c('a', 'One', [c('x', 'No'), c('x', 'Still no'), c('y', 'Yes')])])
-    const tone = { score: 1.9, confidence: 0.6, probabilities: { '0': 0, '1': 0.3, '2': 0.6, '3': 0.1 } }
-    const replies = { push_2: { noul: 0.9 }, push_3: { noul: 0.8 }, push_4: { noul: 0.1 }, hostile_2: { noul: 0.9 }, hostile_3: { noul: 0.8 }, hostile_4: { noul: 0.2 } }
-    const g = gradeFrom(state, { tone, split: { noul: 0.8 }, replies }, 120)
+    const built = buildState('A story', [c('a', 'One', [c('x', 'No'), c('x', 'Still no'), c('y', 'Yes')])])
+    const items = { push_2: { noul: 0.9 }, push_3: { noul: 0.8 }, push_4: { noul: 0.1 }, hostile_2: { noul: 0.9 }, hostile_3: { noul: 0.8 }, hostile_4: { noul: 0.2 }, asks_help: { noul: 0 } }
+    const g = gradeFrom(built, { ...answers, items }, 120)
     expect(g).toMatchObject({ sharp: 0.7, flame: 0.1, pushback: 0.6, hostile: 1, level: 2 })
     expect(describeSpice(g)).toEqual({ name: 'Heated', reasons: ['split into sides', 'lots of pushback'] })
     // A flamewar by its tone alone still says why.
     expect(describeSpice(grade({ level: 3, flame: 0.5 })).reasons).toEqual(['some personal attacks'])
+  })
+
+  it('names the comments to jump to, one per person', () => {
+    const built = buildState('A story', [c('a', 'Wrong'), c('a', 'Still wrong'), c('b', 'Also wrong'), c('d', 'Fine')], 'Which editor should I use?')
+    expect(built.state.story).toEqual({ title: 'A story', text: 'Which editor should I use?' })
+    const [, a2, b, d] = built.sources
+    const items = {
+      asks_help: { noul: 0.9 },
+      disputes_1: { noul: 0.8 },
+      disputes_2: { noul: 0.95 },
+      disputes_3: { noul: 0.75 },
+      disputes_4: { noul: 0.1 },
+      answers_4: { noul: 0.9 },
+      answers_1: { noul: 0.2 },
+    }
+    const g = gradeFrom(built, { ...answers, items }, 120)
+    expect(g.insights).toMatchObject({ sad: 0.9, warm: 0.75 })
+    expect(g.insights?.disputed).toEqual([
+      { id: a2, author: 'a' },
+      { id: b, author: 'b' },
+    ])
+    expect(g.insights?.answers).toEqual([{ id: d, author: 'd' }])
+    // One person disputing it is an opinion; a post that asks nothing has no answers.
+    const lone = gradeFrom(built, { ...answers, items: { ...items, disputes_3: { noul: 0.1 }, asks_help: { noul: 0.2 } } }, 120)
+    expect(lone.insights).toMatchObject({ disputed: [], answers: [] })
+  })
+
+  it('asks about each top-level comment and what the post asks', () => {
+    const { state } = buildState('A story', [c('a', 'One', [c('b', 'Reply')]), c('d', 'Two')])
+    expect(Object.keys(topQuestions(state)).sort()).toEqual(['answers_1', 'answers_3', 'asks_help', 'disputes_1', 'disputes_3'])
   })
 
   it('puts heated discussions first and keeps hot order otherwise', () => {
@@ -186,7 +225,17 @@ describe('/api/spice', () => {
       if (url.startsWith('https://api.typesafe.ai/')) {
         const body = JSON.parse(String(init?.body)) as JevBody
         jevBodies.push(body)
-        if (body.questions.tone) return Response.json({ answers: { tone: { score: 2, confidence: 0.7, probabilities: { '0': 0, '1': 0.2, '2': 0.7, '3': 0.1 } }, split: { noul: 0.9 } } })
+        if (body.questions.tone)
+          return Response.json({
+            answers: {
+              tone: { score: 2, confidence: 0.7, probabilities: { '0': 0, '1': 0.2, '2': 0.7, '3': 0.1 } },
+              split: { noul: 0.9 },
+              sad: { noul: 0.1 },
+              delighted: { noul: 0.1 },
+              warm: { noul: 0.2 },
+              political: { noul: 0.9 },
+            },
+          })
         // Per reply: pushing back, not hostile; one answer missing when a test asks for it.
         const answers = Object.fromEntries(Object.keys(body.questions).map((q) => [q, { noul: q.startsWith('push_') ? 0.8 : 0.1 }]))
         if (dropOne) delete answers[Object.keys(answers)[0]]
@@ -204,13 +253,15 @@ describe('/api/spice', () => {
     const again = await get('hn-1~30')
     expect(again.pending).toEqual(['hn-1'])
     await Promise.all(background)
-    // One request for the thread, one for its replies.
-    expect(jevBodies).toHaveLength(2)
+    // One request for the thread, one for its replies, one for its top-level comments.
+    expect(jevBodies).toHaveLength(3)
     expect(jevBodies.find((b) => b.questions.tone)?.state.comments).toHaveLength(30)
-    expect(Object.keys(jevBodies.find((b) => !b.questions.tone)!.questions)).toHaveLength(40)
+    expect(Object.keys(jevBodies.find((b) => b.questions.push_2)!.questions)).toHaveLength(40)
+    // Ten top-level comments, two questions each, and whether the post asks anything.
+    expect(Object.keys(jevBodies.find((b) => b.questions.asks_help)!.questions)).toHaveLength(21)
     const done = await get('hn-1~30')
     expect(done.pending).toEqual([])
-    expect(done.grades['hn-1']).toMatchObject({ level: 2, comments: 30 })
+    expect(done.grades['hn-1']).toMatchObject({ level: 2, comments: 30, insights: { political: 0.9, disputed: [], answers: [] } })
   })
 
   it('stores nothing when Jev leaves out an answer', async () => {
