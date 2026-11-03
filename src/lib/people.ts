@@ -51,6 +51,8 @@ export const profilePath = (handleOrDid: string) => `/u/${encodeURIComponent(han
 
 export async function fetchPerson(actor: string): Promise<Person> {
   const res = await fetch(feedUrl('person', { actor }))
+  // A busy server isn't a missing person: say what it said.
+  if (res.status === 429) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'Too many requests. Try again in a minute.')
   if (!res.ok) throw new Error(res.status === 400 ? 'That isn’t a Bluesky handle' : 'Couldn’t find that person on Bluesky')
   return (await res.json()) as Person
 }

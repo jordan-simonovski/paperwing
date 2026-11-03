@@ -12,7 +12,7 @@ export async function GET(request: Request): Promise<Response> {
   if ((src !== 'lobsters' && src !== 'status' && src !== 'frontpage' && src !== 'paperwing') || !id) return fail('src=lobsters|status|frontpage|paperwing&id= required')
   if (src === 'paperwing') return selfPost(request, id)
   // A Frontpage thread asks Constellation and every commenter's server: it counts against the caller's fan-out allowance.
-  if (src === 'frontpage' && (await fanOutLimited(request, 10))) return fail('That was a lot at once. Try again in a minute.', 429)
+  if (src === 'frontpage' && (await fanOutLimited(request, 3))) return fail('That was a lot at once. Try again in a minute.', 429)
   try {
     if (src === 'frontpage') return json(await frontpageThread(id), 60)
     return json(src === 'status' ? await statusThread(id) : await lobstersThread(id), src === 'status' ? 60 : 120)

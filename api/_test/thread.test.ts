@@ -42,7 +42,7 @@ describe('a self post through the thread function', () => {
 describe('a Frontpage thread through the thread function', () => {
   it('counts against the caller’s fan-out allowance: it asks every commenter’s server', async () => {
     const ask = () => call(GET, '/api/thread?src=frontpage&id=fp-nope', { headers: { 'x-forwarded-for': '203.0.113.9' } })
-    for (let i = 0; i < 12; i++) expect((await ask()).status).not.toBe(429)
+    for (let i = 0; i < 40; i++) expect((await ask()).status).not.toBe(429)
     expect((await ask()).status).toBe(429)
   })
 })

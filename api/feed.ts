@@ -71,20 +71,20 @@ export const SOURCES: Record<FeedSource, Source> = {
     },
   },
   // A member's Frontpage posts, comments and the replies to them.
-  fpactivity: { ttl: 60, cost: 10, run: (p) => frontpageActivity(need(p, 'did')) },
+  fpactivity: { ttl: 60, cost: 3, run: (p) => frontpageActivity(need(p, 'did')) },
   // A community board and its listings (also cached in KV).
-  board: { ttl: 60, cost: 10, run: (p) => boardFront(p.get('did') ?? '', p.get('rkey') ?? '', sortOf(p.get('sort'))) },
+  board: { ttl: 60, cost: 3, run: (p) => boardFront(p.get('did') ?? '', p.get('rkey') ?? '', sortOf(p.get('sort'))) },
   // A board's own record (name, moderators, rules), without its listings or moderation: what its
   // editor and header need, and still there when the board's moderation can't be read.
   boardinfo: { ttl: 60, run: (p) => readBoard(need(p, 'did'), need(p, 'rkey')) },
   // Every community board, for Explore.
   boards: { ttl: 300, run: () => allBoards() },
   // Margin notes on an article, from anyone.
-  notes: { ttl: 120, cost: 10, run: (p) => marginNotes(need(p, 'url')) },
+  notes: { ttl: 120, cost: 2, run: (p) => marginNotes(need(p, 'url')) },
   // Someone's PaperWing profile: their listings and mixes, from their own repo.
   person: {
     ttl: 120,
-    cost: 5,
+    cost: 1,
     run: (p) => {
       const actor = actorOf(p.get('actor') ?? '')
       if (!actor) throw new BadRequest('actor (a handle or DID) required')
@@ -96,9 +96,9 @@ export const SOURCES: Record<FeedSource, Source> = {
   // Headlines for a search, from any publisher.
   news: { ttl: 900, run: (p) => newsSearch(need(p, 'q')) },
   // A site's feeds, from any link to it. Sites rarely change their feeds. Up to a dozen whole feeds per call.
-  discover: { ttl: 86_400, cost: 30, run: (p) => discoverFeeds(need(p, 'url')) },
+  discover: { ttl: 86_400, cost: 5, run: (p) => discoverFeeds(need(p, 'url')) },
   // Who on Bluesky and Frontpage is discussing a link.
-  atlinks: { ttl: 600, cost: 10, run: (p) => openNetworkDiscussions(need(p, 'url')) },
+  atlinks: { ttl: 600, cost: 1, run: (p) => openNetworkDiscussions(need(p, 'url')) },
   frontpage: { ttl: 300, run: (p) => frontpageFeed(sortOf(p.get('feed'))) },
   arxiv: { ttl: 1800, run: (p) => arxiv(p.get('q') ?? 'cat:cs.AI') },
   hf: { ttl: 1800, run: () => hfPapers() },
@@ -126,10 +126,10 @@ export const SOURCES: Record<FeedSource, Source> = {
       )
     },
   },
-  releases: { ttl: 3600, cost: (p) => Math.ceil(list(p.get('repos')).length / 4) || 1, run: (p) => releases(list(p.get('repos'))) },
+  releases: { ttl: 3600, cost: (p) => Math.ceil(list(p.get('repos')).length / 8) || 1, run: (p) => releases(list(p.get('repos'))) },
   github: { ttl: 3600, run: (p) => github(p.get('q') ?? 'stars:>50', Number(p.get('days') ?? 7)) },
   // Incidents move fast; two minutes at the edge keeps every status page at one request per region.
-  status: { ttl: 120, cost: (p) => 1 + Math.min(list(p.get('hosts')).length, 25), run: (p) => statusIncidents(list(p.get('providers')), p.get('active') === '1', list(p.get('hosts'))) },
+  status: { ttl: 120, cost: (p) => 1 + Math.ceil(Math.min(list(p.get('hosts')).length, 25) / 5), run: (p) => statusIncidents(list(p.get('providers')), p.get('active') === '1', list(p.get('hosts'))) },
   // Settings asks before following a page; the answer changes rarely.
   statuscheck: { ttl: 3600, run: (p) => checkStatusPage(p.get('host') ?? '') },
 }

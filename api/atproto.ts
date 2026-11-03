@@ -149,7 +149,7 @@ export async function GET(request: Request): Promise<Response> {
         const q = (p.get('q') ?? '').trim().slice(0, 120)
         if (!q) return fail('q required')
         // Searches as PaperWing's own account when it has one, so a stranger mustn't be able to spend it.
-        if (await fanOutLimited(request, 2)) return fail('That was a lot at once. Try again in a minute.', 429)
+        if (await fanOutLimited(request, 1)) return fail('That was a lot at once. Try again in a minute.', 429)
         const days = Number(p.get('days')) || undefined
         return json(await searchStories(q, days && days > 0 && days <= 3650 ? days : undefined, p.get('sort') === 'new' ? 'latest' : 'top'), 300)
       }

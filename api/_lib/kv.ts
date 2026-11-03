@@ -199,8 +199,9 @@ export async function overLimit(key: string, seconds: number, limit: number, by 
 
 /**
  * How much fan-out (requests to other servers) one caller may cause a minute, across every
- * endpoint that fans out. Each call costs roughly what it can ask of others; a one-fetch answer
- * (a feed, an icon, a card) costs nothing and never comes here.
+ * endpoint that fans out. A call costs more the more it can ask of others, but the costs are sized
+ * so the app's own busiest minute fits (api/_test/feed.test.ts pins it): this stops a script, not a
+ * reader. A one-fetch answer (a feed, an icon, a card) costs nothing and never comes here.
  */
 export const FAN_OUT_PER_MINUTE = 120
 
