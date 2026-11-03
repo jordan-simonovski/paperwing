@@ -4,7 +4,7 @@ import { useEffect, useId, useState } from 'react'
 import { linkFrom, useComposer } from '../lib/compose'
 import { keys } from '../lib/query'
 import { linkKey, storyFromKey } from '../lib/sources'
-import { api } from '../lib/sources/http'
+import { feed } from '../lib/sources/http'
 import { Sheet } from './Sheet'
 
 /**
@@ -28,7 +28,7 @@ export function PostLink({ url: given, title: givenTitle, board, onClose }: { ur
     queryKey: keys.card(settled ?? ''),
     enabled: !!settled,
     staleTime: Infinity,
-    queryFn: () => api('feed', { src: 'card', url: settled }) as Promise<{ title?: string; description?: string }>,
+    queryFn: () => feed('card', { url: settled }) as Promise<{ title?: string; description?: string }>,
   })
   // The page's title belongs to the link it was read from: while a new link settles, there is none
   // yet, so a changed link never goes out under the old one's title. Your own title always wins.

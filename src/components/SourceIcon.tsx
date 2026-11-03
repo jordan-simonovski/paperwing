@@ -41,6 +41,7 @@ import { feedMark } from '../lib/sources/kinds'
 import type { FeedRef } from '../lib/topics'
 import { Pip } from './Pip'
 import type { SourceKind, Story } from '../lib/types'
+import { feedUrl } from '../lib/sources/http'
 
 // Logos from Simple Icons (CC0) where the brand has one; the site's own favicon otherwise.
 const BY_KIND: Partial<Record<SourceKind, SimpleIcon>> = {
@@ -130,19 +131,7 @@ function Favicon({ hosts, size }: { hosts: string[]; size: number }) {
   const [tried, setTried] = useState(0)
   const host = hosts[tried]
   if (!host) return <Logo icon={siRss} size={size} mono />
-  return (
-    <img
-      key={host}
-      className="favicon"
-      src={`/api/feed?src=icon&d=${encodeURIComponent(host)}`}
-      width={size}
-      height={size}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      onError={() => setTried((n) => n + 1)}
-    />
-  )
+  return <img key={host} className="favicon" src={feedUrl('icon', { d: host })} width={size} height={size} alt="" loading="lazy" decoding="async" onError={() => setTried((n) => n + 1)} />
 }
 
 interface Props {

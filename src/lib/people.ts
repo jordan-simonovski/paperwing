@@ -2,6 +2,7 @@ import { keys } from './query'
 import { useQuery } from '@tanstack/react-query'
 import { useAtproto } from './atproto'
 import type { Story } from './types.js'
+import { feedUrl } from './sources/http'
 
 // People on PaperWing: anyone with a Bluesky account. Their profile is their listings and mixes,
 // read from their own repo (api/_lib/people.ts). Following someone here puts what they list on
@@ -49,7 +50,7 @@ export interface FollowedPerson {
 export const profilePath = (handleOrDid: string) => `/u/${encodeURIComponent(handleOrDid.replace(/^@/, ''))}`
 
 export async function fetchPerson(actor: string): Promise<Person> {
-  const res = await fetch(`/api/feed?src=person&actor=${encodeURIComponent(actor)}`)
+  const res = await fetch(feedUrl('person', { actor }))
   if (!res.ok) throw new Error(res.status === 400 ? 'That isn’t a Bluesky handle' : 'Couldn’t find that person on Bluesky')
   return (await res.json()) as Person
 }

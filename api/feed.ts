@@ -1,5 +1,6 @@
 import { fail, json } from './_lib/http.js'
 import { fanOutLimited } from './_lib/kv.js'
+import type { FeedSource } from '../src/lib/sources/http.js'
 import { discoverFeeds } from './_lib/discover.js'
 import { favicon } from './_lib/icon.js'
 import { frontpageActivity, frontpageFeed } from './_lib/frontpage.js'
@@ -47,7 +48,7 @@ interface Source {
   run(p: URLSearchParams, request: Request): Promise<unknown>
 }
 
-export const SOURCES: Record<string, Source> = {
+export const SOURCES: Record<FeedSource, Source> = {
   lobsters: { ttl: 300, run: (p) => lobsters(p.get('path') ?? 'hottest') },
   rss: { ttl: 900, run: (p) => rss(need(p, 'url'), p.get('label') ?? undefined) },
   // A link card's words, for sharing a story to Bluesky: a day at the edge.
@@ -137,7 +138,7 @@ export async function GET(request: Request): Promise<Response> {
   const p = new URL(request.url).searchParams
   const src = p.get('src') ?? ''
   if (!Object.hasOwn(SOURCES, src)) return fail('unknown src')
-  const source = SOURCES[src]
+  const source = SOURCES[src as FeedSource]
   const cost = typeof source.cost === 'function' ? source.cost(p) : source.cost
   if (cost && (await fanOutLimited(request, cost))) return fail('That was a lot at once. Try again in a minute.', 429)
   try {

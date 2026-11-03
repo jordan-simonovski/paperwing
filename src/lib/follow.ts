@@ -2,7 +2,7 @@ import { keys } from './query'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { followsTech } from './channels'
-import { api } from './sources/http'
+import { feed } from './sources/http'
 import { useActivity, usePrefs } from './store'
 import { isTechTopic, TOPICS } from './topics'
 import { toast } from './ui'
@@ -55,7 +55,7 @@ export function useFollowedHosts(): Set<string> {
 export const isFollowed = (feed: FoundFeed, hosts: Set<string>) =>
   BUILT_IN.includes(feed.url) || usePrefs.getState().customFeeds.some((f) => f.url === feed.url) || hosts.has(bare(feed.site)) || hosts.has(hostOf(feed.url) ?? '')
 
-export const findFeeds = (url: string) => api('feed', { src: 'discover', url }) as Promise<FoundFeed[]>
+export const findFeeds = (url: string) => feed('discover', { url }) as Promise<FoundFeed[]>
 
 const DAY = 86_400_000
 const discoverQuery = (host: string, url: string) => ({ queryKey: keys.discover(host), queryFn: () => findFeeds(url), staleTime: 7 * DAY, gcTime: 30 * DAY, retry: false })

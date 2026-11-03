@@ -7,6 +7,7 @@ import { keys } from './query'
 import { BOARD_HIDE_NSID, BOARD_NSID, boardRecord, type Board } from './social'
 import { usePrefs } from './store'
 import type { Story } from './types'
+import { feedUrl } from './sources/http'
 
 // Community boards (social.ts, api/_lib/boards.ts): spaces with their own name, rules and moderators,
 // owned by whoever made them and kept in their Bluesky account. Votes and comments are Bluesky likes
@@ -39,14 +40,14 @@ export const boardPath = (uri: string) => {
 }
 
 export async function fetchBoard(did: string, rkey: string, sort = 'hot'): Promise<{ board: BoardView; stories: Story[] }> {
-  const res = await fetch(`/api/feed?src=board&did=${encodeURIComponent(did)}&rkey=${encodeURIComponent(rkey)}&sort=${sort}`)
+  const res = await fetch(feedUrl('board', { did, rkey, sort }))
   if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'That board didn’t load')
   return (await res.json()) as { board: BoardView; stories: Story[] }
 }
 
 /** A board's own record, without its listings: it loads even while the board's moderation can't be read. */
 async function fetchBoardInfo(did: string, rkey: string): Promise<BoardView> {
-  const res = await fetch(`/api/feed?src=boardinfo&did=${encodeURIComponent(did)}&rkey=${encodeURIComponent(rkey)}`)
+  const res = await fetch(feedUrl('boardinfo', { did, rkey }))
   if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? 'That board didn’t load')
   return (await res.json()) as BoardView
 }
@@ -63,7 +64,7 @@ export const useAllBoardsWhen = (enabled: boolean) =>
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const res = await fetch('/api/feed?src=boards')
+      const res = await fetch(feedUrl('boards'))
       return res.ok ? ((await res.json()) as BoardView[]) : []
     },
   })

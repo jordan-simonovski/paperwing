@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
-import { api } from '../lib/sources/http'
+import { feed } from '../lib/sources/http'
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
 
@@ -32,7 +32,7 @@ export function StatusPagesSettings() {
     setBusy(true)
     try {
       // The server checks the page is public and publishes incidents, and learns what it calls itself.
-      const { host, name, builtIn } = (await api('feed', { src: 'statuscheck', host: input })) as { host: string; name: string; builtIn?: boolean }
+      const { host, name, builtIn } = (await feed('statuscheck', { host: input })) as { host: string; name: string; builtIn?: boolean }
       if (builtIn) return toast(`${name} status is already built in`)
       if (following.has(host)) return toast(`Already following ${name}`)
       set({ statusPages: [...statusPages, { host, name }] })
