@@ -31,6 +31,43 @@ function publication(url = 'https://writer.example') {
 }
 
 describe('Standard.site publications', () => {
+  it('scans at most 300 records and verifies only the newest 20 documents', async () => {
+    publication()
+    const author = did
+    const pages: number[] = []
+    const verified: string[] = []
+    net
+      .get('https://standard-pds.example')
+      .intercept({ path: (p) => p.startsWith('/xrpc/com.atproto.repo.listRecords?') && new URL(p, 'https://standard-pds.example').searchParams.get('repo') === author })
+      .reply(200, ({ path }) => {
+        const page = Number(new URL(path, 'https://standard-pds.example').searchParams.get('cursor') ?? 0)
+        pages.push(page)
+        return {
+          records: Array.from({ length: 100 }, (_, i) => {
+            const key = String(page * 100 + i)
+            return {
+              uri: `at://${did}/site.standard.document/${key}`,
+              value: { site: uri, title: key, path: `/cap-post-${key}`, publishedAt: new Date(Date.UTC(2026, 10, 1) + Number(key) * 1000).toISOString() },
+            }
+          }),
+          cursor: String(page + 1),
+        }
+      })
+      .persist()
+    net
+      .get('https://writer.example')
+      .intercept({ path: (p) => p.startsWith('/cap-post-') })
+      .reply(200, ({ path }) => {
+        verified.push(path)
+        return head(`<link rel="site.standard.document" href="at://${did}/site.standard.document/${path.slice('/cap-post-'.length)}">`)
+      })
+      .persist()
+    const stories = await standardFeed('https://writer.example')
+    expect(pages).toEqual([0, 1, 2])
+    expect(stories.map((s) => s.title)).toEqual(Array.from({ length: 20 }, (_, i) => String(299 - i)))
+    expect(verified.sort()).toEqual(Array.from({ length: 20 }, (_, i) => `/cap-post-${280 + i}`).sort())
+  })
+
   it.each(['comment', 'script', 'attribute'])('does not verify a document from link text inside a %s', async (kind) => {
     publication()
     const doc = `at://${did}/site.standard.document/3medocument12`

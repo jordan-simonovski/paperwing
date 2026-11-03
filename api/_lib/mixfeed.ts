@@ -30,10 +30,13 @@ export async function readMix(uri: string): Promise<{ mix: MixRecord; did: strin
 
 const APPVIEW = 'https://public.api.bsky.app'
 
+export class MixSourceError extends Error {}
+
 /** Recent link stories from a mix's non-Bluesky sources: a few from each, newest first. */
 export async function linkStories(sources: MixSource[], request?: Request): Promise<Story[]> {
   const jobs: (() => Promise<Story[]>)[] = []
   let limited: StandardRateLimit | undefined
+  let failedNative = false
   for (const s of sources) {
     if (s.kind === 'rss') jobs.push(() => rss(s.url, s.label))
     else if (s.kind === 'standard')
@@ -42,6 +45,7 @@ export async function linkStories(sources: MixSource[], request?: Request): Prom
           return await standardFeed(s.url, s.label, request)
         } catch (err) {
           if (err instanceof StandardRateLimit) limited = err
+          else failedNative = true
           throw err
         }
       })
@@ -80,6 +84,7 @@ export async function linkStories(sources: MixSource[], request?: Request): Prom
   }
   const results = await pool(jobs.slice(0, 16), 6, (job) => job())
   if (limited) throw limited
+  if (failedNative && results.every((r) => r === undefined)) throw new MixSourceError('Mix publishers could not be read')
   const seen = new Set<string>()
   return results
     .flatMap((r) => (r ?? []).slice(0, 10))
@@ -98,7 +103,7 @@ async function bestPostFor(url: string): Promise<string[]> {
 async function buildMixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
   const { mix } = await readMix(`at://${did}/${MIX_NSID}/${rkey}`)
   const feeds = mix.sources.filter((s): s is Extract<MixSource, { kind: 'bskyFeed' }> => s.kind === 'bskyFeed').slice(0, 6)
-  const [fromFeeds, stories] = await Promise.all([
+  const [fromFeeds, links] = await Promise.all([
     pool(feeds, 3, (f) =>
       fetchJson<{ feed: { post: PostView }[] }>(
         f.uri.includes('/app.bsky.graph.list/')
@@ -107,8 +112,13 @@ async function buildMixFeed(did: string, rkey: string, request?: Request): Promi
         { timeoutMs: 8000 },
       ),
     ),
-    linkStories(mix.sources, request),
+    linkStories(mix.sources, request).catch((err: unknown) => {
+      if (err instanceof MixSourceError) return err
+      throw err
+    }),
   ])
+  if (links instanceof MixSourceError && fromFeeds.every((r) => r === undefined)) throw links
+  const stories = links instanceof MixSourceError ? [] : links
   // For each story, every post that shared it; then the most liked of those, one per story.
   const sharing = await pool(stories, 8, (s) => bestPostFor(s.url!))
   const candidates = [...new Set(sharing.flatMap((u) => u ?? []))].slice(0, 200)
