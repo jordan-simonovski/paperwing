@@ -1,7 +1,7 @@
 import { deleteRecord, putRecord, useAtproto } from './atproto'
 import { channelId } from './channelId'
 import { cleanMix, FEEDGEN_DID, feedRkey, MIX_NSID, type MixRecord, type MixSource } from './mixSources'
-import { api } from './sources/http'
+import { feed } from './sources/http'
 import { usePrefs, type FollowedMix, type Mix } from './store'
 import type { FeedRef } from './topics'
 import { toast } from './ui'
@@ -112,7 +112,7 @@ export function deleteMix(mix: Mix) {
 
 /** Someone's published mix, read by PaperWing's server from their repo. */
 export async function fetchMix(uri: string): Promise<{ mix: MixRecord; did: string; handle?: string }> {
-  const res = (await api('feed', { src: 'mix', uri })) as { mix: unknown; did: string; handle?: string }
+  const res = (await feed('mix', { uri })) as { mix: unknown; did: string; handle?: string }
   // Checked here too: what comes back is someone else's data.
   const mix = cleanMix(res.mix)
   if (!mix) throw new Error('That mix is empty or malformed')

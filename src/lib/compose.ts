@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { canWrite, createRecord, deleteRecord, uploadBlob, useAtproto, type StrongRef } from './atproto'
 import { postToMastodon } from './mastodon'
 import { SUBMISSION_NSID, submissionRecord } from './paperwing'
-import { api } from './sources/http'
+import { feed, feedUrl } from './sources/http'
 import { postHtml } from './bskyPost'
 import { facetsFor, graphemes } from './facets'
 import { hnComment, hnSubmit, useHn } from './hnAccount'
@@ -258,11 +258,11 @@ export const mastodonText = (i: Pick<ShareInput, 'take' | 'title'>, link: string
 
 /** The link card: the page's own words where we can get them, and its picture uploaded to your repo. */
 async function linkCard(url: string, title: string): Promise<Record<string, unknown>> {
-  const card = (await api('feed', { src: 'card', url }).catch(() => ({}))) as { title?: string; description?: string }
+  const card = (await feed('card', { url }).catch(() => ({}))) as { title?: string; description?: string }
   const external: Record<string, unknown> = { uri: url, title: title.slice(0, 300), description: (card.description ?? '').slice(0, 1000) }
   if ((useAtproto.getState().scope ?? 'blob:').includes('blob:')) {
     try {
-      const res = await fetch(`/api/feed?src=cardimage&url=${encodeURIComponent(url)}`)
+      const res = await fetch(feedUrl('cardimage', { url }))
       if (res.status === 200) external.thumb = await uploadBlob(await res.blob())
     } catch {
       /* a card without a picture is still a card */

@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { setUpstream } from '../_lib/http.js'
+import { FAN_OUT_PER_MINUTE, kv } from '../_lib/kv.js'
 import { call, fakeUpstreams } from './harness.js'
 import { GET, SOURCES } from '../feed.js'
 
@@ -118,5 +119,64 @@ describe('the feed function', () => {
       .reply(200, '<html></html>', { headers: { 'content-type': 'text/html' } })
     const res = await call(GET, '/api/feed?src=cardimage&url=https://news.example/no-picture')
     expect(res.status).toBe(204)
+  })
+})
+
+// Sources that fan out to many other servers share one allowance per caller (FAN_OUT_PER_MINUTE),
+// each costing about what it can ask of others. A one-fetch source (a feed, an icon, a card) never counts.
+describe('the fan-out allowance', () => {
+  const discover = (from: string) => call(GET, '/api/feed?src=discover&url=nope', { headers: { 'x-forwarded-for': from } })
+
+  const costOf = (src: keyof typeof SOURCES, query = '') => {
+    const cost = SOURCES[src].cost
+    return typeof cost === 'function' ? cost(new URLSearchParams(query)) : (cost ?? 0)
+  }
+  const allowed = (src: keyof typeof SOURCES, query = '') => Math.floor(FAN_OUT_PER_MINUTE / costOf(src, query))
+
+  // The app's own busiest minute must fit: a library import filling 30 links (each asks who's
+  // discussing it), For you reading 20 followed people, Follow blogs looking up 6 suggestions, a
+  // status channel with 5 custom pages, a releases channel of 40 projects, and a few boards and notes.
+  it('leaves room for the app’s own busiest minute', () => {
+    const burst =
+      30 * costOf('atlinks') +
+      20 * costOf('person') +
+      6 * costOf('discover') +
+      costOf('status', 'hosts=a,b,c,d,e') +
+      costOf('releases', `repos=${Array.from({ length: 40 }, (_, i) => `o/r${i}`).join(',')}`) +
+      3 * costOf('notes') +
+      2 * costOf('board')
+    expect(burst).toBeLessThanOrEqual(FAN_OUT_PER_MINUTE)
+  })
+
+  it('stops a caller who asks for too much fan-out, and only that caller', async () => {
+    for (let i = 0; i < allowed('discover'); i++) expect((await discover('203.0.113.9')).status).not.toBe(429)
+    const over = await discover('203.0.113.9')
+    expect(over.status).toBe(429)
+    expect(over.headers.get('cache-control')).toBe('no-store')
+    expect((await discover('198.51.100.7')).status).not.toBe(429)
+  })
+
+  it('never counts a one-fetch source against it', async () => {
+    for (let i = 0; i <= allowed('discover'); i++) await discover('203.0.113.9')
+    net.get('https://lobste.rs').intercept({ path: '/hottest.json' }).reply(200, [lobstersStory])
+    expect((await call(GET, '/api/feed?src=lobsters', { headers: { 'x-forwarded-for': '203.0.113.9' } })).status).toBe(200)
+  })
+
+  it('costs a status check more the more pages the caller names', async () => {
+    const hosts = Array.from({ length: 25 }, (_, i) => `s${i}.example`).join(',')
+    expect(costOf('status', `hosts=${hosts}`)).toBeGreaterThan(costOf('status'))
+    const status = () => call(GET, `/api/feed?src=status&providers=x&hosts=${hosts}`, { headers: { 'x-forwarded-for': '203.0.113.9' } })
+    net
+      .get(/s\d+\.example/)
+      .intercept({ path: '/api/v2/incidents.json' })
+      .reply(200, { incidents: [] })
+      .persist()
+    for (let i = 0; i < allowed('status', `hosts=${hosts}`); i++) expect((await status()).status).toBe(200)
+    expect((await status()).status).toBe(429)
+  })
+
+  it('refuses when the store can’t count', async () => {
+    vi.spyOn(kv(), 'bump').mockRejectedValueOnce(new Error('Sync store answered 503'))
+    expect((await discover('203.0.113.9')).status).toBe(429)
   })
 })

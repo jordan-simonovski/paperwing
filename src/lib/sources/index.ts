@@ -1,7 +1,7 @@
 import type { Article, Story, Thread } from '../types'
 import { devtoThread } from './devto'
 import { hnByUrl, hnThread } from './hn'
-import { api, getJson, urlFromLinkKey } from './http'
+import { api, getJson, urlFromLinkKey, feed } from './http'
 import { blueskyThread } from './bluesky'
 import { lemmyByUrl, lemmyThread } from './lemmy'
 import { parseLemmyKey } from '../lemmyKey'
@@ -47,7 +47,7 @@ export async function fetchArticle(url: string): Promise<Article> {
 /** Every HN and Lemmy thread about a link, busiest first. One source failing doesn't hide the other. */
 export async function findDiscussions(url: string): Promise<Story[]> {
   // Hacker News and Lemmy by their own URL search; Bluesky and Frontpage through the open network's link index.
-  const found = await Promise.allSettled([hnByUrl(url), lemmyByUrl(url), api('feed', { src: 'atlinks', url }) as Promise<Story[]>])
+  const found = await Promise.allSettled([hnByUrl(url), lemmyByUrl(url), feed('atlinks', { url }) as Promise<Story[]>])
   if (found.every((f) => f.status === 'rejected')) throw (found[0] as PromiseRejectedResult).reason
   return found.flatMap((f) => (f.status === 'fulfilled' ? f.value : [])).sort((a, b) => (b.comments ?? 0) - (a.comments ?? 0))
 }

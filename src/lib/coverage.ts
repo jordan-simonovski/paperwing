@@ -2,7 +2,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { words } from './cluster'
 import { keys } from './query'
-import { api } from './sources/http'
+import { feed } from './sources/http'
 import type { Story } from './types'
 
 // How a story is being covered: the same event from other publishers, found by searching the
@@ -46,7 +46,7 @@ export function useCoverage(story: Story | undefined, enabled: boolean) {
   const q = story ? coverageQuery(story.title) : undefined
   return useQuery({
     queryKey: keys.coverage(story?.key),
-    queryFn: async () => sameEvent(story!, (await api('feed', { src: 'news', q: q! })) as Story[]),
+    queryFn: async () => sameEvent(story!, (await feed('news', { q: q! })) as Story[]),
     enabled: enabled && !!q,
     staleTime: 15 * 60_000,
     retry: false,

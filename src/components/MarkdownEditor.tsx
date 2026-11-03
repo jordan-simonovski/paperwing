@@ -1,5 +1,5 @@
 import { Bold, Code, Italic, Link2, List, ListOrdered, Quote } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { sanitize } from '../lib/html'
 import { format, markdownHtml, type FormatAction } from '../lib/markdown'
 
@@ -28,17 +28,25 @@ export function MarkdownEditor({ value, onChange, label, placeholder, autoFocus 
   const id = useId()
   const [tab, setTab] = useState<'write' | 'preview'>('write')
   const box = useRef<HTMLTextAreaElement>(null)
+  // What a toolbar button left selected, put back as soon as React has the new text in, before the
+  // next key is handled: waiting a frame let fast typing land where the caret used to be.
+  const selectAfter = useRef<{ start: number; end: number } | undefined>(undefined)
+  useLayoutEffect(() => {
+    const el = box.current
+    const sel = selectAfter.current
+    if (!el || !sel) return
+    selectAfter.current = undefined
+    el.focus()
+    el.setSelectionRange(sel.start, sel.end)
+  }, [value])
 
   const apply = (action: FormatAction) => {
     const el = box.current
     if (!el) return
     const next = format({ value, start: el.selectionStart, end: el.selectionEnd }, action)
+    if (next.value === value) return el.setSelectionRange(next.start, next.end)
+    selectAfter.current = { start: next.start, end: next.end }
     onChange(next.value)
-    // After React has put the new text in, select what the button left selected.
-    requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(next.start, next.end)
-    })
   }
 
   return (
