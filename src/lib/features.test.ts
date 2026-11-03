@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatOf, keywords, learn, reasons, similarity, storyFeatures, tasteFactor } from './features'
+import { formatOf, keywords, learn, reasons, rowReason, similarity, storyFeatures, tasteFactor } from './features'
 import type { Story } from './types'
 
 const story = (title: string, extra: Partial<Story & { topics: string[] }> = {}): Story & { topics: string[] } => ({
@@ -63,5 +63,26 @@ describe('taste', () => {
   it('explains a ranking by its strongest features', () => {
     const profile = learn({}, storyFeatures(k8s), 1)
     expect(reasons(storyFeatures(k8s2), profile)[0].key).toBe('t:cloud-native')
+  })
+})
+
+describe('the reason a row gives', () => {
+  const space = story('Starship reaches orbit on its tenth flight', { topics: ['space'], url: 'https://spacenews.com/starship' })
+
+  it('names what you like when your taste clearly lifted the story', () => {
+    let profile = {}
+    for (let i = 0; i < 3; i++) profile = learn(profile, storyFeatures(story('Another rocket launch', { topics: ['space'], url: 'https://spacenews.com/a' })), 1.5)
+    expect(rowReason(storyFeatures(space), profile)).toMatchObject({ up: true })
+  })
+
+  it('names what you voted down when it sank the story', () => {
+    const profile = learn({}, storyFeatures(story('Rocket news', { topics: ['space'], url: 'https://spacenews.com/b' })), -4.5)
+    expect(rowReason(storyFeatures(space), profile)).toMatchObject({ up: false })
+  })
+
+  it('says nothing when taste barely moved it, or there is no taste yet', () => {
+    expect(rowReason(storyFeatures(space), {})).toBeUndefined()
+    const faint = learn({}, storyFeatures(story('A recipe for bread', { topics: ['food'], url: 'https://food.example/x' })), 0.75)
+    expect(rowReason(storyFeatures(space), faint)).toBeUndefined()
   })
 })

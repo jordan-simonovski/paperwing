@@ -37,6 +37,8 @@ export function FeedPage() {
   const kindFilter = (['shared', 'discussions'] as const).find((k) => k === params.get('kind'))
   const feed = useChannelFeed(channelId, { variant, sort })
   const channel = feed.channel
+  // Only Hot, in a feed it ranks, is ordered by your taste: there a row can say why it moved.
+  const tasteOrders = sort === 'hot' && !channel?.native
   const read = useActivity((s) => s.read)
   const now = useNow()
   const [limit, setLimit] = useState(PAGE)
@@ -146,7 +148,7 @@ export function FeedPage() {
               {feed.loading && !visible.length && pretext && <TypesetLoader label={channel.label} />}
               {feed.loading && !visible.length && Array.from({ length: pretext ? 4 : 8 }, (_, i) => <RowSkeleton key={i} />)}
               {visible.slice(0, rendered).map((s) => (
-                <StoryRow key={s.key} story={s} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} />
+                <StoryRow key={s.key} story={s} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} why={tasteOrders} />
               ))}
             </div>
             {allFailed && <FeedFailed offline={!navigator.onLine} statuses={feed.statuses} onRetry={() => void feed.refetch()} />}
