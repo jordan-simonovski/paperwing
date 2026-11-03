@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { spicyOrder, describeSpice } from '../../src/lib/spice'
 import type { SpiceGrade, SpiceResponse } from '../../src/lib/spiceTypes'
-import { buildState, GRADE_VERSION, gradeFrom, lemmyTree, levelOf, needsGrade, validKey, type SpiceComment } from './spice'
+import { buildState, GRADE_VERSION, gradeFrom, lemmyTree, levelOf, needsGrade, replyQuestions, validKey, type SpiceComment } from './spice'
 
 // The background grade runs as soon as it's handed over; tests wait for it by polling.
 const background: Promise<unknown>[] = []
@@ -12,7 +12,14 @@ const thread = {
   title: 'Big fight',
   author: 'op',
   text: null,
-  children: Array.from({ length: 30 }, (_, i) => ({ id: 100 + i, type: 'comment', author: `u${i}`, text: `<p>Point ${i}</p>`, children: [] })),
+  // Ten top-level comments with two replies each: thirty in all.
+  children: Array.from({ length: 10 }, (_, i) => ({
+    id: 100 + i,
+    type: 'comment',
+    author: `u${i}`,
+    text: `<p>Point ${i}</p>`,
+    children: [1, 2].map((j) => ({ id: 1000 + i * 10 + j, type: 'comment', author: `r${i}${j}`, text: `<p>Reply ${j}</p>`, children: [] })),
+  })),
 }
 vi.mock('./http.js', async (orig) => ({
   ...(await orig<typeof import('./http.js')>()),
@@ -24,7 +31,7 @@ vi.mock('./http.js', async (orig) => ({
 }))
 
 const c = (author: string, text: string, children: SpiceComment[] = []): SpiceComment => ({ author, text, children })
-const grade = (over: Partial<SpiceGrade>): SpiceGrade => ({ level: 0, heat: 0, confidence: 1, split: 0, pushback: 0, hostile: 0, pileOn: 0, comments: 100, at: 0, ...over })
+const grade = (over: Partial<SpiceGrade>): SpiceGrade => ({ level: 0, heat: 0, confidence: 1, split: 0, pushback: 0, hostile: 0, sharp: 0, flame: 0, comments: 100, at: 0, ...over })
 
 describe('spice grading', () => {
   it('only grades keys from the fixed sources', () => {
@@ -102,11 +109,24 @@ describe('spice grading', () => {
   })
 
   it('gives one chilli only for real disagreement, more for heat', () => {
-    expect(levelOf({ heat: 1.2, split: 0.7, pushback: 0.6 })).toBe(0)
-    expect(levelOf({ heat: 1.5, split: 0.4, pushback: 0.6 })).toBe(0)
-    expect(levelOf({ heat: 1.5, split: 0.75, pushback: 0.55 })).toBe(1)
-    expect(levelOf({ heat: 1.8, split: 0, pushback: 0 })).toBe(2)
-    expect(levelOf({ heat: 2.5, split: 0, pushback: 0 })).toBe(3)
+    const calm = { sharp: 0.1, flame: 0, split: 0.2, pushback: 0.25, hostile: 0 }
+    expect(levelOf(calm)).toBe(0)
+    // Sharp replies with little pushback, or sides with little pushback, are still calm.
+    expect(levelOf({ ...calm, sharp: 0.7, pushback: 0.3 })).toBe(0)
+    expect(levelOf({ ...calm, split: 0.9, pushback: 0.4 })).toBe(0)
+    expect(levelOf({ ...calm, split: 0.8, pushback: 0.55 })).toBe(1)
+    expect(levelOf({ ...calm, sharp: 0.5, pushback: 0.42 })).toBe(1)
+    expect(levelOf({ ...calm, sharp: 0.65, pushback: 0.5 })).toBe(2)
+    expect(levelOf({ ...calm, sharp: 0.9, flame: 0.45, pushback: 0.5 })).toBe(3)
+    expect(levelOf({ ...calm, sharp: 0.7, pushback: 0.5, hostile: 4 })).toBe(3)
+  })
+
+  it('asks about each reply with the comment it answers', () => {
+    const { state } = buildState('A story', [c('a', 'Rust is great', [c('b', 'It is not'), c('c', 'Agreed')]), c('d', 'Unrelated')])
+    const q = replyQuestions(state) as Record<string, { instructions: { comment: { author: string }; reply: { text: string } } }>
+    expect(Object.keys(q).sort()).toEqual(['hostile_2', 'hostile_3', 'push_2', 'push_3'])
+    expect(q.push_2.instructions.comment.author).toBe('a')
+    expect(q.push_2.instructions.reply.text).toBe('It is not')
   })
 
   it('lets smaller sources in with smaller threads', () => {
@@ -133,9 +153,12 @@ describe('spice grading', () => {
     expect(needsGrade('hn-1', 41, grade({ comments: 40, at: now - 60e3, v: 1 }), now)).toBe(true)
   })
 
-  it('names what makes a discussion heated', () => {
-    const g = gradeFrom({ heat: { score: 1.9, confidence: 0.6 }, split: { noul: 0.8 }, pushback: { noul: 0.7 }, hostile: { noul: 0.1 }, pile_on: { noul: 0.2 } }, 120)
-    expect(g.level).toBe(2)
+  it('counts pushback as a share of replies and hostility by people', () => {
+    const { state } = buildState('A story', [c('a', 'One', [c('x', 'No'), c('x', 'Still no'), c('y', 'Yes')])])
+    const tone = { score: 1.9, confidence: 0.6, probabilities: { '0': 0, '1': 0.3, '2': 0.6, '3': 0.1 } }
+    const replies = { push_2: { noul: 0.9 }, push_3: { noul: 0.8 }, push_4: { noul: 0.1 }, hostile_2: { noul: 0.9 }, hostile_3: { noul: 0.8 }, hostile_4: { noul: 0.2 } }
+    const g = gradeFrom(state, { tone, split: { noul: 0.8 }, replies }, 120)
+    expect(g).toMatchObject({ sharp: 0.7, flame: 0.1, pushback: 0.6, hostile: 1, level: 2 })
     expect(describeSpice(g)).toEqual({ name: 'Heated', reasons: ['split into sides', 'lots of pushback'] })
   })
 
@@ -148,15 +171,22 @@ describe('spice grading', () => {
 
 describe('/api/spice', () => {
   let spice: typeof import('../spice')
-  const jevBodies: { state: { comments: unknown[] } }[] = []
+  type JevBody = { state: { comments?: unknown[] }; questions: Record<string, unknown> }
+  const jevBodies: JevBody[] = []
+  let dropOne = false
   beforeAll(async () => {
     process.env.SYNC_MEMORY = '1'
     process.env.TYPESAFE_API_KEY = 'ts-test'
     vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.startsWith('https://api.typesafe.ai/')) {
-        jevBodies.push(JSON.parse(String(init?.body)))
-        return Response.json({ answers: { heat: { score: 2.1, confidence: 0.7 }, split: { noul: 0.9 }, pushback: { noul: 0.8 }, hostile: { noul: 0.2 }, pile_on: { noul: 0.1 } } })
+        const body = JSON.parse(String(init?.body)) as JevBody
+        jevBodies.push(body)
+        if (body.questions.tone) return Response.json({ answers: { tone: { score: 2, confidence: 0.7, probabilities: { '0': 0, '1': 0.2, '2': 0.7, '3': 0.1 } }, split: { noul: 0.9 } } })
+        // Per reply: pushing back, not hostile; one answer missing when a test asks for it.
+        const answers = Object.fromEntries(Object.keys(body.questions).map((q) => [q, { noul: q.startsWith('push_') ? 0.8 : 0.1 }]))
+        if (dropOne) delete answers[Object.keys(answers)[0]]
+        return Response.json({ answers })
       }
       throw new Error(`unexpected fetch ${url}`)
     })
@@ -170,11 +200,23 @@ describe('/api/spice', () => {
     const again = await get('hn-1~30')
     expect(again.pending).toEqual(['hn-1'])
     await Promise.all(background)
-    expect(jevBodies).toHaveLength(1)
-    expect(jevBodies[0].state.comments).toHaveLength(30)
+    // One request for the thread, one for its replies.
+    expect(jevBodies).toHaveLength(2)
+    expect(jevBodies.find((b) => b.questions.tone)?.state.comments).toHaveLength(30)
+    expect(Object.keys(jevBodies.find((b) => !b.questions.tone)!.questions)).toHaveLength(40)
     const done = await get('hn-1~30')
     expect(done.pending).toEqual([])
     expect(done.grades['hn-1']).toMatchObject({ level: 2, comments: 30 })
+  })
+
+  it('stores nothing when Jev leaves out an answer', async () => {
+    dropOne = true
+    await get('hn-3~30')
+    await Promise.allSettled(background)
+    dropOne = false
+    const { kv } = await import('./kv')
+    expect(await kv().get('rd:spice:hn-3')).toBeNull()
+    expect(JSON.parse((await kv().get('rd:spice-error'))!)).toMatchObject({ key: 'hn-3', message: 'Jev left out an answer' })
   })
 
   it('rests a source that rate-limited the server', async () => {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSpiceStore, wantSpice } from './spice'
 import type { SpiceGrade, SpiceResponse } from './spiceTypes'
 
-const grade: SpiceGrade = { level: 2, heat: 2, confidence: 0.9, split: 0.6, pushback: 0.6, hostile: 0, pileOn: 0, comments: 300, at: 0, v: 1 }
+const grade: SpiceGrade = { level: 2, heat: 2, confidence: 0.9, split: 0.6, pushback: 0.6, hostile: 0, sharp: 0.7, flame: 0, comments: 300, at: 0, v: 1 }
 const answer = (key: string): SpiceResponse => ({ enabled: true, grades: { [key]: grade }, pending: [] })
 
 describe('spice grades on the device', () => {

@@ -2,7 +2,7 @@ import { waitUntil } from '@vercel/functions'
 import { spiceMin, type SpiceGrade, type SpiceResponse } from '../src/lib/spiceTypes.js'
 import { clientKey, fail, json, today } from './_lib/http.js'
 import { kv, kvConfigured, overLimit } from './_lib/kv.js'
-import { askJev, buildState, fetchDiscussion, JEV_MODEL, levelOf, needsGrade, quiet, gradeFrom, validKey } from './_lib/spice.js'
+import { askJev, buildState, fetchDiscussion, GRADE_VERSION, JEV_MODEL, levelOf, needsGrade, quiet, gradeFrom, validKey } from './_lib/spice.js'
 
 // GET /api/spice?keys=hn-123~240,lb-abc~55: the spice grades known for those stories (each key
 // with the comment count the client sees). Stories that are big enough and ungraded, or have grown
@@ -25,7 +25,7 @@ async function grade(key: string, apiKey: string) {
   const store = kv()
   const { title, comments } = await fetchDiscussion(key)
   const { state, total } = buildState(title, comments)
-  const g: SpiceGrade = total < (spiceMin(key) ?? Infinity) || state.comments.length < 8 ? quiet(total) : gradeFrom(await askJev(state, apiKey), total)
+  const g: SpiceGrade = total < (spiceMin(key) ?? Infinity) || state.comments.length < 8 ? quiet(total) : gradeFrom(state, await askJev(state, apiKey), total)
   await store.set(gradeKey(key), JSON.stringify(g), KEEP_SECONDS)
 }
 
@@ -59,9 +59,10 @@ export async function GET(request: Request): Promise<Response> {
   const grades: Record<string, SpiceGrade> = {}
   stored.forEach((s, i) => {
     if (!s) return
-    // The level is worked out again on the way out, so retuned thresholds apply to every grade.
+    // The level is worked out again on the way out, so retuned thresholds apply to every grade
+    // asked the current questions; older ones keep theirs until they're regraded.
     const g = JSON.parse(s) as SpiceGrade
-    grades[asked[i].key] = { ...g, level: g.heat ? levelOf(g) : 0 }
+    grades[asked[i].key] = g.v === GRADE_VERSION ? { ...g, level: levelOf(g) } : g
   })
 
   const pending: string[] = []

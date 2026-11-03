@@ -12,14 +12,18 @@ export const spiceMin = (key: string): number | undefined => SPICE_MIN[key.slice
 
 export interface SpiceGrade {
   level: SpiceLevel
-  /** Jev's heat score, 0 (calm) to 3 (flamewar), and how sure it was. */
+  /** The tone of the replies, 0 (friendly) to 3 (personal attacks), and how sure Jev was. */
   heat: number
   confidence: number
-  /** Probabilities (0 to 1) of what makes it heated. */
+  /** How likely the replies are sharp or worse (tone 2 or 3), and personal attacks (tone 3). */
+  sharp: number
+  flame: number
+  /** How likely people are divided into sides (0 to 1). */
   split: number
+  /** The share of replies that push back on the comment they answer (0 to 1). */
   pushback: number
+  /** How many different people insult, mock or belittle someone they reply to. */
   hostile: number
-  pileOn: number
   /** Comments in the thread when it was graded. */
   comments: number
   at: number

@@ -11,8 +11,9 @@ const grade = (level: SpiceGrade['level'], extra: Partial<SpiceGrade> = {}): Spi
   confidence: 0.8,
   split: 0.2,
   pushback: 0.2,
-  hostile: 0.1,
-  pileOn: 0.1,
+  sharp: 0.2,
+  flame: 0,
+  hostile: 0,
   comments: 412,
   at: NOW,
   ...extra,
@@ -48,7 +49,7 @@ export const MarkOnARow: Story = {
 }
 
 export const Flamewar: Story = {
-  parameters: graded(grade(3, { split: 0.8, pushback: 0.7, hostile: 0.75, pileOn: 0.65 })),
+  parameters: graded(grade(3, { sharp: 0.9, flame: 0.5, split: 0.8, pushback: 0.7, hostile: 3 })),
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { expanded: false })
     await userEvent.click(button)

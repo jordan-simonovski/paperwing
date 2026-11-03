@@ -7,8 +7,9 @@ import { lobstersThread } from './sources.js'
 
 // Spice: how heated a discussion is, which is not the same as how negative it is. A thread that
 // agrees a company got it wrong is negative but calm; two camps arguing is spicy. Jev (TypeSafe's
-// classifier) scores the heat on a four-level rubric and answers four yes/no questions about why;
-// the level and its label are worked out here in code, as TypeSafe recommends.
+// classifier) rates the tone of the replies and whether people split into sides, and judges each
+// reply on its own: does it push back, is it hostile. How many push back, how many people are
+// hostile, and the level and its label are worked out here in code, as TypeSafe recommends.
 //
 // The server fetches each thread itself from fixed hosts, so a grade only ever reflects the real
 // discussion: nobody can get a grade stored by sending made-up comments.
@@ -177,61 +178,119 @@ export function buildState(title: string, tree: SpiceComment[]): { state: SpiceS
   return { state: { title, comments }, total: count(tree) }
 }
 
-export const QUESTIONS = {
-  heat: {
+// Wording probed against Jev 1.14 on real HN, Lobsters and Lemmy threads before it shipped.
+
+/** Questions about the whole thread, asked over it as state. */
+export const THREAD_QUESTIONS = {
+  // How people argue, not how many do: the replies below measure how many push back.
+  tone: {
     type: 'score',
-    instructions: 'How heated is the disagreement between the commenters in `comments`?',
+    instructions: 'What tone do the replies in `comments` take toward the comments they answer?',
     criteria: [
-      'Calm: commenters mostly agree with each other, add information or ask questions',
-      'Some debate: a few commenters disagree with each other, politely and with reasons',
-      'Heated: many commenters argue with each other, with sharp, dismissive or sarcastic replies',
-      'Flamewar: commenters attack each other personally, with insults and open hostility',
+      'Replies are friendly or neutral: people agree, add information or ask questions',
+      'Replies disagree politely and give their reasons',
+      'Replies are sharp, dismissive or sarcastic',
+      'Replies insult the person they answer and attack them personally',
     ],
   },
   split: { type: 'noul', instructions: 'The commenters in `comments` are divided into opposing sides about the story in `title`.' },
-  pushback: { type: 'noul', instructions: 'Many comments in `comments` disagree with the comment their `reply_to` points at.' },
-  // "At least one" is true of nearly every big thread, so this asks about several.
-  hostile: { type: 'noul', instructions: 'Several different comments in `comments` insult, mock or belittle the commenter they reply to.' },
-  pile_on: { type: 'noul', instructions: 'Most comments in `comments` criticise the same company, product, project or person, and agree with each other about it.' },
 } as const
 
-export interface JevAnswers {
-  heat: { score: number; confidence: number }
-  split: { noul: number }
-  pushback: { noul: number }
-  hostile: { noul: number }
-  pile_on: { noul: number }
+/**
+ * Two questions per reply, with the comment it answers written into the question: Jev judges a
+ * pair it can see better than it follows `reply_to` through a list, and code does the counting.
+ */
+export function replyQuestions(state: SpiceState): Record<string, unknown> {
+  const byId = new Map(state.comments.map((c) => [c.id, c]))
+  const questions: Record<string, unknown> = {}
+  for (const c of state.comments) {
+    const parent = c.reply_to === null ? undefined : byId.get(c.reply_to)
+    if (!parent) continue
+    const pair = { comment: { author: parent.author, text: parent.text }, reply: { author: c.author, text: c.text } }
+    questions[`push_${c.id}`] = {
+      type: 'noul',
+      instructions: { question: 'Does the reply push back on the comment it answers?', ...pair },
+      // Without this, a counter-argument that never says "I disagree" read as agreement.
+      criteria: {
+        true: 'The reply argues against the comment, corrects it, doubts it, or dismisses its point, even without saying "I disagree"',
+        false: 'The reply agrees with the comment, adds to it, asks about it, or jokes along with it',
+      },
+    }
+    questions[`hostile_${c.id}`] = { type: 'noul', instructions: { question: 'Does the reply insult, mock or belittle the person who wrote the comment?', ...pair } }
+  }
+  return questions
 }
 
+interface Noul {
+  noul: number
+}
+export interface JevAnswers {
+  tone: { score: number; confidence: number; probabilities: Record<string, number> }
+  split: Noul
+  /** `push_<id>` and `hostile_<id>` for each reply in the state. */
+  replies: Record<string, Noul>
+}
+
+/** A reply counts as hostile above this. */
+const YES = 0.7
+
 /**
- * The chillies, from Jev's answers. Most good threads have some debate, so one chilli also needs
- * real disagreement (sides and replies pushing back); otherwise every busy thread would get one.
- * Tuned on real grades of HN's busiest threads: Jev's heat lands between 1 and 2 for most of them.
+ * The chillies, from what Jev found. Most good threads have some debate, so heat needs sharp
+ * replies and a good share of them pushing back; sides alone, with plenty of pushback, make a
+ * discussion lively.
  */
-export function levelOf(a: Pick<SpiceGrade, 'heat' | 'split' | 'pushback'>): SpiceLevel {
-  if (a.heat >= 2.3) return 3
-  if (a.heat >= 1.75) return 2
-  if (a.heat >= 1.3 && a.split >= 0.6 && a.pushback >= 0.5) return 1
+export function levelOf(a: Pick<SpiceGrade, 'sharp' | 'flame' | 'split' | 'pushback' | 'hostile'>): SpiceLevel {
+  // ponytail: thresholds set from 31 probed threads (most heated HN threads: sharp 0.5-0.75,
+  // pushback 0.45-0.65; calm ones under 0.2 and 0.4). Recheck on fresh threads when the model changes.
+  if (a.flame >= 0.4 || (a.hostile >= 4 && a.sharp >= 0.6)) return 3
+  if (a.sharp >= 0.6 && a.pushback >= 0.45) return 2
+  if ((a.sharp >= 0.45 && a.pushback >= 0.4) || (a.split >= 0.7 && a.pushback >= 0.5)) return 1
   return 0
 }
 
-export function gradeFrom(answers: JevAnswers, comments: number, now = Date.now()): SpiceGrade {
+const r2 = (x: number) => Math.round(x * 100) / 100
+
+export function gradeFrom(state: SpiceState, a: JevAnswers, comments: number, now = Date.now()): SpiceGrade {
+  const p = (level: number) => a.tone.probabilities[String(level)] ?? 0
+  const of = (prefix: string) => Object.entries(a.replies).filter(([k]) => k.startsWith(prefix))
+  const pushes = of('push_').map(([, v]) => v.noul)
+  const author = new Map(state.comments.map((c) => [`hostile_${c.id}`, c.author]))
+  // People, not replies: one person sniping all thread long is not a flamewar.
+  const hostile = new Set(
+    of('hostile_')
+      .filter(([, v]) => v.noul >= YES)
+      .map(([k]) => author.get(k)),
+  )
   const g = {
-    heat: Math.round(answers.heat.score * 100) / 100,
-    confidence: Math.round(answers.heat.confidence * 100) / 100,
-    split: Math.round(answers.split.noul * 100) / 100,
-    pushback: Math.round(answers.pushback.noul * 100) / 100,
-    hostile: Math.round(answers.hostile.noul * 100) / 100,
-    pileOn: Math.round(answers.pile_on.noul * 100) / 100,
+    heat: r2(a.tone.score),
+    confidence: r2(a.tone.confidence),
+    sharp: r2(p(2) + p(3)),
+    flame: r2(p(3)),
+    split: r2(a.split.noul),
+    // The expected share of replies that push back: the probabilities added up, not a vote.
+    pushback: pushes.length ? r2(pushes.reduce((s, x) => s + x, 0) / pushes.length) : 0,
+    hostile: hostile.size,
   }
   return { ...g, level: levelOf(g), comments, at: now, v: GRADE_VERSION }
 }
 
 /** A thread too small to grade: calm, and not looked at again until it grows. */
-export const quiet = (comments: number, now = Date.now()): SpiceGrade => ({ level: 0, heat: 0, confidence: 0, split: 0, pushback: 0, hostile: 0, pileOn: 0, comments, at: now, v: GRADE_VERSION })
+export const quiet = (comments: number, now = Date.now()): SpiceGrade => ({
+  level: 0,
+  heat: 0,
+  confidence: 0,
+  sharp: 0,
+  flame: 0,
+  split: 0,
+  pushback: 0,
+  hostile: 0,
+  comments,
+  at: now,
+  v: GRADE_VERSION,
+})
 
 /** Bumped when the questions change, so older grades are redone once. */
-export const GRADE_VERSION = 3
+export const GRADE_VERSION = 4
 
 /**
  * Whether a story is worth (re)grading: big enough, and either never graded or grown by half
@@ -247,13 +306,13 @@ export function needsGrade(key: string, comments: number, grade: SpiceGrade | un
 
 export const JEV_MODEL = process.env.TYPESAFE_MODEL || 'jev-1.14.0'
 
-/** One request to Jev: the trimmed discussion as state, the five questions. Retries once when busy. */
-export async function askJev(state: SpiceState, apiKey: string): Promise<JevAnswers> {
+/** One request to Jev. Retries once when busy; any other failure is an error, never an answer. */
+async function systemOne(state: unknown, questions: Record<string, unknown>, apiKey: string): Promise<Record<string, unknown>> {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch('https://api.typesafe.ai/v1/systemone', {
       method: 'POST',
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: JEV_MODEL, state, questions: QUESTIONS }),
+      body: JSON.stringify({ model: JEV_MODEL, state, questions }),
       signal: AbortSignal.timeout(20_000),
     })
     if ((res.status === 429 || res.status === 529) && attempt === 0) {
@@ -261,9 +320,18 @@ export async function askJev(state: SpiceState, apiKey: string): Promise<JevAnsw
       continue
     }
     if (!res.ok) throw new Error(`Jev answered ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`)
-    const data = (await res.json()) as { answers?: Partial<JevAnswers> }
-    const a = data.answers
-    if (!a?.heat || !a.split || !a.pushback || !a.hostile || !a.pile_on) throw new Error('Jev left out an answer')
-    return a as JevAnswers
+    const answers = ((await res.json()) as { answers?: Record<string, unknown> }).answers ?? {}
+    if (Object.keys(questions).some((q) => !answers[q])) throw new Error('Jev left out an answer')
+    return answers
   }
+}
+
+/**
+ * Two requests at once: the thread-wide questions over the trimmed discussion, and the per-reply
+ * ones, which carry their own text and need nothing else in state.
+ */
+export async function askJev(state: SpiceState, apiKey: string): Promise<JevAnswers> {
+  const perReply = replyQuestions(state)
+  const [thread, replies] = await Promise.all([systemOne(state, THREAD_QUESTIONS, apiKey), Object.keys(perReply).length ? systemOne({ story: { title: state.title } }, perReply, apiKey) : {}])
+  return { ...(thread as Omit<JevAnswers, 'replies'>), replies: replies as JevAnswers['replies'] }
 }
