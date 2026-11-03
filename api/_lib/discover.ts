@@ -111,7 +111,8 @@ export async function discoverFeeds(raw: string): Promise<FoundFeed[]> {
     const hint = standardHint(first.text)
     if (hint || !candidates.size) {
       const publication = await standardPublication(first.finalUrl, hint).catch((err: unknown) => {
-        if (hint) throw err
+        // An unverifiable claim only stops discovery when the page offers nothing else to follow.
+        if (hint && !candidates.size) throw err
         return undefined
       })
       if (publication) return [{ url: publication.url, title: publication.name, site: new URL(publication.url).hostname, posts: 0, format: 'standard' }]

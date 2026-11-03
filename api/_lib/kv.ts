@@ -183,7 +183,7 @@ export function resetMemoryKv(): void {
  * `build()`, kept in KV for `seconds` so the next caller in that window gets the same answer
  * without asking upstream again. Without a store it just builds; a store that fails is skipped.
  */
-export async function cachedInKv<T>(key: string, seconds: number, build: () => Promise<T>): Promise<T> {
+export async function cachedInKv<T>(key: string, seconds: number | (() => number), build: () => Promise<T>): Promise<T> {
   if (kvConfigured()) {
     const hit = await kv()
       .get(key)
@@ -193,7 +193,7 @@ export async function cachedInKv<T>(key: string, seconds: number, build: () => P
   const value = await build()
   if (kvConfigured())
     await kv()
-      .set(key, JSON.stringify(value), seconds)
+      .set(key, JSON.stringify(value), typeof seconds === 'function' ? seconds() : seconds)
       .catch(() => {})
   return value
 }
@@ -215,9 +215,42 @@ export async function overLimit(key: string, seconds: number, limit: number, by 
  * so the app's own busiest minute fits (api/_test/feed.test.ts pins it): this stops a script, not a
  * reader. A one-fetch answer (a feed, an icon, a card) costs nothing and never comes here.
  */
-export const FAN_OUT_PER_MINUTE = 150
+export const FAN_OUT_PER_MINUTE = 170
 
-/** Counts `cost` against the caller's fan-out allowance; true when this call goes over it. Fails closed. */
-export function fanOutLimited(request: Request, cost: number): Promise<boolean> {
-  return overLimit(`rd:fanout:${clientKey(request)}`, 60, FAN_OUT_PER_MINUTE, cost)
+/**
+ * Every mix Bluesky reads, together: Bluesky asks from a few shared addresses, so each mix is charged
+ * to its author instead, and this ceiling stops anyone minting accounts to buy fresh allowances.
+ */
+export const MIX_FAN_OUT_PER_MINUTE = 600
+
+/** Who pays for fan-out: the caller, or the author of a mix that Bluesky is reading. */
+export type Payer = Request | { mix: string }
+
+/** A did:web's host name, as its document is fetched: decoded, without port or path, lower case. */
+function webHost(did: string): string {
+  const rest = did.slice('did:web:'.length)
+  try {
+    return decodeURIComponent(rest).split(/[:/]/)[0].toLowerCase()
+  } catch {
+    return rest.split(/[:%]/)[0].toLowerCase()
+  }
+}
+
+/** Whether fan-out is on a mix author's account rather than the caller's. */
+export const forMix = (payer: Payer | undefined): payer is { mix: string } => !!payer && 'mix' in payer
+
+/** Counts `cost` against a fan-out allowance; true when this call goes over it. Fails closed. */
+export async function fanOutLimited(payer: Payer, cost: number): Promise<boolean> {
+  if (!forMix(payer)) return overLimit(`rd:fanout:${clientKey(payer)}`, 60, FAN_OUT_PER_MINUTE, cost)
+  // A did:web account costs nothing to make: every one on a site (any path, any port) shares that site's allowance.
+  const author = payer.mix.startsWith('did:web:') ? `did:web:${webHost(payer.mix)}` : payer.mix
+  // The author's own allowance first, so an author already over it can't use up everyone's ceiling.
+  const own = `rd:fanout:mix:${author}`
+  if (await overLimit(own, 60, FAN_OUT_PER_MINUTE, cost)) return true
+  if (!(await overLimit('rd:fanout:mix:*', 60, MIX_FAN_OUT_PER_MINUTE, cost))) return false
+  // Turned away at the ceiling: the author gets back what a read that won't happen cost them.
+  await kv()
+    .bump(own, 60, -cost)
+    .catch(() => {})
+  return true
 }

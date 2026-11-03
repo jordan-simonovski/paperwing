@@ -1,9 +1,9 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import { createRecord } from './atproto'
-import { linkFrom, react, send, useReactions } from './compose'
+import { linkFrom, react, send, shareStory, useReactions } from './compose'
 import { keys } from './query'
-import type { Comment, Thread } from './types'
+import type { Comment, Story, Thread } from './types'
 
 vi.mock('./hnAccount', async (real) => ({ ...(await real<typeof import('./hnAccount')>()), hnComment: vi.fn(async () => {}) }))
 vi.mock('./atproto', async (importOriginal) => ({ ...(await importOriginal<typeof import('./atproto')>()), createRecord: vi.fn(), deleteRecord: vi.fn() }))
@@ -76,5 +76,33 @@ describe('liking and voting', () => {
     await expect(Promise.all([first, again])).resolves.toEqual([true, true])
     expect(createRecord).toHaveBeenCalledTimes(1)
     expect(useReactions.getState().made[post.uri]).toBe('at://did:plc:reader/app.bsky.feed.like/1')
+  })
+})
+
+describe('sharing to Bluesky and listing on PaperWing', () => {
+  const story = { key: 'rss-1', source: 'rss', sourceLabel: 'Quanta', title: 'Melting', url: 'https://example.com/melting', discussionUrl: null, createdAt: 0, hasThread: false } as Story
+  const share = () => shareStory({ story, title: 'Melting', take: '', paperwing: true, to: ['bluesky'] })
+  const post = { uri: 'at://did:plc:reader/app.bsky.feed.post/3', cid: 'bafy-post3' }
+
+  it('says it is listed only when the listing was written', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new Error('offline'))),
+    )
+    vi.mocked(createRecord).mockReset().mockResolvedValueOnce(post).mockResolvedValueOnce({ uri: 'at://did:plc:reader/io.paperwing.submission/3', cid: 'bafy-sub' })
+    const [result] = await share()
+    expect(result).toMatchObject({ network: 'bluesky', ok: true, listed: true })
+  })
+
+  it('says the post is up but not listed when the listing fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Promise.reject(new Error('offline'))),
+    )
+    vi.mocked(createRecord).mockReset().mockResolvedValueOnce(post).mockRejectedValueOnce(new Error('PDS said no'))
+    const [result] = await share()
+    expect(result.ok).toBe(true)
+    expect(result.listed).toBeUndefined()
+    expect(result.note).toMatch(/^Posted, but not listed on PaperWing/)
   })
 })

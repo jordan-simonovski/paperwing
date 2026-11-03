@@ -81,6 +81,8 @@ export interface Prefs {
   followed: string[]
   /** Has picked what to read: a new install starts on the welcome page until then. */
   welcomed: boolean
+  /** Moments this device has had explained once already (firsts.ts). */
+  firsts: string[]
   /** How feeds open: ranked (hot), or latest first, straight from each source's newest posts. */
   feedOrder: 'ranked' | 'latest'
   customFeeds: CustomFeed[]
@@ -169,6 +171,7 @@ export const usePrefs = create<Prefs>()(
       // A new install picks its own on the welcome page.
       followed: [],
       welcomed: false,
+      firsts: [],
       feedOrder: 'ranked',
       customFeeds: [],
       bskyFeeds: [],

@@ -28,6 +28,9 @@ test('a suggested board post in For you says so, and joining its board is one ta
   await expect(suggestion.getByText('Suggested')).toBeVisible()
   await suggestion.getByRole('button', { name: 'Join Home Cooking' }).click()
   await expect(page.getByText('Joined Home Cooking: its posts show in For you')).toBeVisible()
+  // A first join says where the board now lives, in that one message rather than a second.
+  await expect(page.getByText(/^Joined Home Cooking.*under Boards in your menu/)).toBeVisible()
+  await expect(page.getByText(/^Joined Home Cooking/)).toHaveCount(1)
   // The post stays where it was: now from a board you've joined, not a suggestion.
   await expect(suggestion).toBeVisible()
   await expect(suggestion.getByRole('button', { name: 'Join Home Cooking' })).toBeHidden()

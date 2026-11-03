@@ -3,7 +3,7 @@ import { parseHTML } from 'linkedom'
 import { getRecord, pdsOf, pool } from './frontpage.js'
 import { assertPublicUrl, fetchJson, fetchText, linkKey } from './http.js'
 import { escapeHtml } from './text.js'
-import { cachedInKv, fanOutLimited } from './kv.js'
+import { cachedInKv, fanOutLimited, kv, kvConfigured, type Payer } from './kv.js'
 
 const DID = 'did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)'
 const publicationUri = new RegExp(`^at://(${DID})/site\\.standard\\.publication/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
@@ -88,7 +88,7 @@ async function readStandardFeed(raw: string): Promise<Story[]> {
   let cursor: string | undefined
   // shortcut: scans the newest 300 documents per author, use a publication index for larger archives.
   for (let page = 0; page < 3; page++) {
-    const params = new URLSearchParams({ repo: did, collection: 'site.standard.document', limit: '100', reverse: 'true', ...(cursor ? { cursor } : {}) })
+    const params = new URLSearchParams({ repo: did, collection: 'site.standard.document', limit: '100', ...(cursor ? { cursor } : {}) })
     const result = await fetchJson<{ records: unknown[]; cursor?: string }>(`${pds}/xrpc/com.atproto.repo.listRecords?${params}`, { timeoutMs: 8000 })
     if (!Array.isArray(result.records)) throw new Error('Malformed Standard.site documents')
     for (const rawRecord of result.records.slice(0, 100)) {
@@ -148,13 +148,33 @@ async function readStandardFeed(raw: string): Promise<Story[]> {
   return verified.filter((s): s is Story => !!s)
 }
 
-/** Shared by the app and public mixes: cache verified articles, and charge only cold reads. */
-export async function standardFeed(raw: string, label?: string, request?: Request): Promise<Story[]> {
+/** What a cold read costs the allowance: it asks a dozen or more servers (records, pages, verification). */
+export const STANDARD_COLD_READ_COST = 8
+
+/** Shared by the app and public mixes: cache verified articles, and charge only cold reads, to whoever `payer` names. */
+export async function standardFeed(raw: string, label?: string, payer?: Payer): Promise<Story[]> {
   const url = canonical(await assertPublicUrl(raw))
+  // A publication that just failed isn't asked again for a minute (one allowance window), so one that keeps failing costs once a window.
+  const failed = `rd:standard:failed:${url}`
   const stories = await cachedInKv(`rd:standard:${url}`, 900, async () => {
+    if (
+      kvConfigured() &&
+      (await kv()
+        .get(failed)
+        .catch(() => null))
+    )
+      throw new Error('This publication couldn’t be read just now')
     // Metadata, three record pages, and four batches of article verification.
-    if (request && (await fanOutLimited(request, 8))) throw new StandardRateLimit()
-    return readStandardFeed(url)
+    if (payer && (await fanOutLimited(payer, STANDARD_COLD_READ_COST))) throw new StandardRateLimit()
+    try {
+      return await readStandardFeed(url)
+    } catch (err) {
+      if (kvConfigured())
+        await kv()
+          .set(failed, '1', 60)
+          .catch(() => {})
+      throw err
+    }
   })
   return label ? stories.map((s) => ({ ...s, sourceLabel: label })) : stories
 }

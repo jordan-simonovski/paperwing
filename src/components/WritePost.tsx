@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { canUpdate, canUpload, canWrite, useAtproto } from '../lib/atproto'
 import { useComposer } from '../lib/compose'
+import { firstTime } from '../lib/firsts'
 import { BODY_LIMIT, SUBMISSION_NSID } from '../lib/paperwing'
 import { keys } from '../lib/query'
 import { editSelfPost, saveWords, withSelfPost, WordsNotSaved, writeSelfPost, type ContentLabel, type PendingSelfPost } from '../lib/selfPost'
@@ -73,7 +74,13 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         // Bluesky takes a moment to have it: show the post straight away.
         qc.setQueryData<Thread>(keys.thread(key), { story, comments: [] })
         onClose()
-        toast('Posted to PaperWing')
+        // The first post says where it lives: in the writer's own account, not PaperWing's.
+        if (firstTime('post') && story.discussionUrl) {
+          const url = story.discussionUrl
+          toast('Posted. It lives in your own Bluesky account, so it stays yours with or without PaperWing.', {
+            action: { label: 'See it on Bluesky', run: () => window.open(url, '_blank', 'noopener') },
+          })
+        } else toast('Posted to PaperWing')
         void navigate(`/t/paperwing/${key}`)
       }
     } catch (err) {

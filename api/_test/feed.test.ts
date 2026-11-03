@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { setUpstream } from '../_lib/http.js'
 import { FAN_OUT_PER_MINUTE, kv } from '../_lib/kv.js'
+import { STANDARD_COLD_READ_COST } from '../_lib/standard.js'
 import { call, fakeUpstreams } from './harness.js'
 import { GET, SOURCES } from '../feed.js'
 
@@ -140,7 +141,8 @@ describe('the fan-out allowance', () => {
   // The app's own busiest minute must fit: a library import filling 30 links (each asks who's
   // discussing it), For you reading 20 followed people, 10 joined boards and board suggestions,
   // Follow blogs looking up 6 suggestions, a status channel with 5 custom pages, a releases channel
-  // of 40 projects, and a few notes.
+  // of 40 projects, a few notes, and 5 followed
+  // Standard.site publications read cold (their charge is in the loader, not SOURCES).
   it('leaves room for the app’s own busiest minute', () => {
     const burst =
       30 * costOf('atlinks') +
@@ -150,7 +152,8 @@ describe('the fan-out allowance', () => {
       costOf('releases', `repos=${Array.from({ length: 40 }, (_, i) => `o/r${i}`).join(',')}`) +
       3 * costOf('notes') +
       10 * costOf('board') +
-      costOf('boardpicks')
+      costOf('boardpicks') +
+      5 * STANDARD_COLD_READ_COST
     expect(burst).toBeLessThanOrEqual(FAN_OUT_PER_MINUTE)
   })
 

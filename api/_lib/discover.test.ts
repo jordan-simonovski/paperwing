@@ -45,6 +45,20 @@ describe('feed discovery', () => {
     expect(await discoverFeeds('https://forum.example/c/help/7')).toMatchObject([{ url: 'https://forum.example/c/help/7.rss', title: 'Forum — Help', posts: 1 }])
   })
 
+  it('still finds a site’s RSS feed when its Standard.site claim can’t be verified', async () => {
+    const hint = 'at://did:plc:abcdefghijklmnopqrstuvwx/site.standard.publication/blog'
+    net
+      .get('https://blog.example')
+      .intercept({ path: '/' })
+      .reply(200, `<html><head><link rel="alternate" type="application/rss+xml" href="/feed.xml"><link rel="site.standard.publication" href="${hint}"></head></html>`)
+    net.get('https://plc.directory').intercept({ path: '/did:plc:abcdefghijklmnopqrstuvwx' }).reply(500, 'down')
+    net
+      .get('https://blog.example')
+      .intercept({ path: '/feed.xml' })
+      .reply(200, '<rss><channel><title>A blog</title><item><title>A post</title><link>https://blog.example/a-post</link></item></channel></rss>')
+    expect(await discoverFeeds('https://blog.example/')).toMatchObject([{ url: 'https://blog.example/feed.xml', title: 'A blog', posts: 1 }])
+  })
+
   it('offers chronological and weekly forum feeds, and preserves tag and top filters', () => {
     const html = '<meta content="Discourse 3.5" name="generator">'
     expect(discourseFeeds(html, 'https://forum.example/')).toEqual(['https://forum.example/latest.rss?order=created', 'https://forum.example/top.rss?period=weekly'])

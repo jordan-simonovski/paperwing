@@ -1,4 +1,5 @@
 import { useComposer } from '../lib/compose'
+import { firstTime } from '../lib/firsts'
 import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
 import { boardPath, toggleJoin } from '../lib/boards'
@@ -290,8 +291,10 @@ function JoinBoard({ board }: { board: { uri: string; name: string } }) {
       aria-label={`Join ${board.name}`}
       onClick={(e) => {
         e.stopPropagation()
-        toggleJoin(board)
-        toast(`Joined ${board.name}: its posts show in For you`, { action: { label: 'Undo', run: () => toggleJoin(board) } })
+        toggleJoin(board, { explain: false })
+        // One message either way: the first join on a device also says where a joined board shows up.
+        const where = firstTime('join') ? ' It’s under Boards in your menu, and among the places to put a story when you share or post.' : ''
+        toast(`Joined ${board.name}: its posts show in For you.${where}`, { action: { label: 'Undo', run: () => toggleJoin(board, { explain: false }) } })
       }}
     >
       <Plus size={12} /> Join
@@ -312,7 +315,9 @@ export function hideStory(key: string, story?: Story) {
   // A hide is a mild "less like this"; a downvote is the strong one.
   const { learn } = usePrefs.getState()
   if (story) learn(story, -LESSON.hide)
-  toast('Story hidden', {
+  // The first hide says what hiding teaches: ranking is on the device, and it listens.
+  const said = story && firstTime('hide') ? 'Story hidden. PaperWing now ranks stories like it a little lower; a down vote counts for more.' : 'Story hidden'
+  toast(said, {
     action: {
       label: 'Undo',
       run: () => {
@@ -356,7 +361,12 @@ export async function toggleSaved(s: Story) {
     const m = await lib.save(s)
     // Saving says you want to read it: half an upvote.
     usePrefs.getState().learn(s, LESSON.save)
-    toast(m.hasArticle || m.hasThread ? `Saved to your queue${m.minutes ? `, ${m.minutes} min read` : ''}` : 'Saved, but the article could not be fetched')
+    if (!m.hasArticle && !m.hasThread) return toast('Saved, but the article could not be fetched')
+    const saved = `Saved to your queue${m.minutes ? `, ${m.minutes} min read` : ''}`
+    // The first save says what saving does: it's a copy that reads offline, not a bookmark.
+    if (!firstTime('save')) return toast(saved)
+    const kept = m.hasArticle && m.hasThread ? 'The article and its comments stay' : m.hasArticle ? 'The article stays' : 'The comments stay'
+    toast(`${saved}. ${kept} on this device, so it reads offline too.`)
   } catch {
     toast('Could not save this story', { tone: 'error' })
   }

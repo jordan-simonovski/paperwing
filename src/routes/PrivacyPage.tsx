@@ -29,8 +29,8 @@ export function PrivacyPage() {
 
         <Part title="On your device">
           <p>
-            Your topics, feeds, votes, hides, what you’ve read, your taste profile, your saved stories and their downloaded articles are stored in this browser. Nobody else can see them, and clearing
-            the site’s data removes them.
+            Your topics, feeds, votes, hides, what you’ve read, your taste profile, your saved stories and their downloaded articles, and which one-time explanations you’ve already seen are stored in
+            this browser. Nobody else can see them, and clearing the site’s data removes them.
           </p>
         </Part>
 
@@ -119,8 +119,8 @@ export function PrivacyPage() {
             would on its own site. A PeerTube video’s details are read from its own server, straight from your browser, and it plays as a plain video file from wherever that server keeps it.
           </p>
           <p>
-            To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself
-            isn’t stored.
+            To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). When Bluesky reads a published mix, the count is kept
+            against the mix owner’s public account ID instead. The counters expire within a day, and the address itself isn’t stored.
           </p>
         </Part>
 
