@@ -2,6 +2,7 @@ import { BSKY_FEED_BY_RKEY, BSKY_FEEDS } from '../src/lib/bskyFeeds.js'
 import { authConfigured, buildFeed, searchStories, toStory, whyKept } from './_lib/bsky.js'
 import { resolveTxt } from 'node:dns/promises'
 import { fail, fetchJson, fetchText, json } from './_lib/http.js'
+import { fanOutLimited } from './_lib/kv.js'
 import { mixFeed } from './_lib/mixfeed.js'
 import { paperwingFeedUris } from './_lib/paperwing.js'
 import type { PaperwingSort } from '../src/lib/paperwing.js'
@@ -147,6 +148,8 @@ export async function GET(request: Request): Promise<Response> {
       case 'search': {
         const q = (p.get('q') ?? '').trim().slice(0, 120)
         if (!q) return fail('q required')
+        // Searches as PaperWing's own account when it has one, so a stranger mustn't be able to spend it.
+        if (await fanOutLimited(request, 2)) return fail('That was a lot at once. Try again in a minute.', 429)
         const days = Number(p.get('days')) || undefined
         return json(await searchStories(q, days && days > 0 && days <= 3650 ? days : undefined, p.get('sort') === 'new' ? 'latest' : 'top'), 300)
       }

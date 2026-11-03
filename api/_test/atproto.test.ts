@@ -36,3 +36,11 @@ describe('the feed generator', () => {
     expect(again.body.feeds.every((f) => f.uri.startsWith(`at://${PUBLISHER}/app.bsky.feed.generator/`))).toBe(true)
   })
 })
+
+describe('a reader’s search', () => {
+  it('counts against the caller’s fan-out allowance: it searches as PaperWing’s own account', async () => {
+    const ask = () => call(GET, '/api/atproto?route=search&q=lisp', { headers: { 'x-forwarded-for': '203.0.113.9' } })
+    for (let i = 0; i < 60; i++) expect((await ask()).status).not.toBe(429)
+    expect((await ask()).status).toBe(429)
+  })
+})

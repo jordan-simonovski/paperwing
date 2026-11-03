@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { setUpstream } from '../_lib/http.js'
+import { kv } from '../_lib/kv.js'
 import { call, fakeUpstreams } from './harness.js'
 import { GET, SOURCES } from '../feed.js'
 
@@ -94,5 +95,42 @@ describe('the feed function', () => {
       .reply(200, '<html></html>', { headers: { 'content-type': 'text/html' } })
     const res = await call(GET, '/api/feed?src=cardimage&url=https://news.example/no-picture')
     expect(res.status).toBe(204)
+  })
+})
+
+// Sources that fan out to many other servers share one allowance per caller (FAN_OUT_PER_MINUTE),
+// each costing about what it can ask of others. A one-fetch source (a feed, an icon, a card) never counts.
+describe('the fan-out allowance', () => {
+  const discover = (from: string) => call(GET, '/api/feed?src=discover&url=nope', { headers: { 'x-forwarded-for': from } })
+
+  it('stops a caller who asks for too much fan-out, and only that caller', async () => {
+    for (let i = 0; i < 4; i++) expect((await discover('203.0.113.9')).status).not.toBe(429)
+    const over = await discover('203.0.113.9')
+    expect(over.status).toBe(429)
+    expect(over.headers.get('cache-control')).toBe('no-store')
+    expect((await discover('198.51.100.7')).status).not.toBe(429)
+  })
+
+  it('never counts a one-fetch source against it', async () => {
+    for (let i = 0; i < 5; i++) await discover('203.0.113.9')
+    net.get('https://lobste.rs').intercept({ path: '/hottest.json' }).reply(200, [lobstersStory])
+    expect((await call(GET, '/api/feed?src=lobsters', { headers: { 'x-forwarded-for': '203.0.113.9' } })).status).toBe(200)
+  })
+
+  it('costs a status check one, plus one for each page the caller names', async () => {
+    const hosts = Array.from({ length: 25 }, (_, i) => `s${i}.example`).join(',')
+    const status = () => call(GET, `/api/feed?src=status&providers=x&hosts=${hosts}`, { headers: { 'x-forwarded-for': '203.0.113.9' } })
+    net
+      .get(/s\d+\.example/)
+      .intercept({ path: '/api/v2/incidents.json' })
+      .reply(200, { incidents: [] })
+      .persist()
+    for (let i = 0; i < 4; i++) expect((await status()).status).toBe(200)
+    expect((await status()).status).toBe(429)
+  })
+
+  it('refuses when the store can’t count', async () => {
+    vi.spyOn(kv(), 'bump').mockRejectedValueOnce(new Error('Sync store answered 503'))
+    expect((await discover('203.0.113.9')).status).toBe(429)
   })
 })
