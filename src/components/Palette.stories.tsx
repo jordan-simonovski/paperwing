@@ -69,6 +69,16 @@ export const DottedWordsAreNotLinks: Story = {
   },
 }
 
+/** A pasted Bluesky feed, community or board opens as itself, not as a site to look up. */
+export const PastedFeedOpensAsItself: Story = {
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body)
+    await userEvent.type(page.getByRole('combobox'), 'https://bsky.app/profile/alice.bsky.social/feed/science')
+    await expect(page.getAllByRole('option')[0]).toHaveTextContent('Open this Bluesky feed')
+    await expect(page.queryByRole('option', { name: /Follow this site/ })).toBeNull()
+  },
+}
+
 /** Several words find a setting by any of its words ("sign in" finds accounts). */
 export const SeveralWords: Story = {
   play: async ({ canvasElement }) => {

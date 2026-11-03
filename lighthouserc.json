@@ -18,6 +18,6 @@
         "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }]
       }
     },
-    "upload": { "target": "filesystem", "outputDir": ".lighthouseci" }
+    "upload": { "target": "temporary-public-storage" }
   }
 }

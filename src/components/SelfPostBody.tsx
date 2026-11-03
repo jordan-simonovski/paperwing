@@ -62,7 +62,8 @@ export function SelfPostBody({
             {[...versions].reverse().map((v, i) => (
               <section key={v.seenAt} className="rounded-xl bg-sunk p-4" aria-label={i === 0 ? 'Current version' : `Earlier version, from ${fullDate(v.seenAt)}`}>
                 <p className="mb-2 text-[0.8125rem] font-semibold text-ink-3">
-                  {i === 0 ? 'Now' : 'Before'} · {fullDate(v.seenAt)}
+                  {i === 0 ? 'Now' : 'Before'}
+                  <span className="ml-2 font-normal">{fullDate(v.seenAt)}</span>
                 </p>
                 <Words body={v.body} />
               </section>

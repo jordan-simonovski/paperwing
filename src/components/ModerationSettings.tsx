@@ -23,9 +23,10 @@ export function Labelers() {
           <div className="flex items-center gap-3">
             <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(open === l.did ? undefined : l.did)} aria-expanded={open === l.did}>
               <p className="truncate text-[0.9375rem] font-semibold">{l.name}</p>
-              <p className="truncate text-[0.8125rem] text-ink-3">
-                {l.handle ? `@${l.handle} · ` : ''}
-                {Object.keys(l.defs).length} labels · {open === l.did ? 'hide settings' : 'choose what they do'}
+              <p className="meta">
+                {l.handle && <span>@{l.handle}</span>}
+                <span>{Object.keys(l.defs).length} labels</span>
+                <span>{open === l.did ? 'hide settings' : 'choose what they do'}</span>
               </p>
             </button>
             <button className="icon-btn flex-none" onClick={() => set({ labelers: labelers.filter((x) => x.did !== l.did) })} aria-label={`Unsubscribe from ${l.name}`}>

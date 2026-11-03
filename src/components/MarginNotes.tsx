@@ -79,7 +79,7 @@ export function MarginNotes({ url, container, html }: { url: string; container: 
       {notes.length > 0 && (
         <section className="mt-12 border-t border-line pt-6">
           <h3 className="flex items-center gap-2 text-[1rem] font-bold">
-            <Highlighter size={16} /> Margin notes · {notes.length}
+            <Highlighter size={16} /> Margin notes <span className="num font-normal text-ink-3">{notes.length}</span>
           </h3>
           <ul className="mt-3 space-y-4">
             {notes.map((n) => (

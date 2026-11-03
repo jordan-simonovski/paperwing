@@ -13,6 +13,7 @@ import { OfficialBadge } from './OfficialBadge'
  */
 export function BoardDirectory() {
   const { data: all = [], isPending, isError, refetch } = useAllBoards()
+  const empty = !isPending && !isError && all.length === 0
   const joined = usePrefs((p) => p.boards)
   const [order, setOrder] = useState<'active' | 'new'>('active')
   const [query, setQuery] = useState('')
@@ -26,9 +27,12 @@ export function BoardDirectory() {
     <div className="mt-6">
       <div className="flex flex-wrap items-center gap-3">
         <p className="min-w-0 flex-1 text-[0.9375rem] text-ink-2">Spaces run by their communities, with their own rules and moderators. Each lives in its owner’s Bluesky account.</p>
-        <Link className="btn btn-primary" to="/boards">
-          <Plus size={15} /> Start a board
-        </Link>
+        {/* With no boards yet, the empty state below says what a board is and offers the start itself. */}
+        {!empty && (
+          <Link className="btn btn-primary" to="/boards">
+            <Plus size={15} /> Start a board
+          </Link>
+        )}
       </div>
       {all.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-2">

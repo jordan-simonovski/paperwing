@@ -67,7 +67,11 @@ export function ProfileHeader({ actor }: { actor: string }) {
           <div className="min-w-0 flex-1">
             <h1 className="text-[1.375rem] font-bold leading-tight tracking-[-0.01em] [overflow-wrap:anywhere]">{profile.name ?? `@${profile.handle}`}</h1>
             {profile.name && <p className="truncate text-[0.875rem] text-ink-3">@{profile.handle}</p>}
-            <p className="mt-1 text-[0.8125rem] text-ink-3">{stats.join(' · ')}</p>
+            <p className="meta mt-1">
+              {stats.map((x) => (
+                <span key={x}>{x}</span>
+              ))}
+            </p>
           </div>
         </div>
         {profile.bio && <p className="mt-3 line-clamp-4 whitespace-pre-line text-[0.9375rem] leading-relaxed text-ink-2 [overflow-wrap:anywhere]">{profile.bio}</p>}

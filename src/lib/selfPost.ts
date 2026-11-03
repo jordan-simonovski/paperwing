@@ -44,7 +44,7 @@ function asStory(ref: { uri: string; cid: string }, title: string, body: string,
   return {
     key: storyKey({ kind: 'bs', uri: ref.uri }),
     source: 'bluesky',
-    sourceLabel: 'Bluesky',
+    sourceLabel: 'PaperWing',
     title,
     url: null,
     discussionUrl: `https://bsky.app/profile/${handleOrDid()}/post/${ref.uri.split('/').pop()}`,

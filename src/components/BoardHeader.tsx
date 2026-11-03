@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Link2, Loader2, PenLine, Pencil, Plus, Shield, Users } from 'lucide-react'
+import { Check, ChevronDown, Link2, Loader2, PenLine, Pencil, Plus, RefreshCw, Shield, Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { useAtproto } from '../lib/atproto'
@@ -12,7 +12,7 @@ import { OfficialBadge } from './OfficialBadge'
 
 /** The top of a community board: what it's for, its rules and who moderates it, and a way to join. */
 export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri: string }) {
-  const { data: board, isPending, error } = useBoard(did, rkey)
+  const { data: board, isPending, error, refetch } = useBoard(did, rkey)
   const joined = usePrefs((p) => p.boards.some((b) => b.uri === uri))
   const me = useAtproto((a) => a.did)
   const [rules, setRules] = useState(false)
@@ -31,6 +31,10 @@ export function BoardHeader({ did, rkey, uri }: { did: string; rkey: string; uri
         <div className="rounded-[18px] bg-panel p-5">
           <p className="text-[1.125rem] font-bold">This board didn’t load</p>
           <p className="mt-1 text-[0.875rem] text-ink-3">{error?.message ?? 'It may have been deleted by its owner.'}</p>
+          {/* Like every state that failed: a way on. */}
+          <button className="btn mt-3" onClick={() => void refetch()}>
+            <RefreshCw size={15} /> Try again
+          </button>
         </div>
       </header>
     )

@@ -16,6 +16,10 @@ test('a self post opens to its words, says it was edited, and shows what it said
 
   const story = pane(page)
   await expect(story.getByRole('heading', { name: SELF_POST.title, level: 1 })).toBeVisible()
+  // A PaperWing post is shown as PaperWing's own once its Bluesky thread loads; links out still say Bluesky.
+  await expect(story.locator('header').first()).toContainText('PaperWing')
+  await expect(story.locator('header').first()).not.toContainText('Bluesky')
+  await expect(story.getByRole('link', { name: 'Open on Bluesky' })).toBeVisible()
   // The words from PaperWing, as Markdown, not the Bluesky post's snippet.
   await expect(story.getByText('Piranesi', { exact: true })).toHaveJSProperty('tagName', 'STRONG')
   await expect(story.getByRole('listitem').filter({ hasText: 'Tell me yours' })).toBeVisible()
