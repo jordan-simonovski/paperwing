@@ -96,6 +96,6 @@ const NAMES: Record<SpiceLevel, string> = { 0: 'Calm', 1: 'Lively', 2: 'Heated',
 
 /** "Heated", and what makes it so, in plain words. */
 export function describeSpice(g: SpiceGrade): { name: string; reasons: string[] } {
-  const reasons = [g.split >= 0.7 && 'split into sides', g.pushback >= 0.5 && 'lots of pushback', g.hostile >= 2 && 'some personal attacks'].filter((r): r is string => !!r)
+  const reasons = [g.split >= 0.7 && 'split into sides', g.pushback >= 0.5 && 'lots of pushback', (g.hostile >= 2 || g.flame >= 0.4) && 'some personal attacks'].filter((r): r is string => !!r)
   return { name: NAMES[g.level], reasons }
 }

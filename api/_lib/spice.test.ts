@@ -162,6 +162,8 @@ describe('spice grading', () => {
     const g = gradeFrom(state, { tone, split: { noul: 0.8 }, replies }, 120)
     expect(g).toMatchObject({ sharp: 0.7, flame: 0.1, pushback: 0.6, hostile: 1, level: 2 })
     expect(describeSpice(g)).toEqual({ name: 'Heated', reasons: ['split into sides', 'lots of pushback'] })
+    // A flamewar by its tone alone still says why.
+    expect(describeSpice(grade({ level: 3, flame: 0.5 })).reasons).toEqual(['some personal attacks'])
   })
 
   it('puts heated discussions first and keeps hot order otherwise', () => {
@@ -219,6 +221,17 @@ describe('/api/spice', () => {
     const { kv } = await import('./kv')
     expect(await kv().get('rd:spice:hn-3')).toBeNull()
     expect(JSON.parse((await kv().get('rd:spice-error'))!)).toMatchObject({ key: 'hn-3', message: 'Jev left out an answer' })
+  })
+
+  it('works the level out again for current grades, and leaves older ones as they were', async () => {
+    const { kv } = await import('./kv')
+    // Asked older questions: no sharp or flame to work from, so its stored level stands.
+    await kv().set('rd:spice:hn-7', JSON.stringify(grade({ level: 2, heat: 1.9, v: GRADE_VERSION - 1 })), 600)
+    // Current questions, stored before the thresholds moved: the level comes from today's.
+    await kv().set('rd:spice:hn-8', JSON.stringify(grade({ level: 0, sharp: 0.7, pushback: 0.5, v: GRADE_VERSION })), 600)
+    const res = await get('hn-7~5,hn-8~5')
+    expect(res.grades['hn-7'].level).toBe(2)
+    expect(res.grades['hn-8'].level).toBe(2)
   })
 
   it('rests a source that rate-limited the server', async () => {
