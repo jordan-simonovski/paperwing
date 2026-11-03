@@ -1,6 +1,6 @@
 import { deleteRecord, putRecord, useAtproto } from './atproto'
 import { channelId } from './channelId'
-import { cleanMix, FEEDGEN_DID, feedRkey, MIX_NSID, type MixRecord, type MixSource } from './mixSources'
+import { cleanMix, FEEDGEN_DID, feedRkey, isPublicSource, MIX_NSID, type MixRecord, type MixSource } from './mixSources'
 import { feed } from './sources/http'
 import { usePrefs, type FollowedMix, type Mix } from './store'
 import type { FeedRef } from './topics'
@@ -49,7 +49,13 @@ export function mixFeedRefs(sources: MixSource[], topicFeeds: (id: string) => Fe
   })
 }
 
-const record = (m: Mix): MixRecord => ({ name: m.name, ...(m.description ? { description: m.description } : {}), sources: m.sources, createdAt: new Date(m.updatedAt).toISOString() })
+/** The public record of a mix. A private feed stays in your own copy but never goes in it, nor into its Bluesky feed. */
+const record = (m: Mix): MixRecord => ({
+  name: m.name,
+  ...(m.description ? { description: m.description } : {}),
+  sources: m.sources.filter(isPublicSource),
+  createdAt: new Date(m.updatedAt).toISOString(),
+})
 
 /** The link anyone can open to see and follow a published mix. */
 export const shareLink = (uri: string) => {
@@ -72,6 +78,7 @@ export async function publishMix(mix: Mix, asFeed = !!mix.feed): Promise<Mix> {
   if (!useAtproto.getState().did) throw new Error('Sign in with Bluesky first (Settings, Sources)')
   ownUris(mix)
   if (!mix.sources.length) throw new Error('Add a source first')
+  if (!mix.sources.some(isPublicSource)) throw new Error('Its feeds are private, so they stay out of a published mix: add a public source to publish it')
   const ref = await putRecord(MIX_NSID, mix.id, record(mix) as unknown as Record<string, unknown>)
   let feed = mix.feed
   if (asFeed) {

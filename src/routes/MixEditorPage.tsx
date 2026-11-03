@@ -1,4 +1,4 @@
-import { Check, Copy, Loader2, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, Copy, Loader2, Lock, Plus, Search, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { publisherRef } from '../lib/publishers'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
@@ -6,7 +6,8 @@ import { useAtproto } from '../lib/atproto'
 import { findTopic } from '../lib/channels'
 import { findFeeds } from '../lib/follow'
 import { afterPublishing, deleteMix, mixChannel, newMix, publishMix, removeFeed, saveMix, shareLink, unpublishMix } from '../lib/mixes'
-import { MAX_SOURCES, sourceLabel, type MixSource } from '../lib/mixSources'
+import { plural } from '../lib/format'
+import { isPublicSource, MAX_SOURCES, sourceLabel, type MixSource } from '../lib/mixSources'
 import { usePrefs, type Mix } from '../lib/store'
 import { TOPICS } from '../lib/topics'
 import { toast } from '../lib/ui'
@@ -39,6 +40,8 @@ function Editor({ initial }: { initial: Mix }) {
   const prefs = usePrefs()
   const signedIn = useAtproto((s) => !!s.did)
   const [mix, setMix] = useState(initial)
+  // Private feeds stay in your copy but out of what's published.
+  const hidden = mix.sources.filter((s) => !isPublicSource(s)).length
   const [busy, setBusy] = useState<string>()
   const [site, setSite] = useState('')
   const [search, setSearch] = useState('')
@@ -103,6 +106,7 @@ function Editor({ initial }: { initial: Mix }) {
         <div className="mt-2 flex flex-wrap gap-2">
           {mix.sources.map((s) => (
             <span key={JSON.stringify(s)} className="chip following h-9 gap-1.5 pl-3 pr-1.5 text-[0.875rem]">
+              {!isPublicSource(s) && <Lock size={13} role="img" aria-label="Private: stays out of the published mix" />}
               {sourceLabel(s)}
               <button type="button" className="icon-btn size-6" onClick={() => toggle(s)} aria-label={`Remove ${sourceLabel(s)}`}>
                 <X size={13} />
@@ -236,6 +240,12 @@ function Editor({ initial }: { initial: Mix }) {
 
         <section className="mt-10 rounded-[18px] bg-panel p-5">
           <h2 className="text-[1.0625rem] font-bold">Share it</h2>
+          {signedIn && hidden > 0 && (
+            <p className="mt-1 text-[0.8125rem] text-ink-3">
+              {plural(hidden, 'private feed')} {hidden === 1 ? 'stays' : 'stay'} out of the published mix and its Bluesky feed: {hidden === 1 ? 'its address holds' : 'their addresses hold'} a password
+              or token. {hidden === 1 ? 'It stays' : 'They stay'} in your own copy.
+            </p>
+          )}
           {!signedIn ? (
             <p className="mt-1 text-[0.875rem] text-ink-2">
               Sign in with Bluesky (
