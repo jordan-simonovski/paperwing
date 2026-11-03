@@ -3,7 +3,8 @@ import { authConfigured, buildFeed, searchStories, toStory, whyKept } from './_l
 import { resolveTxt } from 'node:dns/promises'
 import { fail, fetchJson, fetchText, json } from './_lib/http.js'
 import { fanOutLimited } from './_lib/kv.js'
-import { mixFeed } from './_lib/mixfeed.js'
+import { StandardRateLimit } from './_lib/standard.js'
+import { mixFeed, MixSourceError } from './_lib/mixfeed.js'
 import { paperwingFeedUris } from './_lib/paperwing.js'
 import type { PaperwingSort } from '../src/lib/paperwing.js'
 import { clientMetadata, HOME, HOSTS } from '../src/lib/oauthClient.js'
@@ -49,7 +50,8 @@ const PAPERWING_FEEDS: Record<string, { sort: PaperwingSort; displayName: string
 /** The account @paperwing.io belongs to. */
 const HANDLE_DID = 'did:plc:eprq6bm2okrgk6zsoka2wpux'
 
-const xrpcError = (error: string, message: string, status = 400) => new Response(JSON.stringify({ error, message }), { status, headers: { 'content-type': 'application/json' } })
+const xrpcError = (error: string, message: string, status = 400) =>
+  new Response(JSON.stringify({ error, message }), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url)
@@ -92,7 +94,9 @@ export async function GET(request: Request): Promise<Response> {
         }
         if (m && mixRkey) {
           // A feed whose mix was deleted or never existed is an unknown feed to Bluesky, not a server error.
-          const uris = await mixFeed(m[1], mixRkey).catch((err: Error) => err)
+          const uris = await mixFeed(m[1], mixRkey, request).catch((err: Error) => err)
+          if (uris instanceof StandardRateLimit) return xrpcError('RateLimitExceeded', uris.message, 429)
+          if (uris instanceof MixSourceError) return xrpcError('UpstreamFailure', uris.message, 502)
           if (uris instanceof Error) return xrpcError('UnknownFeed', `No PaperWing mix behind this feed: ${uris.message}`)
           const next = offset + limit < uris.length ? String(offset + limit) : undefined
           return json({ feed: uris.slice(offset, offset + limit).map((post) => ({ post })), ...(next ? { cursor: next } : {}) }, 120)

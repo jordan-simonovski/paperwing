@@ -11,7 +11,7 @@ import { toast } from './ui'
 export async function publishBlogroll() {
   const { customFeeds } = usePrefs.getState()
   await putRecord(BLOGROLL_NSID, 'self', {
-    feeds: customFeeds.slice(0, MAX_BLOGROLL).map((f) => ({ url: f.url, label: f.label, ...(f.site ? { site: f.site } : {}) })),
+    feeds: customFeeds.slice(0, MAX_BLOGROLL).map((f) => ({ url: f.url, label: f.label, ...(f.site ? { site: f.site } : {}), ...(f.format ? { format: f.format } : {}) })),
     updatedAt: new Date().toISOString(),
   })
 }

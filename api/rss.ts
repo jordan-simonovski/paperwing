@@ -7,6 +7,7 @@ import { paperwingFront } from './_lib/paperwing.js'
 import { boardFront, readBoard } from './_lib/boards.js'
 import { actorOf, person } from './_lib/people.js'
 import { escapeHtml as esc, siteOf } from './_lib/text.js'
+import { StandardRateLimit } from './_lib/standard.js'
 
 // RSS out: PaperWing's own pages as feeds any reader can follow, so nothing here only works inside
 // PaperWing. /rss/front (the front page), /rss/board/<topic>, /rss/topic/<topic>, /rss/mix/<did>/<rkey>
@@ -76,7 +77,7 @@ async function topicFeed(id: string): Promise<Feed> {
   return { title: `${topic.label} on PaperWing`, description: topic.blurb ?? `${topic.label}, from publishers and Hacker News`, page: `${ORIGIN}/t/${id}`, items: items.slice(0, 40) }
 }
 
-async function build(parts: string[]): Promise<Feed> {
+async function build(parts: string[], request: Request): Promise<Feed> {
   const [kind, a, b] = parts
   switch (kind) {
     case 'front':
@@ -109,7 +110,7 @@ async function build(parts: string[]): Promise<Feed> {
         title: `${mix.name}: a PaperWing mix${handle ? ` by @${handle}` : ''}`,
         description: mix.description ?? 'A mix of sources on PaperWing',
         page: `${ORIGIN}/mix/${a}/${b}`,
-        items: await linkStories(mix.sources),
+        items: await linkStories(mix.sources, request),
       }
     }
     case 'u': {
@@ -159,14 +160,14 @@ export async function GET(request: Request): Promise<Response> {
   const path = (new URL(request.url).searchParams.get('path') ?? '').replace(/^\/+|\/+$/g, '')
   const parts = path.split('/').filter(Boolean)
   try {
-    const feed = await build(parts)
+    const feed = await build(parts, request)
     return new Response(toRss(feed, `${ORIGIN}/rss${path ? `/${path}` : ''}`), {
       headers: { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'public, max-age=600, s-maxage=600, stale-while-revalidate=3600', 'access-control-allow-origin': '*' },
     })
   } catch (err) {
     const missing = err instanceof NotFound
     return new Response(missing ? err.message : 'This feed couldn’t be built just now. Try again shortly.', {
-      status: missing ? 404 : 502,
+      status: missing ? 404 : err instanceof StandardRateLimit ? 429 : 502,
       headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': missing ? 'public, s-maxage=300' : 'no-store' },
     })
   }

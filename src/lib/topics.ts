@@ -8,6 +8,7 @@ export type FeedRef =
   | { kind: 'lobsters'; path: string }
   | { kind: 'devto'; tag: string }
   | { kind: 'rss'; url: string; label: string }
+  | { kind: 'standard'; url: string; label: string }
   | { kind: 'arxiv'; q: string }
   | { kind: 'hf' }
   | { kind: 'github'; q: string }

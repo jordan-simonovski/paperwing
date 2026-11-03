@@ -22,6 +22,7 @@ const SAMPLES: { [K in FeedRef['kind']]: Ref<K>[] } = {
     { kind: 'rss', url: 'https://feeds.example.com/a.xml', label: 'Example A' },
     { kind: 'rss', url: 'https://example.org/b.xml', label: 'Example B' },
   ],
+  standard: [{ kind: 'standard', url: 'https://writer.example', label: 'A writer' }],
   arxiv: [{ kind: 'arxiv', q: 'cat:cs.AI' }],
   hf: [{ kind: 'hf' }],
   github: [{ kind: 'github', q: 'stars:>50' }],

@@ -4,7 +4,7 @@ import { Pip } from '../components/Pip'
 // What PaperWing keeps, where, and who sees it. Written to match the code: if something here
 // changes in the app (a new server store, a new service), this page changes with it.
 
-const UPDATED = '2 November 2026'
+const UPDATED = '3 November 2026'
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -97,6 +97,10 @@ export function PrivacyPage() {
           <p>
             Suggested posts from community boards in For you are picked from how lively each board is across PaperWing, only from posts their posters also put on the front page, and are the same for
             everyone. Nothing about you is sent to pick them: the boards you’ve joined are left out on your device. You can turn suggestions, and PaperWing’s announcements, off under Settings, Tuning.
+          </p>
+          <p>
+            Following a Discourse forum fetches its public RSS feed. Following a Standard.site publication reads its public records from the author’s server and checks its website and article links.
+            The publication address and format stay with your other feed settings, including encrypted sync and your public blogroll if you turn it on.
           </p>
           <p>
             To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself

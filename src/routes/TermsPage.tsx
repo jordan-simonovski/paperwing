@@ -4,7 +4,7 @@ import { Pip } from '../components/Pip'
 // The terms of using PaperWing, in plain words. Like the privacy page, written to match what the app
 // actually does: if a promise here changes in the code, it changes here too.
 
-const UPDATED = '2 November 2026'
+const UPDATED = '3 November 2026'
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -42,6 +42,9 @@ export function TermsPage() {
         </Part>
 
         <Part title="Other people’s content">
+          <p>
+            Discourse forums and Standard.site publications are read from their public feeds or records. Following them here does not sign you in to those services or publish a subscription there.
+          </p>
           <p>
             Stories, articles, posts and comments belong to the people and publishers who made them. PaperWing shows headlines, short excerpts and links, and the reader view and saved stories fetch an
             article for your own reading, the way your browser would. Follow the link to the original to support the people who wrote it.

@@ -1,6 +1,7 @@
 import type { Page, Request, Route } from '@playwright/test'
 import type { SelfPostBody } from '../../src/lib/paperwing'
 import type { Article, Story } from '../../src/lib/types'
+import type { FoundFeed } from '../../src/lib/publishers'
 import { HN_TOP, SEABED, MELTING, WEB_WE_LOST_ARTICLE, WEB_WE_LOST_THREAD, type HnHit, type HnItem, type LemmyPostView } from '../fixtures/upstream'
 
 // Every request the app makes in a journey is answered here, from fixtures, or blocked. The
@@ -22,6 +23,7 @@ type Answer<T> = T | Reply
 
 /** What the stubbed world holds. A journey overrides any part of it; maps merge key by key. */
 export interface Stubs {
+  discover: FoundFeed[]
   /** /api/feed?src=<src>, or <src>:<label> for one RSS feed ("rss:Quanta"): stories, as the server sends them. */
   feeds: Record<string, Answer<Story[]>>
   /** Hacker News' top stories, in order: Firebase's id list and Algolia's hits for them. */
@@ -47,6 +49,7 @@ export interface Stubs {
 }
 
 const DEFAULTS: Stubs = {
+  discover: [],
   feeds: { 'rss:Quanta': [MELTING] },
   hnTop: HN_TOP,
   hnSearch: [],
@@ -104,6 +107,7 @@ const HOSTS: Record<string, Handler> = {
         const rkey = q.get('rkey') ?? ''
         return { board: { uri: `at://${did}/io.paperwing.board/${rkey}`, name: 'Board', official: false, moderators: [], moderatorHandles: {} }, stories: s.feeds[`board:${did}`] ?? [] }
       }
+      if (src === 'discover') return s.discover
       return s.feeds[`${src}:${q.get('label')}`] ?? s.feeds[src] ?? []
     }
     if (p === '/api/extract') return s.extract[q.get('url') ?? ''] ?? fail(422, 'Could not extract an article')

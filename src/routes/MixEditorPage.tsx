@@ -1,5 +1,6 @@
 import { Check, Copy, Loader2, Plus, Search, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
+import { publisherRef } from '../lib/publishers'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { useAtproto } from '../lib/atproto'
 import { findTopic } from '../lib/channels'
@@ -168,9 +169,9 @@ function Editor({ initial }: { initial: Mix }) {
           </Group>
         )}
 
-        <Group title="Publishers" hint="Any site with a feed: paste its address.">
+        <Group title="Publishers" hint="Paste a blog, Discourse forum or Standard.site publication.">
           {prefs.customFeeds.map((f) => {
-            const s: MixSource = { kind: 'rss', url: f.url, label: f.label }
+            const s: MixSource = publisherRef(f)
             return (
               <Chip key={f.url} on={has(s)} onClick={() => toggle(s)}>
                 {f.label}
@@ -178,7 +179,7 @@ function Editor({ initial }: { initial: Mix }) {
             )
           })}
           {mix.sources
-            .filter((s): s is Extract<MixSource, { kind: 'rss' }> => s.kind === 'rss' && !prefs.customFeeds.some((f) => f.url === s.url))
+            .filter((s): s is Extract<MixSource, { kind: 'rss' | 'standard' }> => (s.kind === 'rss' || s.kind === 'standard') && !prefs.customFeeds.some((f) => f.url === s.url))
             .map((s) => (
               <Chip key={s.url} on onClick={() => toggle(s)}>
                 {s.label}
@@ -192,7 +193,7 @@ function Editor({ initial }: { initial: Mix }) {
               void run('site', async () => {
                 const [feed] = await findFeeds(site.trim())
                 if (!feed) throw new Error('No feed found there')
-                toggle({ kind: 'rss', url: feed.url, label: feed.title })
+                toggle(publisherRef({ ...feed, label: feed.title }))
                 setSite('')
               })
             }}

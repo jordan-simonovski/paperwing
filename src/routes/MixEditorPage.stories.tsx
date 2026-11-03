@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor } from 'storybook/test'
 import type { Mix } from '../lib/store'
 import { useUI } from '../lib/ui'
+import { usePrefs } from '../lib/store'
 import { MixEditorPage } from './MixEditorPage'
 
 const DID = 'did:plc:paperwingreaderabcdefghi'
@@ -26,6 +27,18 @@ export const NewMix: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('textbox', { name: 'Mix name' })).toHaveValue('')
     await expect(canvas.getByRole('button', { name: 'Save and open' })).toBeDisabled()
+  },
+}
+
+export const NativePublisher: Story = {
+  parameters: { app: { fetch: { 'src=discover': [{ url: 'https://lab.leaflet.pub', title: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', posts: 0, format: 'standard' }] } } },
+  play: async ({ canvas }) => {
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Mix name' }), 'Open publishing')
+    await userEvent.type(canvas.getByPlaceholderText('theconversation.com, a blog, a newsletter'), 'lab.leaflet.pub')
+    await userEvent.click(canvas.getByRole('button', { name: 'Find' }))
+    await expect(await canvas.findByRole('button', { name: 'Leaflet Lab Notes' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Save and open' }))
+    await expect(usePrefs.getState().mixes[0].sources).toEqual([{ kind: 'standard', url: 'https://lab.leaflet.pub', label: 'Leaflet Lab Notes' }])
   },
 }
 

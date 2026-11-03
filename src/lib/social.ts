@@ -1,4 +1,5 @@
 import { TOPIC_BY_ID } from './topics.js'
+import type { PublisherFeed } from './publishers.js'
 
 // PaperWing's social records: small, public atproto records in each person's own Bluesky account, so
 // they belong to the person, work in any client that cares to read them, and need no database here.
@@ -40,7 +41,7 @@ export function cleanShare(raw: unknown): Share | undefined {
 
 /** The blogs someone reads, published so others can find them through people. One per account (rkey "self"). */
 export interface Blogroll {
-  feeds: { url: string; label: string; site?: string }[]
+  feeds: PublisherFeed[]
   updatedAt: string
 }
 
@@ -51,7 +52,7 @@ export function cleanBlogroll(raw: unknown): Blogroll | undefined {
   const r = raw as Record<string, unknown>
   if (!Array.isArray(r.feeds)) return undefined
   const seen = new Set<string>()
-  const feeds = r.feeds.slice(0, MAX_BLOGROLL * 2).flatMap((f) => {
+  const feeds = r.feeds.slice(0, MAX_BLOGROLL * 2).flatMap((f): PublisherFeed[] => {
     if (!f || typeof f !== 'object') return []
     const o = f as Record<string, unknown>
     const url = web(o.url)
@@ -59,7 +60,8 @@ export function cleanBlogroll(raw: unknown): Blogroll | undefined {
     if (!url || !label || seen.has(url)) return []
     seen.add(url)
     const site = typeof o.site === 'string' && /^[a-z0-9.-]{3,253}$/i.test(o.site) ? o.site : undefined
-    return [{ url, label, ...(site ? { site } : {}) }]
+    const format = o.format === 'standard' || o.format === 'discourse' ? o.format : undefined
+    return [{ url, label, ...(site ? { site } : {}), ...(format ? { format } : {}) }]
   })
   return feeds.length ? { feeds: feeds.slice(0, MAX_BLOGROLL), updatedAt: date(r.updatedAt) } : undefined
 }

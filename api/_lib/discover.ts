@@ -1,31 +1,37 @@
 import { assertPublicUrl, fetchText } from './http.js'
 import { tagsIn } from './text.js'
 import { rss } from './sources.js'
+import { standardHint, standardPublication } from './standard.js'
+import type { FoundFeed } from '../../src/lib/publishers.js'
 
 // Finds a site's feeds from any link to it: the homepage, one of its posts, or the feed itself.
 // Pages name their feeds in <link rel="alternate">; hosted platforms put them at known addresses;
 // failing both, the usual paths are tried. Every candidate is fetched and parsed, so only real
 // feeds with posts come back.
 
-export interface FoundFeed {
-  url: string
-  title: string
-  /** The publisher's host, for its logo and to tell whether it's already followed. */
-  site: string
-  posts: number
-  latest?: number
-}
+export type { FoundFeed } from '../../src/lib/publishers.js'
 
 const ATTR = (tag: string, name: string) =>
   tag
     .match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'))
     ?.slice(1)
     .find((v) => v !== undefined)
+
 const decode = (s: string) =>
   s
     .replace(/&amp;/g, '&')
     .replace(/&#38;/g, '&')
     .replace(/&quot;/g, '"')
+
+/** Discourse's RSS addresses keep category and tag follows scoped to the page that was pasted. */
+export function discourseFeeds(html: string, base: string): string[] {
+  if (!tagsIn(html, 'meta').some((tag) => ATTR(tag, 'name')?.toLowerCase() === 'generator' && /^Discourse\b/i.test(ATTR(tag, 'content') ?? ''))) return []
+  const u = new URL(base)
+  const path = u.pathname.replace(/\/$/, '')
+  if (/^\/(c|tag|tags)\//.test(path)) return [new URL(`${path}.rss${u.search}`, u.origin).toString()]
+  if (/^\/(latest|new|top|hot)$/.test(path)) return [new URL(`${path}.rss${u.search || (path === '/latest' ? '?order=created' : '')}`, u.origin).toString()]
+  return [`${u.origin}/latest.rss?order=created`, `${u.origin}/top.rss?period=weekly`]
+}
 
 /** The RSS and Atom feeds a page names in its <link rel="alternate"> tags, comment feeds left out. */
 export function feedLinks(html: string, base: string): string[] {
@@ -96,8 +102,21 @@ export async function discoverFeeds(raw: string): Promise<FoundFeed[]> {
   const url = await assertPublicUrl(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`)
   const candidates = new Set(knownFeeds(url))
   const first = await page(url.toString())
+  let discourse = false
   if (first && looksLikeFeed(first.text)) candidates.add(first.finalUrl)
-  else if (first) for (const f of feedLinks(first.text, first.finalUrl)) candidates.add(f)
+  else if (first) {
+    const forum = discourseFeeds(first.text, first.finalUrl)
+    discourse = !!forum.length
+    for (const f of forum.length ? forum : feedLinks(first.text, first.finalUrl)) candidates.add(f)
+    const hint = standardHint(first.text)
+    if (hint || !candidates.size) {
+      const publication = await standardPublication(first.finalUrl, hint).catch((err: unknown) => {
+        if (hint) throw err
+        return undefined
+      })
+      if (publication) return [{ url: publication.url, title: publication.name, site: new URL(publication.url).hostname, posts: 0, format: 'standard' }]
+    }
+  }
   // A post that doesn't name the feed: its homepage usually does.
   if (!candidates.size && url.pathname !== '/') {
     const home = await page(url.origin)
@@ -111,8 +130,10 @@ export async function discoverFeeds(raw: string): Promise<FoundFeed[]> {
   if (!found.length && !first) throw new Error(`Couldn't reach ${url.hostname}. Some sites refuse connections from servers like PaperWing's.`)
   // The same feed at two addresses (/feed and /feed/) shows once.
   const seen = new Set<string>()
-  return found.filter((f) => {
-    const id = `${f.title}|${f.site}|${f.posts}`
-    return !seen.has(id) && !!seen.add(id)
-  })
+  return found
+    .filter((f) => {
+      const id = f.url.replace(/\/(?=[?#]|$)/, '')
+      return !seen.has(id) && !!seen.add(id)
+    })
+    .map((f) => (discourse || (first && /<generator\b[^>]*>\s*Discourse\b/i.test(first.text)) ? { ...f, format: 'discourse' } : f))
 }

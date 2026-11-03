@@ -8,6 +8,7 @@ import { getRecord, handles, pool } from './frontpage.js'
 import { fetchJson } from './http.js'
 import { cachedInKv } from './kv.js'
 import { newsSearch, rss } from './sources.js'
+import { standardFeed, StandardRateLimit } from './standard.js'
 
 // Mixes on the server: reading one from its owner's repo (for a share link), and serving one as a
 // Bluesky feed. A Bluesky feed can only hold Bluesky posts, so a mix's feed is the posts from its
@@ -29,11 +30,25 @@ export async function readMix(uri: string): Promise<{ mix: MixRecord; did: strin
 
 const APPVIEW = 'https://public.api.bsky.app'
 
+export class MixSourceError extends Error {}
+
 /** Recent link stories from a mix's non-Bluesky sources: a few from each, newest first. */
-export async function linkStories(sources: MixSource[]): Promise<Story[]> {
+export async function linkStories(sources: MixSource[], request?: Request): Promise<Story[]> {
   const jobs: (() => Promise<Story[]>)[] = []
+  let limited: StandardRateLimit | undefined
+  let failedNative = false
   for (const s of sources) {
     if (s.kind === 'rss') jobs.push(() => rss(s.url, s.label))
+    else if (s.kind === 'standard')
+      jobs.push(async () => {
+        try {
+          return await standardFeed(s.url, s.label, request)
+        } catch (err) {
+          if (err instanceof StandardRateLimit) limited = err
+          else failedNative = true
+          throw err
+        }
+      })
     else if (s.kind === 'news') jobs.push(() => newsSearch(s.q))
     else if (s.kind === 'topic') {
       // A topic brings its first three publishers. (The app reads more for a topic: its HN search,
@@ -68,6 +83,8 @@ export async function linkStories(sources: MixSource[]): Promise<Story[]> {
     }
   }
   const results = await pool(jobs.slice(0, 16), 6, (job) => job())
+  if (limited) throw limited
+  if (failedNative && results.every((r) => r === undefined)) throw new MixSourceError('Mix publishers could not be read')
   const seen = new Set<string>()
   return results
     .flatMap((r) => (r ?? []).slice(0, 10))
@@ -83,10 +100,10 @@ async function bestPostFor(url: string): Promise<string[]> {
   return uris
 }
 
-async function buildMixFeed(did: string, rkey: string): Promise<string[]> {
+async function buildMixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
   const { mix } = await readMix(`at://${did}/${MIX_NSID}/${rkey}`)
   const feeds = mix.sources.filter((s): s is Extract<MixSource, { kind: 'bskyFeed' }> => s.kind === 'bskyFeed').slice(0, 6)
-  const [fromFeeds, stories] = await Promise.all([
+  const [fromFeeds, links] = await Promise.all([
     pool(feeds, 3, (f) =>
       fetchJson<{ feed: { post: PostView }[] }>(
         f.uri.includes('/app.bsky.graph.list/')
@@ -95,8 +112,13 @@ async function buildMixFeed(did: string, rkey: string): Promise<string[]> {
         { timeoutMs: 8000 },
       ),
     ),
-    linkStories(mix.sources),
+    linkStories(mix.sources, request).catch((err: unknown) => {
+      if (err instanceof MixSourceError) return err
+      throw err
+    }),
   ])
+  if (links instanceof MixSourceError && fromFeeds.every((r) => r === undefined)) throw links
+  const stories = links instanceof MixSourceError ? [] : links
   // For each story, every post that shared it; then the most liked of those, one per story.
   const sharing = await pool(stories, 8, (s) => bestPostFor(s.url!))
   const candidates = [...new Set(sharing.flatMap((u) => u ?? []))].slice(0, 200)
@@ -119,6 +141,6 @@ async function buildMixFeed(did: string, rkey: string): Promise<string[]> {
 }
 
 /** A mix's feed, from the cache when it's under ten minutes old. */
-export async function mixFeed(did: string, rkey: string): Promise<string[]> {
-  return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey))
+export async function mixFeed(did: string, rkey: string, request?: Request): Promise<string[]> {
+  return cachedInKv(`rd:mixfeed:${did}:${rkey}`, 600, () => buildMixFeed(did, rkey, request))
 }

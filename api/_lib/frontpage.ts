@@ -31,7 +31,7 @@ export function uriFromKey(key: string): string | undefined {
 const servers = new Map<string, { pds: string; at: number }>()
 
 /** Where a DID's repo lives: its DID document's #atproto_pds service. */
-async function pdsOf(did: string): Promise<string> {
+export async function pdsOf(did: string): Promise<string> {
   const hit = servers.get(did)
   if (hit && Date.now() - hit.at < 3_600_000) return hit.pds
   const url = did.startsWith('did:plc:') ? `https://plc.directory/${did}` : `https://${decodeURIComponent(did.slice('did:web:'.length)).replace(/:/g, '/')}/.well-known/did.json`
