@@ -1,4 +1,4 @@
-import { matchesTopic, type Topic } from './topics'
+import { matchesTopic, type Topic } from './topics.js'
 
 // Finding community boards: by name, by topic, and by how lively they are. Pure, so the command
 // bar, Search, Explore and topic pages all find the same boards the same way.
