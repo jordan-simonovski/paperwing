@@ -56,6 +56,36 @@ describe('spice grading', () => {
     expect(state.comments[0].text.length).toBeLessThanOrEqual(451)
   })
 
+  it('reads across the discussion, not down its first argument', () => {
+    // A long back-and-forth under the top comment used to fill every slot.
+    const chain = (n: number): SpiceComment[] => (n ? [c(`deep${n}`, 'a reply', chain(n - 1))] : [])
+    const argument = c(
+      'a',
+      'First',
+      Array.from({ length: 40 }, (_, i) => c(`r${i}`, 'reply', chain(4))),
+    )
+    const others = Array.from({ length: 30 }, (_, i) => c(`top${i}`, `Top-level ${i}`))
+    const { state } = buildState('Busy', [argument, ...others])
+    const tops = state.comments.filter((x) => x.reply_to === null)
+    expect(tops.length).toBe(16)
+    expect(tops.map((x) => x.author).slice(0, 3)).toEqual(['a', 'top0', 'top1'])
+    // Each top-level thread still brings some of its replies.
+    expect(state.comments.filter((x) => x.reply_to === 1).length).toBeGreaterThan(0)
+    expect(state.comments.length).toBeLessThanOrEqual(80)
+  })
+
+  it('gives a small thread all its slots', () => {
+    const { state } = buildState('Small', [
+      c(
+        'a',
+        'One',
+        Array.from({ length: 30 }, (_, i) => c(`r${i}`, 'reply')),
+      ),
+      c('b', 'Two'),
+    ])
+    expect(state.comments.length).toBe(32)
+  })
+
   it('gives one chilli only for real disagreement, more for heat', () => {
     expect(levelOf({ heat: 1.2, split: 0.7, pushback: 0.6 })).toBe(0)
     expect(levelOf({ heat: 1.5, split: 0.4, pushback: 0.6 })).toBe(0)

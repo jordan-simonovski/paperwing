@@ -17,6 +17,8 @@ const MAX_COMMENTS = 80
 const PER_COMMENT = 450
 const MAX_CHARS = 26_000
 const MAX_DEPTH = 5
+/** Top-level threads that each get a share of the comments before any gets more. */
+const MAX_TOPS = 16
 
 export interface SpiceComment {
   author: string
@@ -129,25 +131,47 @@ export interface SpiceState {
   comments: { id: number; reply_to: number | null; author: string; text: string }[]
 }
 
-/** The top of the discussion, trimmed: Jev is most accurate with only what the question needs. */
+const clip = (c: SpiceComment) => {
+  const text = c.text.replace(/\s+/g, ' ').trim()
+  return text.length > PER_COMMENT ? `${text.slice(0, PER_COMMENT)}…` : text
+}
+
+/**
+ * The top of the discussion, trimmed: Jev is most accurate with only what the question needs.
+ * The first top-level threads each get an equal share first, so one long argument under the top
+ * comment can't fill every slot and stand for the whole discussion; any room left goes to the
+ * rest in reading order.
+ */
 export function buildState(title: string, tree: SpiceComment[]): { state: SpiceState; total: number } {
-  const comments: SpiceState['comments'] = []
+  const keep = new Set<SpiceComment>()
   let chars = 0
-  const walk = (cs: SpiceComment[], parent: number | null, depth: number) => {
+  const take = (c: SpiceComment, depth: number, cap: number) => {
+    if (keep.size >= cap || chars >= MAX_CHARS) return
+    const text = clip(c)
+    if (text && !keep.has(c)) {
+      keep.add(c)
+      chars += text.length + c.author.length + 24
+    }
+    if (depth < MAX_DEPTH) for (const r of c.children) take(r, depth + 1, cap)
+  }
+  const tops = tree.slice(0, MAX_TOPS)
+  const share = Math.floor(MAX_COMMENTS / Math.max(1, tops.length))
+  for (const top of tops) take(top, 0, keep.size + share)
+  for (const top of tree) take(top, 0, MAX_COMMENTS)
+
+  // Numbered in reading order, whichever pass picked them.
+  const comments: SpiceState['comments'] = []
+  const emit = (cs: SpiceComment[], parent: number | null, depth: number) => {
     for (const c of cs) {
-      if (comments.length >= MAX_COMMENTS || chars >= MAX_CHARS) return
       let id = parent
-      const text = c.text.replace(/\s+/g, ' ').trim()
-      if (text) {
-        const clipped = text.length > PER_COMMENT ? `${text.slice(0, PER_COMMENT)}…` : text
+      if (keep.has(c)) {
         id = comments.length + 1
-        comments.push({ id, reply_to: parent, author: c.author, text: clipped })
-        chars += clipped.length + c.author.length + 24
+        comments.push({ id, reply_to: parent, author: c.author, text: clip(c) })
       }
-      if (depth < MAX_DEPTH) walk(c.children, id, depth + 1)
+      if (depth < MAX_DEPTH) emit(c.children, id, depth + 1)
     }
   }
-  walk(tree, null, 0)
+  emit(tree, null, 0)
   return { state: { title, comments }, total: count(tree) }
 }
 
@@ -205,7 +229,7 @@ export function gradeFrom(answers: JevAnswers, comments: number, now = Date.now(
 export const quiet = (comments: number, now = Date.now()): SpiceGrade => ({ level: 0, heat: 0, confidence: 0, split: 0, pushback: 0, hostile: 0, pileOn: 0, comments, at: now, v: GRADE_VERSION })
 
 /** Bumped when the questions change, so older grades are redone once. */
-export const GRADE_VERSION = 2
+export const GRADE_VERSION = 3
 
 /**
  * Whether a story is worth (re)grading: big enough, and either never graded or grown by half
