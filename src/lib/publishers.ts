@@ -13,25 +13,27 @@ export interface PublisherFeed {
 }
 
 /**
- * As many feeds as you can follow. Every synced setting travels as one record of at most 64 KB
- * (api/sync.ts), so your feeds also stop well short of that, however long their addresses.
+ * As many feeds as you can follow. Every synced setting travels sealed in one record of at most
+ * 64,000 characters (api/sync.ts), and sealing adds about a third: your feeds get the room the other
+ * settings leave in that (follow.ts, feedRoom), measured in bytes, so names in any script count right.
  */
 export const MAX_FEEDS = 250
-export const FEEDS_BYTES = 40_000
 
-/** Your feeds with new ones added after them, once each, up to the limit: what was added, and how many didn't fit. */
-export function addFeeds(current: PublisherFeed[], incoming: PublisherFeed[]): { feeds: PublisherFeed[]; added: PublisherFeed[]; left: number } {
+const bytes = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length
+
+/** Your feeds with new ones added after them, once each, while they fit in `room` bytes: what was added, and how many didn't fit. */
+export function addFeeds(current: PublisherFeed[], incoming: PublisherFeed[], room: number): { feeds: PublisherFeed[]; added: PublisherFeed[]; left: number } {
   const have = new Set(current.map((f) => f.url))
   const fresh = incoming.filter((f) => !have.has(f.url) && have.add(f.url))
   const feeds = [...current]
-  let bytes = JSON.stringify(feeds).length
+  let used = bytes(feeds)
   const added: PublisherFeed[] = []
   for (const f of fresh) {
-    const size = JSON.stringify(f).length + 1
-    if (feeds.length >= MAX_FEEDS || bytes + size > FEEDS_BYTES) break
+    const size = bytes(f) + 1
+    if (feeds.length >= MAX_FEEDS || used + size > room) break
     feeds.push(f)
     added.push(f)
-    bytes += size
+    used += size
   }
   return { feeds, added, left: fresh.length - added.length }
 }

@@ -109,6 +109,15 @@ describe('OPML', () => {
     expect(performance.now() - started).toBeLessThan(1000)
   })
 
+  it('reads the type other readers give ordinary feeds, leaving out only the kinds it can’t', () => {
+    const { feeds, skipped } = parseOpml(
+      `<opml><body>${['rss', 'RSS', 'atom', 'rss2', 'link', 'xml'].map((t, n) => `<outline type="${t}" text="${t}" xmlUrl="https://f${n}.example/feed"/>`).join('')}
+      <outline type="XML+XPath" text="x" xmlUrl="https://x.example/feed"/></body></opml>`,
+    )
+    expect(feeds).toHaveLength(6)
+    expect(skipped.unreadable).toBe(1)
+  })
+
   it('leaves the folder PaperWing’s own older exports put every feed in', () => {
     const { feeds } = parseOpml('<opml><body><outline text="Your feeds"><outline type="rss" text="A" xmlUrl="https://a.example/feed"/></outline></body></opml>')
     expect(feeds[0].folder).toBeUndefined()

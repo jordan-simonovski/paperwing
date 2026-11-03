@@ -51,7 +51,7 @@ export const NearlyFull: Story = {
     await userEvent.upload(canvas.getByLabelText('Choose an OPML file'), file())
     const said = await canvas.findByRole('status')
     await expect(said).toHaveTextContent('Following 1 new feed, in 1 folder.')
-    await expect(said).toHaveTextContent(`2 left out: you follow ${MAX_FEEDS} feeds, as many as PaperWing keeps.`)
+    await expect(said).toHaveTextContent(`2 left out: your feeds are full at ${MAX_FEEDS}, as many as PaperWing keeps in sync.`)
   },
 }
 

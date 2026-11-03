@@ -3,7 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { followsTech } from './channels'
 import { feed } from './sources/http'
-import { useActivity, usePrefs } from './store'
+import { SYNCED_PREFS, useActivity, usePrefs } from './store'
 import { isTechTopic, TOPICS } from './topics'
 import { toast } from './ui'
 import { addFeeds, type FoundFeed } from './publishers'
@@ -61,12 +61,22 @@ export function useSiteFeeds(url: string | null | undefined, enabled = true) {
 }
 
 /** What following more says once your feeds are full. */
-export const FEEDS_FULL = 'Your feeds are full: unfollow one under Settings, Sources to follow another'
+export const FEEDS_FULL = 'Your feeds are full: unfollow some under Settings, Sources to follow more'
+
+/** The plain settings a sealed sync record can hold: 64,000 characters, less a third for sealing and some to spare. */
+const SYNCED_BYTES = 44_000
+
+/** The bytes your feeds may take: what your other synced settings leave of the record they travel in. */
+export function feedRoom(): number {
+  const prefs = usePrefs.getState()
+  const others = Object.fromEntries(SYNCED_PREFS.filter((k) => k !== 'customFeeds').map((k) => [k, prefs[k]]))
+  return Math.max(0, SYNCED_BYTES - new TextEncoder().encode(JSON.stringify(others)).length)
+}
 
 export function follow(feed: FoundFeed) {
   const { customFeeds, set } = usePrefs.getState()
   if (customFeeds.some((f) => f.url === feed.url)) return
-  const { feeds, left } = addFeeds(customFeeds, [{ url: feed.url, label: feed.title, site: feed.site, ...(feed.format ? { format: feed.format } : {}) }])
+  const { feeds, left } = addFeeds(customFeeds, [{ url: feed.url, label: feed.title, site: feed.site, ...(feed.format ? { format: feed.format } : {}) }], feedRoom())
   if (left) return toast(FEEDS_FULL, { tone: 'error' })
   set({ customFeeds: feeds })
   toast(`Following ${feed.title}. New posts show in ${followsTech(usePrefs.getState().followed) ? 'Blogs' : 'Publishers'}.`, {

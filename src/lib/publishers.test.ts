@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { addFeeds, byFolder, FEEDS_BYTES, MAX_FEEDS, publisherRef } from './publishers'
+import { addFeeds, byFolder, MAX_FEEDS, publisherRef } from './publishers'
+import { seal } from './syncCrypto'
 import { mixSourceFor, resolveChannel } from './channels'
 import { cleanMix } from './mixSources'
 import { mixFeedRefs } from './mixes'
 import { buildOpml, parseOpml } from './opml'
 import { channelId } from './channelId'
-import { follow, isFollowed } from './follow'
-import { usePrefs } from './store'
+import { feedRoom, follow, isFollowed } from './follow'
+import { SYNCED_PREFS, usePrefs } from './store'
 import { cleanBlogroll } from './social'
 
 const publisher = { url: 'https://writer.example/journal', label: 'A journal', site: 'writer.example', format: 'standard' as const }
@@ -49,7 +50,7 @@ describe('how many feeds you can follow', () => {
   const feed = (n: number, extra = {}) => ({ url: `https://blog${n}.example/feed.xml`, label: `Blog ${n}`, site: `blog${n}.example`, ...extra })
 
   it('adds new feeds once each, after the ones you have', () => {
-    const { feeds, added, left } = addFeeds([feed(1)], [feed(1), feed(2), feed(2), feed(3)])
+    const { feeds, added, left } = addFeeds([feed(1)], [feed(1), feed(2), feed(2), feed(3)], 40_000)
     expect(feeds.map((f) => f.label)).toEqual(['Blog 1', 'Blog 2', 'Blog 3'])
     expect(added.map((f) => f.label)).toEqual(['Blog 2', 'Blog 3'])
     expect(left).toBe(0)
@@ -57,18 +58,34 @@ describe('how many feeds you can follow', () => {
 
   it('stops at the limit, saying how many were left out', () => {
     const many = Array.from({ length: MAX_FEEDS + 40 }, (_, n) => feed(n))
-    const { feeds, added, left } = addFeeds(many.slice(0, 10), many)
+    const { feeds, added, left } = addFeeds(many.slice(0, 10), many, 40_000)
     expect(feeds).toHaveLength(MAX_FEEDS)
     expect(added).toHaveLength(MAX_FEEDS - 10)
     expect(left).toBe(40)
   })
 
-  it('stops before your feeds outgrow what sync can carry, however long their addresses', () => {
-    const long = Array.from({ length: MAX_FEEDS }, (_, n) => feed(n, { url: `https://blog${n}.example/${'x'.repeat(400)}`, label: 'L'.repeat(120), folder: 'F'.repeat(60) }))
-    const { feeds, left } = addFeeds([], long)
-    expect(JSON.stringify(feeds).length).toBeLessThanOrEqual(FEEDS_BYTES)
-    expect(left).toBe(MAX_FEEDS - feeds.length)
+  it('stops at the room it’s given, counting bytes, not letters', () => {
+    const wide = Array.from({ length: 50 }, (_, n) => feed(n, { label: '日本語のブログ'.repeat(10) }))
+    const { feeds, left } = addFeeds([], wide, 10_000)
+    expect(new TextEncoder().encode(JSON.stringify(feeds)).length).toBeLessThanOrEqual(10_000)
+    expect(left).toBe(50 - feeds.length)
     expect(left).toBeGreaterThan(0)
+  })
+
+  it('never lets your settings outgrow what sync carries, sealed, with every other setting full too', async () => {
+    // A full taste profile beside them, and feeds with long addresses and names in other scripts.
+    const affinity = Object.fromEntries(Array.from({ length: 400 }, (_, n) => [`domain:some-long-site-name-${n}.example.com`, 2.5]))
+    usePrefs.setState({ customFeeds: [], affinity, mutedWords: Array.from({ length: 50 }, (_, n) => `muted word ${n}`) })
+    const wide = Array.from({ length: MAX_FEEDS }, (_, n) =>
+      feed(n, { url: `https://blog${n}.example/${'é'.repeat(300)}`, label: 'Ünïcödé 日本語のブログ'.repeat(6).slice(0, 120), folder: 'フォルダ'.repeat(15) }),
+    )
+    const { feeds, left } = addFeeds([], wide, feedRoom())
+    expect(left).toBeGreaterThan(0)
+    usePrefs.setState({ customFeeds: feeds })
+    const prefs = usePrefs.getState()
+    const sealed = await seal('abcdefghijklmnopqrstuvwxyz', { key: 'prefs', updatedAt: Date.now(), data: Object.fromEntries(SYNCED_PREFS.map((k) => [k, prefs[k]])) })
+    // api/sync.ts refuses a record over 64,000.
+    expect(JSON.stringify(sealed).length).toBeLessThanOrEqual(64_000)
   })
 
   it('groups your feeds by folder, loose ones first, folders in the order they first appear', () => {

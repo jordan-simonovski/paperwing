@@ -1,6 +1,6 @@
 import { BookOpen, Check, ChevronDown, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { FEEDS_FULL, follow } from '../lib/follow'
+import { FEEDS_FULL, feedRoom, follow } from '../lib/follow'
 import { plural } from '../lib/format'
 import { usePrefs } from '../lib/store'
 import { toast } from '../lib/ui'
@@ -18,7 +18,7 @@ export function Blogroll({ feeds, who, mine }: { feeds: Feed[]; who: string; min
   const missing = feeds.filter((f) => !followed.has(f.url))
   const followAll = () => {
     const { customFeeds, set } = usePrefs.getState()
-    const { feeds, added, left } = addFeeds(customFeeds, missing)
+    const { feeds, added, left } = addFeeds(customFeeds, missing, feedRoom())
     if (!added.length) return toast(FEEDS_FULL, { tone: 'error' })
     set({ customFeeds: feeds })
     toast(`Following ${plural(added.length, 'blog')} from ${who}’s blogroll${left ? `, ${left} left out: your feeds are full` : ''}`, {

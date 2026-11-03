@@ -15,9 +15,9 @@ export interface OpmlSkipped {
 
 const ATTR = /([a-zA-Z:]+)\s*=\s*("([^"]*)"|'([^']*)')/g
 // An outline tag, opening or closing. Quoted values may hold a '>' (an XPath in a FreshRSS export).
-const TAG = /<outline\b(?:[^<>"']|"[^"]*"|'[^']*'){0,400}>|<\/outline\s*>/gi
-/** The feed kinds PaperWing reads: unmarked, RSS or Atom, and its own Standard.site publications. */
-const READABLE = new Set(['', 'rss', 'atom', 'standard'])
+const TAG = /<outline\b(?:[^<>"']|"[^"]*"|'[^']*'){0,4000}>|<\/outline\s*>/gi
+/** Feed kinds PaperWing can't read: FreshRSS's scraped pages (HTML+XPath, XML+XPath) and JSON feeds. Readers mark ordinary feeds every which way. */
+const UNREADABLE = /xpath|json/i
 /**
  * Words that make a query parameter a key to someone's account, wherever they sit in its name
  * (feed_token, private-token, X-Amz-Signature, authToken). Catching too much only means adding a
@@ -56,7 +56,7 @@ export function parseOpml(text: string): { feeds: OpmlFeed[]; skipped: OpmlSkipp
     if (!/\/\s*>$/.test(tag)) open.push(url ? undefined : (attrs.title || attrs.text || '').trim().slice(0, 60) || undefined)
     if (!url || !/^https?:\/\//i.test(url) || seen.has(url)) continue
     seen.add(url)
-    if (!READABLE.has((attrs.type ?? '').trim().toLowerCase())) {
+    if (UNREADABLE.test(attrs.type ?? '')) {
       skipped.unreadable++
       continue
     }

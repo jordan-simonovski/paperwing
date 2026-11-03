@@ -4,13 +4,16 @@ import { followsTech } from '../lib/channels'
 import { plural } from '../lib/format'
 import { download } from '../lib/importExport'
 import { buildOpml, parseOpml, type OpmlSkipped } from '../lib/opml'
-import { addFeeds, byFolder, MAX_FEEDS } from '../lib/publishers'
+import { feedRoom } from '../lib/follow'
+import { addFeeds, byFolder } from '../lib/publishers'
 import { usePrefs } from '../lib/store'
 import { TOPIC_BY_ID } from '../lib/topics'
 import { toast } from '../lib/ui'
 
 interface Imported extends OpmlSkipped {
   added: number
+  /** How many you follow now. */
+  total: number
   folders: number
   already: number
   left: number
@@ -25,9 +28,9 @@ export function OpmlTools() {
     const { feeds: found, skipped } = parseOpml(await file.text())
     if (!found.length && !skipped.unreadable && !skipped.private) return toast('No feeds found in that file', { tone: 'error' })
     const { customFeeds, set } = usePrefs.getState()
-    const { feeds, added, left } = addFeeds(customFeeds, found)
+    const { feeds, added, left } = addFeeds(customFeeds, found, feedRoom())
     set({ customFeeds: feeds })
-    setImported({ ...skipped, added: added.length, folders: new Set(added.flatMap((f) => f.folder ?? [])).size, already: found.length - added.length - left, left })
+    setImported({ ...skipped, added: added.length, total: feeds.length, folders: new Set(added.flatMap((f) => f.folder ?? [])).size, already: found.length - added.length - left, left })
   }
   const exportFile = () => {
     const topicFeeds = p.followed.flatMap((id) => {
@@ -66,15 +69,17 @@ export function OpmlTools() {
 }
 
 /** What an import did, kept on screen: a big file can leave out enough to want to read about. */
-function ImportSummary({ added, folders, already, left, unreadable, private: secret, where }: Imported & { where: string }) {
+function ImportSummary({ added, total, folders, already, left, unreadable, private: secret, where }: Imported & { where: string }) {
   const lines = [
     added
       ? `Following ${plural(added, 'new feed')}${folders ? `, in ${plural(folders, 'folder')}` : ''}. They’re in ${where}.`
-      : already
-        ? 'You already follow all of those.'
-        : 'Nothing new to follow.',
+      : left
+        ? 'None of the new feeds fit.'
+        : already
+          ? 'You already follow all of those.'
+          : 'Nothing new to follow.',
     added && already ? `You already followed ${already}.` : '',
-    left ? `${left} left out: you follow ${MAX_FEEDS} feeds, as many as PaperWing keeps. Unfollow some below to make room.` : '',
+    left ? `${left} left out: your feeds are full at ${total}, as many as PaperWing keeps in sync. Unfollow some below to make room.` : '',
     unreadable ? `${unreadable} skipped: PaperWing reads RSS and Atom feeds, not scraped pages or JSON feeds.` : '',
     secret
       ? `${secret} skipped: ${secret === 1 ? 'its address holds' : 'their addresses hold'} a password or token, which PaperWing would sync. Add ${secret === 1 ? 'it' : 'them'} by hand if you’re happy with that.`
