@@ -223,9 +223,9 @@ export const usePrefs = create<Prefs>()(
           const now = Date.now()
           const profile = faded(s.affinity, s.affinityAt, now)
           const features = storyFeatures(story)
-          const taught = how.spareLiked ? new Map([...features].filter(([k]) => !((profile[k] ?? 0) > 0))) : features
-          if (!taught.size) return {}
-          return { affinity: learn(profile, taught, delta), affinityAt: now, ...(how.passive ? {} : { syncedPrefsAt: now }) }
+          const liked = (k: string) => (profile[k] ?? 0) > 0
+          if (how.spareLiked && [...features.keys()].every(liked)) return {}
+          return { affinity: learn(profile, features, delta, how.spareLiked ? liked : undefined), affinityAt: now, ...(how.passive ? {} : { syncedPrefsAt: now }) }
         }),
       toggleFollow: (id) => set((s) => ({ followed: s.followed.includes(id) ? s.followed.filter((f) => f !== id) : [...s.followed, id], syncedPrefsAt: Date.now() })),
       addInterest: (query) => {

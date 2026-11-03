@@ -8,7 +8,7 @@ export function CaughtUp() {
       <span className="flex items-center gap-1.5 font-semibold text-ink-2">
         <Check size={14} aria-hidden /> You’re caught up
       </span>
-      <span className="hidden sm:inline">Below: what you’ve seen before</span>
+      <span className="hidden sm:inline">Below: mostly what you’ve seen</span>
       <span className="h-px flex-1 bg-line" />
     </div>
   )

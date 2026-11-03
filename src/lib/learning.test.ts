@@ -90,3 +90,28 @@ describe('what scrolling past can’t do', () => {
     expect(usePrefs.getState().syncedPrefsAt).toBe(123)
   })
 })
+
+describe('sparing what you like', () => {
+  it('teaches the rest of a passed story no more than a plain pass would', () => {
+    // A lesson big enough to leave a mark on every feature, so the shares can be compared.
+    const lesson = -3
+    const s = { ...story('i', 'zorblax quux'), topics: ['space'] }
+    usePrefs.setState({ affinity: {}, affinityAt: 0 })
+    usePrefs.getState().learn(s, lesson)
+    const plain = usePrefs.getState().affinity['k:zorblax']
+    expect(plain).toBeLessThan(0)
+    usePrefs.setState({ affinity: { 't:space': 2 }, affinityAt: 0 })
+    usePrefs.getState().learn(s, lesson, { passive: true, spareLiked: true })
+    expect(usePrefs.getState().affinity['t:space']).toBe(2)
+    expect(usePrefs.getState().affinity['k:zorblax']).toBe(plain)
+  })
+
+  it('teaches nothing when it likes every feature of the story', () => {
+    const s = story('j', 'zorblax')
+    usePrefs.setState({ affinity: {}, affinityAt: 0 })
+    usePrefs.getState().learn(s, 3)
+    const liked = usePrefs.getState().affinity
+    usePrefs.getState().learn(s, -3, { passive: true, spareLiked: true })
+    expect(usePrefs.getState().affinity).toEqual(liked)
+  })
+})

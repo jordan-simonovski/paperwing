@@ -44,7 +44,8 @@ export function momentumOf(batches: Fetched[]): Record<string, number> {
         seen.mid = now
       }
       const span = at - seen.base.at
-      if (span >= SPAN && now.e > seen.base.e) out[s.key] = (now.e - seen.base.e) / (span / 3_600_000)
+      // The same story can come in more than one feed: the fastest gain stands, whatever the order.
+      if (span >= SPAN && now.e > seen.base.e) out[s.key] = Math.max(out[s.key] ?? 0, (now.e - seen.base.e) / (span / 3_600_000))
     }
   }
   while (looks.size > KEPT) looks.delete(looks.keys().next().value!)

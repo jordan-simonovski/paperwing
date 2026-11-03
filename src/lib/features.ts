@@ -171,10 +171,12 @@ export function fade(profile: Record<string, number>, days: number): Record<stri
  * is worth (store.ts LESSON: a vote 1.5, a save 0.75, a hide 0.6). Each feature moves by its share of the story, so one vote on a story
  * with a topic, a site and six keywords moves the topic most.
  */
-export function learn(profile: Record<string, number>, f: Features, delta: number): Record<string, number> {
+export function learn(profile: Record<string, number>, f: Features, delta: number, skip?: (key: string) => boolean): Record<string, number> {
   const next = { ...profile }
+  // Shares are of the whole story, so a skipped feature's share goes nowhere rather than to the rest.
   const n = norm(f)
   for (const [k, w] of f) {
+    if (skip?.(k)) continue
     const v = Math.max(-LIMIT, Math.min(LIMIT, Math.round(((next[k] ?? 0) + (delta * w) / n) * 100) / 100))
     if (Math.abs(v) < 0.05) delete next[k]
     else next[k] = v

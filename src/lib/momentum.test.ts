@@ -47,3 +47,16 @@ describe('momentum', () => {
     expect(seen(200, 2 * hour + 30 * minute)).toEqual({})
   })
 })
+
+describe('the same story in two feeds', () => {
+  it('takes the faster gain, whichever feed comes last', () => {
+    resetMomentum()
+    momentumOf([{ stories: [story(50)], at: 0 }])
+    expect(
+      momentumOf([
+        { stories: [story(100)], at: 30 * minute },
+        { stories: [story(75)], at: 30 * minute },
+      ])['hn-1'],
+    ).toBeCloseTo(70, 0)
+  })
+})
