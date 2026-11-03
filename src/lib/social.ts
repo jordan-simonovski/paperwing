@@ -1,5 +1,5 @@
 import { TOPIC_BY_ID } from './topics.js'
-import type { PublisherFeed } from './publishers.js'
+import { isPrivateAddress, type PublisherFeed } from './publishers.js'
 
 // PaperWing's social records: small, public atproto records in each person's own Bluesky account, so
 // they belong to the person, work in any client that cares to read them, and need no database here.
@@ -57,7 +57,8 @@ export function cleanBlogroll(raw: unknown): Blogroll | undefined {
     const o = f as Record<string, unknown>
     const url = web(o.url)
     const label = str(o.label, 120)
-    if (!url || !label || seen.has(url)) return []
+    // A private feed's address in an older record is never listed, wherever it's read.
+    if (!url || !label || seen.has(url) || isPrivateAddress(url)) return []
     seen.add(url)
     const site = typeof o.site === 'string' && /^[a-z0-9.-]{3,253}$/i.test(o.site) ? o.site : undefined
     const format = o.format === 'standard' || o.format === 'discourse' ? o.format : undefined

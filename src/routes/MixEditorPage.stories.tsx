@@ -54,3 +54,29 @@ export const RepublishFails: Story = {
     await expect(canvas.getByRole('textbox', { name: 'Mix name' })).toHaveValue('Space and science')
   },
 }
+
+/** A private feed stays in your mix but out of what's published, and the editor says so. */
+export const PrivateFeedStaysOut: Story = {
+  parameters: {
+    app: {
+      prefs: {
+        mixes: [
+          {
+            ...published,
+            sources: [
+              { kind: 'topic', id: 'space' },
+              { kind: 'rss', url: 'https://gitlab.example/me.atom?feed_token=glft-secret', label: 'GitLab activity' },
+            ],
+          },
+        ],
+      },
+      atproto: { did: DID, handle: 'reader.example' },
+      route: { path: '/mixes/:id?', url: `/mixes/${ID}` },
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Remove GitLab activity' })).toBeVisible()
+    await expect(canvas.getByLabelText('Private: stays out of the published mix')).toBeVisible()
+    await expect(canvas.getByText(/1 private feed stays out of the published mix/)).toBeVisible()
+  },
+}

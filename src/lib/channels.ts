@@ -5,7 +5,7 @@ import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
 import { boardParts } from './paperwing'
 import { isTechTopic, literalTerm, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
 import { mixFeedRefs } from './mixes'
-import { sourceLabel, type MixSource } from './mixSources'
+import { isPublicSource, sourceLabel, type MixSource } from './mixSources'
 import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
 
 export interface Channel {
@@ -397,7 +397,8 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
   if (a.kind === 'mix' || a.kind === 'followedMix') {
     const own = a.kind === 'mix' ? ctx.mixes?.find((m) => m.id === a.id) : undefined
     const followed = a.kind === 'followedMix' ? ctx.followedMixes?.find((m) => m.uri.split('/')[2] === a.did && m.uri.split('/')[4] === a.rkey) : undefined
-    const mix = own ?? followed
+    // Someone else's mix never fetches a private feed, even from a copy kept before they were left out.
+    const mix = own ?? (followed && { ...followed, sources: followed.sources.filter(isPublicSource) })
     if (!mix) return undefined
     const topicIds = mix.sources.flatMap((s) => (s.kind === 'topic' ? [s.id] : []))
     return {

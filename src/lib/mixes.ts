@@ -1,6 +1,7 @@
-import { deleteRecord, putRecord, useAtproto } from './atproto'
+import { deleteRecord, getOwnRecord, putRecord, useAtproto } from './atproto'
+import { isPrivateAddress } from './publishers'
 import { channelId } from './channelId'
-import { cleanMix, FEEDGEN_DID, feedRkey, MIX_NSID, type MixRecord, type MixSource } from './mixSources'
+import { cleanMix, FEEDGEN_DID, feedRkey, isPublicSource, MIX_NSID, type MixRecord, type MixSource } from './mixSources'
 import { feed } from './sources/http'
 import { usePrefs, type FollowedMix, type Mix } from './store'
 import type { FeedRef } from './topics'
@@ -49,7 +50,13 @@ export function mixFeedRefs(sources: MixSource[], topicFeeds: (id: string) => Fe
   })
 }
 
-const record = (m: Mix): MixRecord => ({ name: m.name, ...(m.description ? { description: m.description } : {}), sources: m.sources, createdAt: new Date(m.updatedAt).toISOString() })
+/** The public record of a mix. A private feed stays in your own copy but never goes in it, nor into its Bluesky feed. */
+const record = (m: Mix): MixRecord => ({
+  name: m.name,
+  ...(m.description ? { description: m.description } : {}),
+  sources: m.sources.filter(isPublicSource),
+  createdAt: new Date(m.updatedAt).toISOString(),
+})
 
 /** The link anyone can open to see and follow a published mix. */
 export const shareLink = (uri: string) => {
@@ -72,6 +79,7 @@ export async function publishMix(mix: Mix, asFeed = !!mix.feed): Promise<Mix> {
   if (!useAtproto.getState().did) throw new Error('Sign in with Bluesky first (Settings, Sources)')
   ownUris(mix)
   if (!mix.sources.length) throw new Error('Add a source first')
+  if (!mix.sources.some(isPublicSource)) throw new Error('Its feeds are private, so they stay out of a published mix: add a public source to publish it')
   const ref = await putRecord(MIX_NSID, mix.id, record(mix) as unknown as Record<string, unknown>)
   let feed = mix.feed
   if (asFeed) {
@@ -99,6 +107,40 @@ export async function unpublishMix(mix: Mix): Promise<Mix> {
   if (mix.feed) await deleteRecord(own.feed)
   if (mix.published) await deleteRecord(own.mix)
   return saveMix({ ...mix, published: undefined, feed: undefined })
+}
+
+/**
+ * Mixes you published before private feeds were kept out of them still hold those feeds' addresses
+ * on Bluesky. Once signed in, each that does is published again without them, or unpublished when
+ * nothing public is left. Bluesky's copy is read first, so a mix already clean is never rewritten.
+ */
+/** Whether a source in a record as stored holds a private feed's address. */
+const hasPrivateAddress = (raw: unknown) => {
+  const s = raw as { kind?: unknown; url?: unknown } | null
+  return (s?.kind === 'rss' || s?.kind === 'standard') && typeof s.url === 'string' && isPrivateAddress(s.url)
+}
+
+export async function scrubPublishedMixes() {
+  if (!useAtproto.getState().did) return
+  const suspect = usePrefs.getState().mixes.filter((m) => m.published && validId(m.id) && m.sources.some((s) => !isPublicSource(s)))
+  for (const mix of suspect) {
+    const there = await getOwnRecord<{ sources?: unknown }>(MIX_NSID, mix.id).catch(() => undefined)
+    const sources: unknown[] = Array.isArray(there?.value.sources) ? there.value.sources : []
+    // Judged on Bluesky's copy as it is: the checks a source passes to be read would drop some private ones first.
+    if (!sources.some(hasPrivateAddress)) continue
+    // The mix as it is now, not as it was before Bluesky answered: it may have changed, or been unpublished.
+    const now = usePrefs.getState().mixes.find((m) => m.id === mix.id)
+    if (!now?.published) continue
+    try {
+      if (now.sources.some(isPublicSource)) await publishMix(now)
+      else {
+        await unpublishMix(now)
+        toast(`“${now.name}” is unpublished: its only feeds are private, and those stay out of published mixes`)
+      }
+    } catch (err) {
+      toast(`Couldn’t take a private feed out of your mix “${mix.name}”: ${(err as Error).message}`, { tone: 'error' })
+    }
+  }
 }
 
 export async function removeFeed(mix: Mix): Promise<Mix> {
@@ -137,6 +179,10 @@ export const mixChannel = (m: Mix | FollowedMix) => channelId('id' in m ? { kind
 
 /** Followed mixes change when their owner edits them: re-read any older than half a day, quietly. */
 export async function refreshFollowedMixes(maxAge = 12 * 3600_000) {
+  // Copies kept from before private feeds were left out of mixes lose them now, fetched again or not.
+  const kept = usePrefs.getState().followedMixes
+  // Not an edit (set would stamp one), so it never outranks newer settings from sync.
+  if (kept.some((m) => m.sources.some((s) => !isPublicSource(s)))) usePrefs.setState({ followedMixes: kept.map((m) => ({ ...m, sources: m.sources.filter(isPublicSource) })) })
   const stale = usePrefs.getState().followedMixes.filter((m) => Date.now() - m.fetchedAt > maxAge)
   for (const m of stale) {
     try {

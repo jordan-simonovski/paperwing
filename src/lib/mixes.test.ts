@@ -25,6 +25,17 @@ describe('mix records', () => {
     expect(mix?.name).toBe('Footy')
     expect(mix?.sources.map((s) => s.kind)).toEqual(['topic', 'rss', 'lemmy', 'bskyFeed', 'news'])
   })
+  it('never carry a private feed’s address, even in a mix published before it was kept out', () => {
+    const mix = cleanMix({
+      name: 'Work',
+      sources: [
+        { kind: 'rss', url: 'https://jvns.ca/atom.xml', label: 'Julia Evans' },
+        { kind: 'rss', url: 'https://gitlab.example/me.atom?feed_token=glft-secret', label: 'GitLab activity' },
+        { kind: 'standard', url: 'https://me:hunter2@writer.example/journal', label: 'Private journal' },
+      ],
+    })
+    expect(mix?.sources.map((s) => ('label' in s ? s.label : ''))).toEqual(['Julia Evans'])
+  })
   it('reject a mix with nothing usable', () => {
     expect(cleanMix({ name: 'x', sources: [{ kind: 'topic', id: 'nope' }] })).toBeUndefined()
     expect(cleanMix({ sources: [{ kind: 'news', q: 'a' }] })).toBeUndefined()

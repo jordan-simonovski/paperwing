@@ -1,4 +1,5 @@
 import { LEMMY_INSTANCES } from './lemmyKey.js'
+import { isPrivateAddress } from './publishers.js'
 import { TOPIC_BY_ID } from './topics.js'
 
 // A mix is a channel you build: a name and a handful of sources (topics, publishers, Lemmy
@@ -73,6 +74,9 @@ export function cleanSource(raw: unknown): MixSource | undefined {
 }
 
 /** A mix record as read from anyone's repo: only what checks out, nothing else. */
+/** Whether a source can go in a published mix: not a feed whose address is a key to someone's account (publishers.ts). */
+export const isPublicSource = (s: MixSource) => !((s.kind === 'rss' || s.kind === 'standard') && isPrivateAddress(s.url))
+
 export function cleanMix(raw: unknown): MixRecord | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const r = raw as Record<string, unknown>
@@ -82,7 +86,8 @@ export function cleanMix(raw: unknown): MixRecord | undefined {
   const sources = r.sources
     .slice(0, MAX_SOURCES * 2)
     .map(cleanSource)
-    .filter((s): s is MixSource => !!s && !seen.has(JSON.stringify(s)) && !!seen.add(JSON.stringify(s)))
+    // A private feed's address in an older record is never read, listed or fetched.
+    .filter((s): s is MixSource => !!s && isPublicSource(s) && !seen.has(JSON.stringify(s)) && !!seen.add(JSON.stringify(s)))
     .slice(0, MAX_SOURCES)
   if (!sources.length) return undefined
   return { name, description: str(r.description, 600), sources, createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date(0).toISOString() }
