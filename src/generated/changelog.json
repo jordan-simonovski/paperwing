@@ -1,6 +1,22 @@
 {
-  "version": "0.7.0",
+  "version": "0.7.1",
   "releases": [
+    {
+      "version": "0.7.1",
+      "date": "3 November 2026",
+      "sections": [
+        {
+          "kind": "fix",
+          "title": "Fixes",
+          "changes": [
+            {
+              "title": "Signing in with Bluesky works again.",
+              "detail": "Sign-in, PaperWing's front page and boards, threads, Bluesky feeds and RSS stopped loading after the last update; they're back."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.7.0",
       "date": "2 November 2026",

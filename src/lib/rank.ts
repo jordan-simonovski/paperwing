@@ -187,7 +187,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         const shareNote = existing.shareNote ?? s.shareNote
         const followed = existing.followed || s.followed
         // Keep the hotter copy as primary so the row links to the liveliest discussion.
-        if (e > leadOf.get(existing)! && s.hasThread) {
+        // PaperWing's pinned announcement keeps its row (and takes it): no other copy carries the pin.
+        if (s.pinned || (!existing.pinned && e > leadOf.get(existing)! && s.hasThread)) {
           const { alsoOn, topics, ...old } = existing
           Object.assign(existing, s, { alsoOn: [old as Story, ...alsoOn], topics })
           leadOf.set(existing, e)
@@ -215,7 +216,11 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
 
   // Different links about one event become one row, led by the most engaged copy.
   if (!opts.native && order.length > 2) {
-    const strongest = order.map((_, i) => i).sort((a, b) => engagementOf.get(order[b])! - engagementOf.get(order[a])!)
+    // A pinned announcement is never folded into another row's coverage.
+    const strongest = order
+      .map((_, i) => i)
+      .filter((i) => !order[i].pinned)
+      .sort((a, b) => engagementOf.get(order[b])! - engagementOf.get(order[a])!)
     const absorbed = new Set<number>()
     for (const [l, members] of clusterEvents(order, strongest)) {
       const leader = order[l]
@@ -259,8 +264,12 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
     const gravity = unscored(r) ? 1.3 : 1.5
     return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice) / Math.pow(ageH + 2, gravity)
   }
-  const ranks = new Map(order.map((r) => [r, rank(r)]))
-  return interleave(order, ranks)
+  // PaperWing's official announcement leads Hot wherever its front page is part of the list, the
+  // way it leads the front page: only the server pins, and only for its first few days.
+  const pinned = order.filter((r) => r.pinned)
+  const rest = pinned.length ? order.filter((r) => !r.pinned) : order
+  const ranks = new Map(rest.map((r) => [r, rank(r)]))
+  return [...pinned, ...interleave(rest, ranks)]
 }
 
 /** Each story already placed from a source costs that source this much on its next one. */

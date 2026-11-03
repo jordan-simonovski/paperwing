@@ -27,6 +27,8 @@ export interface Submission {
   front?: boolean
   /** A self post's words, in Markdown: the post is the listing, and its link is its own page here. Editable. */
   body?: string
+  /** When a self post's words were last edited (ISO), written by its author's edit. */
+  editedAt?: string
   createdAt: string
 }
 
@@ -39,7 +41,10 @@ export interface SelfPostVersion {
 /** A self post's words and the versions PaperWing has seen, oldest first (the last is the body). */
 export interface SelfPostBody {
   body: string
+  /** Earlier versions are kept for a day after they're replaced; the last is the body. */
   versions: SelfPostVersion[]
+  /** When it was last edited, if ever: it says so even once the earlier words are gone. */
+  editedAt?: number
 }
 
 /** How long a self post's body may be, in characters. */
@@ -113,6 +118,7 @@ export function cleanSubmission(raw: unknown): Submission | undefined {
     ...(community ? { community } : {}),
     ...(community && r.front === true ? { front: true } : {}),
     ...(typeof r.body === 'string' && r.body.trim() ? { body: r.body.trim().slice(0, BODY_LIMIT) } : {}),
+    ...(typeof r.editedAt === 'string' && !Number.isNaN(Date.parse(r.editedAt)) ? { editedAt: r.editedAt } : {}),
     site: PAPERWING_SITE,
     boardUrl: board ? boardUrl(board) : cm && community ? communityUrl(cm[1], cm[2]) : undefined,
     createdAt: typeof r.createdAt === 'string' ? r.createdAt : new Date(0).toISOString(),

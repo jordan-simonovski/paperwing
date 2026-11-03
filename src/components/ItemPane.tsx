@@ -286,6 +286,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                             <SelfPostBody
                               body={story.selfPost.body}
                               versions={story.selfPost.versions}
+                              editedAt={story.selfPost.editedAt}
                               now={now}
                               onEdit={me && story.authorDid === me ? () => useComposer.getState().open({ kind: 'self-post', edit: story }) : undefined}
                             />

@@ -79,7 +79,8 @@ export async function boardFront(did: string, rkey: string, sort: PaperwingSort)
  */
 export async function allBoards(): Promise<BoardView[]> {
   const off = blocked()
-  const uris = (await linksTo(PAPERWING_SITE, BOARD_NSID, '.site', 500).catch(() => [])).filter((u) => !off.has(u) && !off.has(u.split('/')[2]))
+  // An index that can't be read is an error, not an empty list: errors aren't cached, so readers keep the list they had.
+  const uris = (await linksTo(PAPERWING_SITE, BOARD_NSID, '.site', 500)).filter((u) => !off.has(u) && !off.has(u.split('/')[2]))
   const now = Date.now()
   const weekAgo = now - 7 * 86_400_000
   const found = await pool(uris, 10, async (u) => {

@@ -138,6 +138,7 @@ describe('editing a self post', () => {
     const put = writes.at(-1)!
     expect(put).toMatchObject({ op: 'put', collection: 'io.paperwing.submission', rkey: uri.split('/').pop() })
     expect(cleanSubmission(put.record)).toMatchObject({ title: 'T', board: 'books', body: 'new words' })
+    expect(Date.parse(cleanSubmission(put.record)!.editedAt!)).toBeGreaterThan(Date.now() - 5000)
   })
 
   it('needs the newer Bluesky permission', async () => {

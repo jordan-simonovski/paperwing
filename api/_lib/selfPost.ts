@@ -6,20 +6,47 @@ import { blocked } from './paperwing.js'
 
 // A self post's body. Its Bluesky post holds the title and a snippet; the words themselves, in
 // Markdown, are in the submission record beside it (same key, same repo), where its author can
-// edit them. Each version the server sees is kept here, with when it was first seen, so an edit
-// shows as one and what it changed can be read: the original and the newest few.
+// edit them. The words live there, not here. What's kept here is short-lived: each version the
+// server sees, for a day after it's replaced, so a fresh edit shows what it changed; and when the
+// post was last edited, so it says so after that. Delete the words and all of it goes.
 
-/** How many versions are kept: the original, and the newest after it. */
+/** How many versions are kept at most: the newest ones still within their day. */
 export const VERSIONS_KEPT = 10
 /** How long a read of the author's repo stands before it's asked again. */
 const FRESH_FOR = 60_000
-/** Versions are kept a year past the last time anyone opened the post. */
-const KEEP_FOR = 365 * 86_400
+/** How long an earlier version stays readable after it's replaced. */
+export const HISTORY_FOR = 86_400_000
+/** What's kept goes a day after anyone last opened the post. */
+const KEEP_FOR = 86_400
 
 interface Kept {
   checkedAt: number
   cid: string
   versions: SelfPostVersion[]
+  editedAt?: number
+}
+
+/** Versions replaced more than a day ago are gone; the current one always stays. */
+const recent = (versions: SelfPostVersion[], now: number) => versions.filter((v, i) => i === versions.length - 1 || now - versions[i + 1].seenAt < HISTORY_FOR)
+
+/**
+ * The author's server said the record isn't there (not that it's down): RecordNotFound is a 400.
+ * A 400 from looking the account up (the PLC directory, or a did:web author's own host) says
+ * nothing about the words.
+ */
+function deleted(err: unknown, did: string): boolean {
+  const m = err instanceof Error ? /\bUpstream 400 for (\S+)/.exec(err.message) : null
+  if (!m) return false
+  const lookup = did.startsWith('did:web:') ? decodeURIComponent(did.slice(8).split(':')[0]) : 'plc.directory'
+  return m[1] !== lookup && m[1] !== 'plc.directory'
+}
+
+/** When it was last edited: the later of what's kept here (or what an older history shows) and what its record says. */
+function lastEdit(kept: Kept | undefined, recorded?: string): number | undefined {
+  const fromHistory = kept?.editedAt ?? (kept && kept.versions.length > 1 ? kept.versions.at(-1)!.seenAt : undefined)
+  const fromRecord = recorded ? Date.parse(recorded) : undefined
+  const latest = Math.max(fromHistory ?? 0, fromRecord ?? 0)
+  return latest || undefined
 }
 
 export class NotSelfPost extends Error {
@@ -50,21 +77,38 @@ export async function selfPostBody(key: string, now = Date.now()): Promise<SelfP
           return undefined
         })
     : undefined
-  if (kept && now - kept.checkedAt < FRESH_FOR) return { body: kept.versions.at(-1)!.body, versions: kept.versions }
+  if (kept && now - kept.checkedAt < FRESH_FOR) {
+    const versions = recent(kept.versions, now)
+    const editedAt = lastEdit(kept)
+    return { body: versions.at(-1)!.body, versions, ...(editedAt ? { editedAt } : {}) }
+  }
 
-  const record = await getRecord<unknown>(at)
+  // Words that are gone take what's kept here with them.
+  const forget = async (message: string): Promise<never> => {
+    if (kvConfigured())
+      await kv()
+        .del([store])
+        .catch(() => {})
+    throw new NotSelfPost(message)
+  }
+  const record = await getRecord<unknown>(at).catch((err: unknown) => (deleted(err, uri.split('/')[2]) ? forget('It was deleted') : Promise.reject(err)))
   const sub = cleanSubmission(record.value)
   // Only the post's own record speaks for it.
-  if (!sub?.body || sub.post.uri !== uri) throw new NotSelfPost()
+  if (!sub?.body || sub.post.uri !== uri) return forget('That isn’t a self post')
 
   let versions = kept?.versions ?? []
+  let editedAt = lastEdit(kept, sub.editedAt)
   if (!kept || kept.cid !== record.cid) {
-    if (versions.at(-1)?.body !== sub.body) versions = [...versions, { body: sub.body, seenAt: now }]
-    if (versions.length > VERSIONS_KEPT) versions = [versions[0], ...versions.slice(-(VERSIONS_KEPT - 1))]
+    if (versions.at(-1)?.body !== sub.body) {
+      if (versions.length) editedAt = now
+      versions = [...versions, { body: sub.body, seenAt: now }]
+    }
   }
+  versions = recent(versions, now)
+  if (versions.length > VERSIONS_KEPT) versions = versions.slice(-VERSIONS_KEPT)
   if (kvConfigured() && !unread)
     await kv()
-      .set(store, JSON.stringify({ checkedAt: now, cid: record.cid, versions } satisfies Kept), KEEP_FOR)
+      .set(store, JSON.stringify({ checkedAt: now, cid: record.cid, versions, ...(editedAt ? { editedAt } : {}) } satisfies Kept), KEEP_FOR)
       .catch(() => {})
-  return { body: sub.body, versions }
+  return { body: sub.body, versions, ...(editedAt ? { editedAt } : {}) }
 }

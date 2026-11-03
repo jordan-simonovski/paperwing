@@ -153,7 +153,8 @@ export async function editSelfPost(postUri: string, body: string): Promise<void>
   if (canUpdate(scope, SUBMISSION_NSID) === false) throw new Error('Editing needs one more Bluesky permission: allow it under Settings, Sources.')
   const current = await getOwnRecord<Record<string, unknown>>(SUBMISSION_NSID, rkey)
   const { $type: _type, ...rest } = current.value
-  await putRecord(SUBMISSION_NSID, rkey, { ...rest, body: words })
+  // The edit is dated in the post's own record, so it says it was edited for as long as it exists.
+  await putRecord(SUBMISSION_NSID, rkey, { ...rest, body: words, editedAt: new Date().toISOString() })
 }
 
 /** A self post's words and versions, from PaperWing (api/_lib/selfPost.ts). */

@@ -1,5 +1,13 @@
 # What's new
 
+## 0.7.1
+
+_Released 3 November 2026_
+
+### Fixes
+
+- **Signing in with Bluesky works again.** Sign-in, PaperWing's front page and boards, threads, Bluesky feeds and RSS stopped loading after the last update; they're back.
+
 ## 0.7.0
 
 _Released 2 November 2026_
