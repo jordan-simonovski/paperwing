@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatOf, keywords, learn, reasons, rowReason, similarity, storyFeatures, tasteFactor } from './features'
+import { fade, formatOf, keywords, learn, reasons, rowReason, similarity, storyFeatures, tasteFactor } from './features'
 import type { Story } from './types'
 
 const story = (title: string, extra: Partial<Story & { topics: string[] }> = {}): Story & { topics: string[] } => ({
@@ -84,5 +84,13 @@ describe('the reason a row gives', () => {
     expect(rowReason(storyFeatures(space), {})).toBeUndefined()
     const faint = learn({}, storyFeatures(story('A recipe for bread', { topics: ['food'], url: 'https://food.example/x' })), 0.75)
     expect(rowReason(storyFeatures(space), faint)).toBeUndefined()
+  })
+})
+
+describe('a taste profile fades', () => {
+  it('halves every 45 days, and lets go of what’s faded to nothing', () => {
+    expect(fade({ 't:space': 2, 'd:a.example': -1, 'k:tiny': 0.06 }, 45)).toEqual({ 't:space': 1, 'd:a.example': -0.5 })
+    const same = { 't:space': 2 }
+    expect(fade(same, 0)).toBe(same)
   })
 })

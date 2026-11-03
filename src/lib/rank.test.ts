@@ -264,3 +264,33 @@ describe('Hot spreads things out', () => {
     expect(merge([[...liked, outside]], { sort: 'hot', filters, affinity }).some((r) => r.explore)).toBe(false)
   })
 })
+
+describe('checking Hot through the day (a replay)', () => {
+  it('shows mostly new stories at the top of each visit, without burying a big one you haven’t seen', () => {
+    const hour = 3_600_000
+    let now = Date.now()
+    let n = 0
+    const feed: Story[] = []
+    // Stories arrive through the day, scores spread out; you look every three hours.
+    const arrive = (count: number, overHours: number) => {
+      for (let i = 0; i < count; i++, n++) feed.push(s(`hn-${n}`, `https://site${n}.example/x`, 30 + ((n * 37) % 200), { createdAt: now - (i % overHours) * hour }))
+    }
+    arrive(40, 12)
+    const memory: Record<string, { looks: number; at: number; openedAt?: number }> = {}
+    const fresh: number[] = []
+    for (let visit = 0; visit < 5; visit++) {
+      const top = merge([feed], { sort: 'hot', filters, memory }).slice(0, 10)
+      fresh.push(top.filter((r) => !memory[r.key]).length)
+      for (const r of top) memory[r.key] = { looks: (memory[r.key]?.looks ?? 0) + 1, at: now }
+      // You open two of what you see.
+      for (const r of top.slice(0, 2)) memory[r.key].openedAt = now
+      now += 3 * hour
+      arrive(8, 3)
+    }
+    expect(fresh[0]).toBe(10)
+    for (const f of fresh.slice(1)) expect(f).toBeGreaterThanOrEqual(7)
+    // A huge story posted since still leads, however much you've already seen.
+    feed.push(s('hn-big', 'https://big.example/x', 900, { createdAt: now - hour }))
+    expect(merge([feed], { sort: 'hot', filters, memory })[0].key).toBe('hn-big')
+  })
+})

@@ -156,6 +156,21 @@ const LIMIT = 3
  * is worth (store.ts LESSON: a vote 1.5, a save 0.75, a hide 0.6). Each feature moves by its share of the story, so one vote on a story
  * with a topic, a site and six keywords moves the topic most.
  */
+/** How long a lesson takes to count for half as much: newer ones weigh more, and one hide doesn't exile a topic for good. */
+const HALF_LIFE_DAYS = 45
+
+/** A profile `days` on: every weight halved each HALF_LIFE_DAYS, and what's faded to almost nothing let go. */
+export function fade(profile: Record<string, number>, days: number): Record<string, number> {
+  if (!(days > 0)) return profile
+  const k = 0.5 ** (days / HALF_LIFE_DAYS)
+  const out: Record<string, number> = {}
+  for (const [f, w] of Object.entries(profile)) {
+    const v = Math.round(w * k * 100) / 100
+    if (Math.abs(v) >= 0.05) out[f] = v
+  }
+  return out
+}
+
 export function learn(profile: Record<string, number>, f: Features, delta: number): Record<string, number> {
   const next = { ...profile }
   const n = norm(f)

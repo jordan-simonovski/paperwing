@@ -59,7 +59,7 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
   // A text-only post's title is its own first line; repeating it as an excerpt adds nothing.
   const excerpt = plain && !plain.startsWith(s.title.replace(/…$/, '').slice(0, 40)) ? plain : undefined
   const rowRef = useRef<HTMLElement>(null)
-  useImpression(rowRef, s.key, s.comments, !read)
+  useImpression(rowRef, s, !read)
   const vote = useActivity((a) => a.votes[s.key])
   const swipeRef = useSwipeActions<HTMLDivElement>({ right: swipe?.right?.[1] ?? (() => void toggleSaved(s)), left: swipe?.left?.[1] ?? (() => hideStory(s.key, s)) })
   const comments = s.comments ?? 0

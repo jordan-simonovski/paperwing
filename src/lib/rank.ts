@@ -313,15 +313,15 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
 }
 
 /**
- * How far an earlier visit sinks a story: each visit it was on screen unopened costs it 40%,
- * recovering over a day, and opening it costs 85%. A story whose discussion has really grown since
+ * How far an earlier visit sinks a story: each visit it was on screen halves it (to a quarter at
+ * most), recovering over a day, and opening it costs 85% more. A story whose discussion has really grown since
  * (sinceSeen) is worth another look: half a sink at most.
  */
 function staleness(m: Memory | undefined, r: Ranked, now: number): number {
   if (!m) return 1
   const days = Math.max(0, (now - m.at) / 86_400_000)
   const looks = m.looks * 0.5 ** days
-  const sunk = Math.max(0.3, 0.6 ** looks) * (m.openedAt ? 0.15 : 1)
+  const sunk = Math.max(0.25, 0.5 ** looks) * (m.openedAt ? 0.15 : 1)
   return r.sinceSeen ? Math.max(sunk, 0.6) : sunk
 }
 

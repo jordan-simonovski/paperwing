@@ -47,6 +47,10 @@ const EMPTY_STORY: Story = { key: '', source: 'rss', sourceLabel: '', title: '',
 
 export type PaneTab = 'discussion' | 'article' | 'related'
 
+/** How long in sight counts as staying with a story, and how often that's checked. */
+const LINGER = 45_000
+const LINGER_TICK = 5_000
+
 interface Props {
   itemKey: string
   onClose: () => void
@@ -131,6 +135,22 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
     if (useLibrary.getState().items[itemKey]) void useLibrary.getState().markSeen(itemKey)
     scrollRef.current?.scrollTo({ top: 0 })
   }, [itemKey])
+  // Staying with a story for 45 seconds in sight teaches the taste profile a little (store.ts, linger).
+  const lingering = story
+  useEffect(() => {
+    if (!lingering) return
+    let seen = 0
+    const tick = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      seen += LINGER_TICK
+      if (seen < LINGER) return
+      useActivity.getState().linger(lingering)
+      window.clearInterval(tick)
+    }, LINGER_TICK)
+    return () => window.clearInterval(tick)
+    // One count a story: a refetch of the same story doesn't restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lingering?.key])
   // Count the story towards its site, for "blogs you keep reading".
   useEffect(() => {
     if (story?.url) useActivity.getState().noteSite(itemKey, story.url)

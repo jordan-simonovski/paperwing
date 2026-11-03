@@ -1,10 +1,11 @@
 import { useEffect, type RefObject } from 'react'
 import { useActivity } from './store'
+import type { Story } from './types'
 
 // One observer for every row: a story counts as seen once it's mostly on screen for over a second.
 const DWELL = 1200
-/** The row each element shows: its key, and its comments now, kept with the look (visits.ts). */
-const keys = new WeakMap<Element, { key: string; comments?: number }>()
+/** The story each element shows, kept with the look (visits.ts) and, when passed on, taught to the profile. */
+const keys = new WeakMap<Element, Story & { topics?: string[] }>()
 const timers = new Map<Element, number>()
 let observer: IntersectionObserver | undefined
 
@@ -33,11 +34,11 @@ function getObserver() {
   return observer
 }
 
-export function useImpression(ref: RefObject<Element | null>, key: string, comments: number | undefined, enabled = true) {
+export function useImpression(ref: RefObject<Element | null>, story: Story & { topics?: string[] }, enabled = true) {
   useEffect(() => {
     const el = ref.current
     if (!el || !enabled || typeof IntersectionObserver === 'undefined') return
-    keys.set(el, { key, comments })
+    keys.set(el, story)
     const o = getObserver()
     o.observe(el)
     return () => {
@@ -45,5 +46,5 @@ export function useImpression(ref: RefObject<Element | null>, key: string, comme
       window.clearTimeout(timers.get(el))
       timers.delete(el)
     }
-  }, [ref, key, comments, enabled])
+  }, [ref, story, enabled])
 }
