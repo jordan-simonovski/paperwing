@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Bookmark, CalendarDays, Users, CornerDownLeft, Hash, Layers, Link2, Moon, Newspaper, Plus, Rss, Search, Settings, SlidersHorizontal, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Bell, Bookmark, CalendarDays, Users, CornerDownLeft, Hash, Layers, SquarePen, Moon, Newspaper, Plus, Rss, Search, Settings, SlidersHorizontal, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { followable, openFollowable } from '../lib/pastedLink'
 import { useNavigate } from 'react-router'
@@ -102,7 +102,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       { id: 'whats-new', group: 'Go to', label: 'What’s new', keywords: 'changelog release version updates', icon: <Sparkles size={15} />, run: go('/whats-new') },
       { id: 'settings', group: 'Go to', label: 'Settings', keywords: 'preferences options', icon: <Settings size={15} />, run: go('/settings') },
       ...SETTINGS.map(([section, label, keywords]) => ({ id: `settings:${section}`, group: 'Settings', label, keywords, icon: <SlidersHorizontal size={15} />, run: go(`/settings/${section}`) })),
-      { id: 'post', group: 'Actions', label: 'Post a link to PaperWing', icon: <Link2 size={15} />, run: () => postLink() },
+      { id: 'post', group: 'Actions', label: 'Post a link to PaperWing', icon: <SquarePen size={15} />, run: () => postLink() },
       { id: 'theme', group: 'Actions', label: `Switch to ${dark ? 'light' : 'dark'} mode`, icon: <Moon size={15} />, run: () => set({ theme: dark ? 'light' : 'dark' }) },
     ]
 
@@ -125,7 +125,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       if (own) out.push({ id: 'open-pasted', group: 'Actions', label: <>{own.label}</>, hint: pasted, icon: <Rss size={15} />, run: () => void openFollowable(own, navigate) })
       if (!own || ('guess' in own && own.guess))
         out.push({ id: 'follow-pasted', group: 'Actions', label: <>Follow this site</>, hint: pasted, icon: <Rss size={15} />, run: go(`/explore/publishers?follow=${encodeURIComponent(pasted)}`) })
-      out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <Link2 size={15} />, run: () => postLink({ url: pasted }) })
+      out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <SquarePen size={15} />, run: () => postLink({ url: pasted }) })
     }
     const hits = searchTopics(query, topics).slice(0, 6)
     for (const h of hits)
