@@ -69,6 +69,25 @@ describe('mixes published before private feeds were kept out', () => {
     expect(usePrefs.getState().mixes[0].published).toBeUndefined()
   })
 
+  it('are republished when Bluesky’s copy holds a password in a feed’s address', async () => {
+    const withPassword = { kind: 'rss' as const, url: 'https://me:hunter2@intranet.example/rss', label: 'Intranet' }
+    live.bbbbbbbbbbbbb = { name: 'Work', sources: [open, withPassword] }
+    usePrefs.setState({ mixes: [publishedMix([open, secret])] })
+    await scrubPublishedMixes()
+    expect(puts.find((p) => p.collection === 'io.paperwing.mix')?.record.sources).toEqual([open])
+  })
+
+  it('act on the mix as it is when they get to it, not as it was', async () => {
+    live.bbbbbbbbbbbbb = { name: 'Work', sources: [secret] }
+    usePrefs.setState({ mixes: [publishedMix([secret])] })
+    const run = scrubPublishedMixes()
+    // Unpublished here while Bluesky was being read: nothing left to do.
+    usePrefs.setState({ mixes: [mix([secret])] })
+    await run
+    expect(deletes).toHaveLength(0)
+    expect(puts).toHaveLength(0)
+  })
+
   it('are left alone once Bluesky holds nothing private', async () => {
     live.bbbbbbbbbbbbb = { name: 'Work', sources: [open] }
     usePrefs.setState({ mixes: [publishedMix([open, secret])] })
@@ -84,7 +103,10 @@ describe('mixes you follow', () => {
     usePrefs.setState({ followedMixes: [followed] })
     const channel = resolveChannel('mix:did:plc:ownerownerownerownerowne:ccccccccccccc', undefined, { followed: [], interests: [], customFeeds: [], followedMixes: [followed] })
     expect(JSON.stringify(channel?.feeds)).not.toContain('feed_token')
+    const stamped = usePrefs.getState().syncedPrefsAt
     await refreshFollowedMixes()
     expect(usePrefs.getState().followedMixes[0].sources).toEqual([open])
+    // A clean-up isn't an edit: it never makes this device's settings outrank newer ones in sync.
+    expect(usePrefs.getState().syncedPrefsAt).toBe(stamped)
   })
 })
