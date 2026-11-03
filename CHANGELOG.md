@@ -1,5 +1,17 @@
 # What's new
 
+## 0.10.0
+
+_Released 3 November 2026_
+
+### Improved
+
+- **Bring your feeds from FreshRSS.** Importing an OPML file from another reader now keeps its folders, in Settings and when you export again. It says what it left out and why: feeds PaperWing can't read, like scraped pages and JSON feeds, and private feeds with a password or token in their address. You can follow up to 250 feeds, fewer if their addresses are very long.
+
+### Fixes
+
+- **Private feeds stay private.** A feed whose address holds a password or a token, like a private GitLab or newsletter feed, is no longer published on your profile's blogroll or in a published mix and its Bluesky feed. It stays in your own copy of the mix, marked with a lock, and a mix you published before is published again without it, or unpublished if it has nothing public left. PaperWing no longer shows one from a blogroll or mix published earlier. If yours went out with a feed like that in it, its address has already been seen: reset that feed's token where you got it.
+
 ## 0.9.0
 
 _Released 3 November 2026_
