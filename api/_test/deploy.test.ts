@@ -25,6 +25,16 @@ describe('what Vercel deploys from api/', () => {
   })
 })
 
+/** Relative module specifiers a file loads at run time: imports, re-exports, side-effect imports and import(). */
+export function runtimeSpecifiers(code: string): string[] {
+  // Type-only imports and re-exports are erased before anything runs. Matched clause by clause, so a
+  // type alias (`export type A = 'x'`, no semicolons here) can never swallow the import after it.
+  const values = code.replace(/^\s*(?:import|export)\s+type\s+(?:\*(?:\s+as\s+\w+)?|\{[^}]*\}|\w+)\s+from\s+['"][^'"]+['"]/gm, '')
+  const found: string[] = []
+  for (const m of values.matchAll(/^\s*(?:import|export)\s[^'"]*?\bfrom\s+['"](\.[^'"]+)['"]|^\s*import\s+['"](\.[^'"]+)['"]|\bimport\(\s*['"](\.[^'"]+)['"]\s*\)/gm)) found.push(m[1] ?? m[2] ?? m[3])
+  return found
+}
+
 /**
  * Every relative import reachable from a function, with the file it's in. Vercel runs functions as
  * Node ESM, which needs the file named (`./topics.js`): Vite and Vitest find `./topics` either way,
@@ -36,13 +46,10 @@ function relativeImports(entries: string[]): { from: string; spec: string }[] {
   const visit = (file: string) => {
     if (seen.has(file)) return
     seen.add(file)
-    // Type-only imports are erased before anything runs.
-    const code = readFileSync(file, 'utf8').replace(/^\s*(import|export)\s+type\s[^;]*?from\s+['"][^'"]+['"]/gm, '')
-    for (const m of code.matchAll(/(?:^|\n)\s*(?:import|export)\s[^'"]*?from\s+['"](\.[^'"]+)['"]|(?:^|\n)\s*import\s+['"](\.[^'"]+)['"]|import\(\s*['"](\.[^'"]+)['"]\s*\)/g)) {
-      const spec = m[1] ?? m[2] ?? m[3]
+    for (const spec of runtimeSpecifiers(readFileSync(file, 'utf8'))) {
       found.push({ from: relative(join(API, '..'), file), spec })
       const target = resolve(dirname(file), spec).replace(/\.js$/, '')
-      const next = ['.ts', '.tsx', '/index.ts', ''].map((ext) => target + ext).find((f) => existsSync(f) && /\.tsx?$/.test(f))
+      const next = ['.ts', '.tsx', '/index.ts'].map((ext) => target + ext).find((f) => existsSync(f))
       if (next) visit(next)
     }
   }
@@ -54,5 +61,24 @@ describe('what Vercel runs from api/', () => {
   it('names the file in every relative import, all the way down: Node ESM finds nothing else', () => {
     const missing = relativeImports(deployed(API)).filter(({ spec }) => !/\.(js|json)$/.test(spec))
     expect(missing).toEqual([])
+  })
+
+  it('reads every way a module is loaded, and skips only what TypeScript erases', () => {
+    const code = [
+      "import { a } from './a'",
+      "import type { T } from './types'",
+      "import type * as All from './all'",
+      "export type Kind = 'x' | 'y'",
+      "export { b } from './b'",
+      "export * from './c'",
+      "import './side'",
+      'import {',
+      '  d,',
+      '  e,',
+      "} from './de'",
+      "const f = await import('./f')",
+      "import pkg from 'some-package'",
+    ].join('\n')
+    expect(runtimeSpecifiers(code)).toEqual(['./a', './b', './c', './side', './de', './f'])
   })
 })
