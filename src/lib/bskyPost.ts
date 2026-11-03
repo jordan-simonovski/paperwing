@@ -52,7 +52,16 @@ const VIDEO = 'app.bsky.embed.video#view'
 const cardOf = (p: Shareable) => (p.embed?.$type === EXTERNAL ? p.embed.external?.uri : p.embed?.media?.$type === EXTERNAL ? p.embed.media.external?.uri : undefined)
 
 /** A PaperWing self post: its card links to its own page, where its words are (paperwing.ts). */
-export const selfPostOf = (p: Shareable) => !!p.uri && isSelfPost(cardOf(p), p.uri)
+export const selfPostOf = (p: Shareable) =>
+  !!p.uri &&
+  // A link card to its own page, or (a picture post, which has no card) a link to it in its words.
+  (isSelfPost(cardOf(p), p.uri) || (p.record.facets ?? []).some((f) => (f.features ?? []).some((x) => x.$type === 'app.bsky.richtext.facet#link' && isSelfPost(x.uri, p.uri!))))
+
+/** A post's words; a self post's without the link back to its page here (where they're being read). */
+export const postWords = (p: Shareable) => {
+  const text = p.record.text.trim()
+  return selfPostOf(p) ? text.replace(/\s*paperwing\.io$/, '').trim() : text
+}
 
 /** The link a post shares: its preview card, else the first link typed into the text (not other Bluesky posts). A self post shares none. */
 export function sharedLink(p: Shareable): string | undefined {

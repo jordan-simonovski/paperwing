@@ -1,6 +1,6 @@
 import { storyKey } from '../../src/lib/storyKey.js'
 import { BSKY_FEED_BY_RKEY, BSKY_FEEDS, isOffTopic, searchQueries, strongHits, strongTerms, type BskyFeedDef } from '../../src/lib/bskyFeeds.js'
-import { isGifLink, postMedia, quotedPost, sharedLink, type Shareable } from '../../src/lib/bskyPost.js'
+import { isGifLink, postMedia, postWords, quotedPost, sharedLink, type Shareable } from '../../src/lib/bskyPost.js'
 import type { Story } from '../../src/lib/types.js'
 import { UA } from './http.js'
 import { escapeHtml } from './text.js'
@@ -227,7 +227,7 @@ export function postUrl(p: Pick<PostView, 'uri' | 'author'>): string {
 
 export function toStory(p: PostView): Story {
   const ext = external(p)
-  const text = p.record.text.trim()
+  const text = postWords(p)
   const firstLine =
     text
       .split('\n')

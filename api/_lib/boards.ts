@@ -4,6 +4,7 @@ import { BOARD_NSID, canPost, cleanBoard, type Board } from '../../src/lib/socia
 import type { Story } from '../../src/lib/types.js'
 import { posts } from './atlinks.js'
 import { type PostView, toStory } from './bsky.js'
+import { postMedia } from '../../src/lib/bskyPost.js'
 import { boardShows, moderationOf } from './boardModeration.js'
 import { getRecord, handles, pool } from './frontpage.js'
 import { cachedInKv } from './kv.js'
@@ -66,7 +67,8 @@ export async function boardFront(did: string, rkey: string, sort: PaperwingSort)
       if (!boardShows(board, board.owner, board.official, mod, s.post.uri, author) || off.has(author) || off.has(s.post.uri)) return []
       return [s]
     })
-    const found: PostView[] = (await posts([...new Set(subs.map((s) => s.post.uri))])).filter((p) => !unlisted(p))
+    // A board that takes no pictures leaves off posts carrying them.
+    const found: PostView[] = (await posts([...new Set(subs.map((s) => s.post.uri))])).filter((p) => !unlisted(p) && !(board.noImages && postMedia(p)?.length))
     const onFront = new Set(subs.filter((s) => s.front).map((s) => s.post.uri))
     const stories = rank(found, sort)
       .slice(0, 80)

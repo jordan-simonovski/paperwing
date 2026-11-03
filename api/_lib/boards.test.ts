@@ -29,6 +29,8 @@ const records: Record<string, unknown> = {
   [`at://${STRANGER}/io.paperwing.boardhide/1`]: { board: BOARD, subject: post(ANN, 'aaaaaaaaaaaaa'), createdAt: '2026-11-01T00:00:00Z' },
 }
 
+/** Posts that carry pictures. */
+const withPictures = new Set<string>()
 /** Records whose server isn't answering just now. */
 const unreachable = new Set<string>()
 /** Accounts whose server isn't answering just now. */
@@ -60,6 +62,7 @@ vi.mock('./atlinks.js', () => ({
           cid: 'c',
           author: { did: u.split('/')[2], handle: 'x' },
           record: { text: u.split('/').pop(), createdAt: '2026-11-01T00:00:00Z' },
+          ...(withPictures.has(u) ? { embed: { $type: 'app.bsky.embed.images#view', images: [{ thumb: 't', fullsize: 'f', alt: 'A picture' }] } } : {}),
           likeCount: 1,
           replyCount: 0,
           indexedAt: '2026-11-01T00:00:00Z',
@@ -130,6 +133,22 @@ describe('community boards', () => {
       } finally {
         delete process.env.PAPERWING_BLOCKED
       }
+    }
+  })
+
+  it('on a board that takes no pictures, leaves out posts that carry them', async () => {
+    const pictured = post(ANN, 'aaaaaaaaaaaaa')
+    withPictures.add(pictured)
+    const before = records[BOARD]
+    try {
+      expect((await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).stories.map((st) => st.title)).toEqual(['aaaaaaaaaaaaa'])
+      records[BOARD] = { ...(before as object), noImages: true }
+      const { resetMemoryKv } = await import('./kv.js')
+      resetMemoryKv()
+      expect((await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).stories).toEqual([])
+    } finally {
+      withPictures.clear()
+      records[BOARD] = before
     }
   })
 

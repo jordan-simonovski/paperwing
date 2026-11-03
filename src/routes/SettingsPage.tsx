@@ -46,6 +46,7 @@ import { HnAccount } from '../components/HnAccount'
 import { LemmyAccount } from '../components/LemmyAccount'
 import { Labelers } from '../components/ModerationSettings'
 import { BoardSettings } from '../components/BoardSettings'
+import { PostingSettings } from '../components/PostingSettings'
 import { BlueskyFeeds } from '../components/BlueskyFeeds'
 import { playSplash } from '../lib/splash'
 import { MastodonSettings } from '../components/MastodonSettings'
@@ -733,6 +734,9 @@ function SourcesSettings() {
       </Section>
       <Section title="Bluesky account" hint="Sign in to reply and like on Bluesky threads, post a story to Bluesky, and vote and comment on Frontpage. Reading never needs it.">
         <BlueskyAccount />
+      </Section>
+      <Section title="Posting" hint="When you post to PaperWing or Bluesky from here. Your choice syncs.">
+        <PostingSettings />
       </Section>
       <Section
         title="Bluesky feeds and lists"

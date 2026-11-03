@@ -6,17 +6,20 @@ import { canUpdate, canWrite, useAtproto } from '../lib/atproto'
 import { useComposer } from '../lib/compose'
 import { BODY_LIMIT, SUBMISSION_NSID } from '../lib/paperwing'
 import { keys } from '../lib/query'
-import { editSelfPost, saveWords, withSelfPost, WordsNotSaved, writeSelfPost, type PendingSelfPost } from '../lib/selfPost'
+import { editSelfPost, saveWords, withSelfPost, WordsNotSaved, writeSelfPost, type ContentLabel, type PendingSelfPost } from '../lib/selfPost'
+import { usePrefs } from '../lib/store'
 import type { Story, Thread } from '../lib/types'
 import { toast } from '../lib/ui'
 import { BoardPicker, useBoardShut } from './BoardPicker'
 import { MarkdownEditor } from './MarkdownEditor'
+import { PicturePicker, type Picture } from './PicturePicker'
 import { Sheet } from './Sheet'
 
 /**
- * Write a post: a title and words in Markdown, listed on PaperWing (a board, or the front page)
- * like a link. Its Bluesky post carries the title and a snippet. Given a post of yours, it edits
- * the words instead; the title stays, as it's the Bluesky post's.
+ * Write a post: a title and words in Markdown, and up to four pictures, listed on PaperWing (a
+ * board, or the front page) like a link. Its Bluesky post carries the title, a snippet and the
+ * pictures. Given a post of yours, it edits the words instead; the title and pictures stay, as
+ * they're the Bluesky post's.
  */
 export function WritePost({ board: given, edit, onClose }: { board?: string; edit?: Story; onClose: () => void }) {
   const qc = useQueryClient()
@@ -29,12 +32,19 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
   const [busy, setBusy] = useState(false)
   // The Bluesky post is up but its words didn't save: Post now saves only the words, never a second post.
   const [pending, setPending] = useState<PendingSelfPost>()
-  const { shut } = useBoardShut(board)
+  const [pictures, setPictures] = useState<Picture[]>([])
+  const [label, setLabel] = useState<ContentLabel | ''>('')
+  const requireAlt = usePrefs((p) => p.requireAlt)
+  const { shut, name: boardName, noImages } = useBoardShut(board)
+  const undescribed = requireAlt && pictures.some((p) => !p.alt.trim())
+  const noPicturesHere = noImages && pictures.length > 0
   const allowed = edit ? canUpdate(scope, SUBMISSION_NSID) !== false : canWrite(scope, SUBMISSION_NSID) !== false
   const over = body.trim().length > BODY_LIMIT
   // Saving the same words again isn't an edit.
   const changed = !edit || body.trim() !== edit.selfPost?.body
-  const ready = !!did && allowed && !!body.trim() && !over && changed && (!!edit || !!pending || (!!title.trim() && !shut))
+  // Words, pictures, or both: with pictures, the words are optional.
+  const something = !!body.trim() || (!edit && !pending && pictures.length > 0)
+  const ready = !!did && allowed && something && !over && changed && (!!edit || !!pending || (!!title.trim() && !shut && !undescribed && !noPicturesHere))
 
   const submit = async () => {
     if (!ready || busy) return
@@ -52,7 +62,9 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         toast('Saved')
         onClose()
       } else {
-        const { key, story } = pending ? await saveWords(pending, body) : await writeSelfPost({ title, body, board: board || undefined, front: board.startsWith('at://') && front })
+        const { key, story } = pending
+          ? await saveWords(pending, body)
+          : await writeSelfPost({ title, body, board: board || undefined, front: board.startsWith('at://') && front, images: pictures, requireAlt, label: label || undefined })
         // Bluesky takes a moment to have it: show the post straight away.
         qc.setQueryData<Thread>(keys.thread(key), { story, comments: [] })
         onClose()
@@ -120,6 +132,18 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         <MarkdownEditor value={body} onChange={setBody} label="Your post" placeholder="Say what you want to say. Markdown works." autoFocus={!!edit} />
         {over && <p className="text-[0.8125rem] text-signal">That’s over {BODY_LIMIT.toLocaleString()} characters.</p>}
 
+        {!edit && !pending && did && allowed && <PicturePicker pictures={pictures} onChange={setPictures} label={label} onLabel={setLabel} requireAlt={requireAlt} />}
+        {undescribed && (
+          <p className="text-[0.8125rem] text-ink-3">
+            Describe every picture to post it.{' '}
+            <Link to="/settings/sources" className="underline underline-offset-2" onClick={onClose}>
+              Alt text is required in your settings
+            </Link>
+            .
+          </p>
+        )}
+        {noPicturesHere && <p className="text-[0.8125rem] text-signal">{boardName ?? 'This board'} takes no pictures: remove them, or pick another board.</p>}
+
         {pending && (
           <p className="rounded-xl bg-sunk px-3.5 py-3 text-[0.875rem]" role="status">
             Your Bluesky post is up, but its words didn’t save. Save them again: it won’t post twice.
@@ -128,7 +152,9 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
 
         {!edit && !pending && did && allowed && (
           <div className="rounded-xl bg-sunk px-3.5 py-3">
-            <p className="mb-2 text-[0.8125rem] text-ink-3">Your Bluesky post has the title, the start of your words and a link here. Likes are its votes, replies its comments.</p>
+            <p className="mb-2 text-[0.8125rem] text-ink-3">
+              Your Bluesky post has the title, {pictures.length ? 'your pictures' : 'the start of your words'} and a link here. Likes are its votes, replies its comments.
+            </p>
             <BoardPicker board={board} onBoard={setBoard} front={front} onFront={setFront} />
           </div>
         )}

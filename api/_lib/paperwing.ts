@@ -1,5 +1,6 @@
 import { boardUrl, PAPERWING_SITE, SUBMISSION_NSID, cleanSubmission, type PaperwingSort, type Submission } from '../../src/lib/paperwing.js'
 import { officialFrom } from '../../src/lib/boardFinder.js'
+import { postMedia } from '../../src/lib/bskyPost.js'
 import { cleanBoard, type Board } from '../../src/lib/social.js'
 import type { Story } from '../../src/lib/types.js'
 import { posts } from './atlinks.js'
@@ -117,6 +118,8 @@ export async function paperwingFront(sort: PaperwingSort, board?: string, now = 
       const b = boards.get(sub.community)
       const mod = moderation.get(sub.community)
       const owner = sub.community.split('/')[2]
+      // A board that takes no pictures keeps picture posts off the front page too.
+      if (b?.noImages && postMedia(post)?.length) return false
       return !!b && !!mod && !off.has(owner) && !off.has(sub.community) && boardShows(b, owner, official(owner), mod, post.uri, post.author.did)
     })
     const subs = new Map(list.map((x) => [x.post.uri, x.sub]))

@@ -4,7 +4,7 @@ import { markup } from '../markup'
 import { api, getJson } from './http'
 import { acceptLabelers } from '../moderation'
 import { usePrefs } from '../store'
-import { bskyKeyOf, postHtml, postMedia, quotedPost, selfPostOf, sharedLink, type Shareable } from '../bskyPost'
+import { bskyKeyOf, postHtml, postMedia, postWords, quotedPost, selfPostOf, sharedLink, type Shareable } from '../bskyPost'
 import { fetchSelfPost, withSelfPost } from '../selfPost'
 
 // Feeds come from our own generator (api/atproto.ts); threads straight from Bluesky's public,
@@ -80,7 +80,7 @@ function mapReplies(nodes: ThreadNode[] = []): Comment[] {
 /** A Bluesky post as a story: its link card's title, or its first line. */
 export function postStory(p: PostView, key = bskyKeyOf(p.uri)): Story {
   const ext = p.embed?.external ?? p.embed?.media?.external
-  const text = p.record.text.trim()
+  const text = postWords(p)
   const first =
     text
       .split('\n')

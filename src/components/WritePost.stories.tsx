@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { story } from '../test/fixtures'
+import { aPicture } from './PicturePicker.stories'
 import { WritePost } from './WritePost'
 
 const ME = 'did:plc:readerreaderreaderreader'
@@ -75,5 +76,52 @@ export const EditingNeedsPermission: Story = {
   play: async () => {
     await waitFor(() => expect(page().getByRole('link', { name: 'Allow it under Settings, Sources' })).toBeVisible())
     await expect(page().getByRole('button', { name: 'Save' })).toBeDisabled()
+  },
+}
+
+/** Pictures instead of words: Post waits until every picture is described. */
+export const PicturesNeedDescribing: Story = {
+  parameters: { app: { atproto: bsky } },
+  play: async () => {
+    await userEvent.type(await page().findByRole('textbox', { name: 'Title' }), 'Our new kitchen')
+    await userEvent.upload(page().getByLabelText('Choose pictures'), await aPicture())
+    const describe = await page().findByRole('textbox', { name: /Describe picture 1/ })
+    await expect(page().getByRole('button', { name: 'Post' })).toBeDisabled()
+    await expect(page().getByText(/Describe every picture to post it/)).toBeVisible()
+    await userEvent.type(describe, 'A green tiled kitchen')
+    await waitFor(() => expect(page().getByRole('button', { name: 'Post' })).toBeEnabled())
+  },
+}
+
+/** Alt text turned off in settings: pictures can go undescribed. */
+export const AltTextOff: Story = {
+  parameters: { app: { atproto: bsky, prefs: { requireAlt: false } } },
+  play: async () => {
+    await userEvent.type(await page().findByRole('textbox', { name: 'Title' }), 'Our new kitchen')
+    await userEvent.upload(page().getByLabelText('Choose pictures'), await aPicture())
+    await page().findByRole('textbox', { name: /Describe picture 1/ })
+    await waitFor(() => expect(page().getByRole('button', { name: 'Post' })).toBeEnabled())
+  },
+}
+
+const OWNER = 'did:plc:ownerownerownerownerowne'
+const WORDS = `at://${OWNER}/io.paperwing.board/3m2wordsonlya`
+/** A board that takes no pictures says so, and won't take them. */
+export const NoPicturesBoard: Story = {
+  parameters: {
+    app: {
+      atproto: bsky,
+      prefs: { boards: [{ uri: WORDS, name: 'Words Only' }] },
+      queries: [[['board', OWNER, '3m2wordsonlya'], { uri: WORDS, owner: OWNER, name: 'Words Only', moderators: [], moderatorHandles: {}, noImages: true, createdAt: '2026-11-01T00:00:00Z' }]],
+    },
+  },
+  args: { board: WORDS },
+  play: async () => {
+    await userEvent.type(await page().findByRole('textbox', { name: 'Title' }), 'Our new kitchen')
+    await userEvent.upload(page().getByLabelText('Choose pictures'), await aPicture())
+    await page().findByRole('textbox', { name: /Describe picture 1/ })
+    await userEvent.type(page().getByRole('textbox', { name: /Describe picture 1/ }), 'A kitchen')
+    await waitFor(() => expect(page().getByText(/Words Only takes no pictures/)).toBeVisible())
+    await expect(page().getByRole('button', { name: 'Post' })).toBeDisabled()
   },
 }
