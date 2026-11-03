@@ -64,6 +64,8 @@ export function useChannelFeed(channelId: string, opts: { variant?: string; sort
       plan,
       reader,
       queries.map((q) => q.data),
+      // When each feed was fetched: a feed restored from the cache keeps its old time (momentum.ts).
+      queries.map((q) => q.dataUpdatedAt),
     )
     const kept = previous.current
     if (kept.size > 3000) kept.clear()

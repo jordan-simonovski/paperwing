@@ -67,3 +67,26 @@ describe('what the ranking learns', () => {
     expect(usePrefs.getState().affinity['k:zorblax'] ?? 0).toBe(0)
   })
 })
+
+describe('what scrolling past can’t do', () => {
+  it('never wears down something you like: passing on stories about it is just volume', () => {
+    usePrefs.setState({ affinity: { 'k:zorblax': 2 }, affinityAt: 0 })
+    for (const visit of [0, 1, 2]) {
+      resetVisits(visit * day)
+      useActivity.getState().noteImpression(story('f', 'zorblax'))
+    }
+    expect(usePrefs.getState().affinity['k:zorblax']).toBe(2)
+  })
+
+  it('never makes this device’s settings look newer to sync: only what you choose does', () => {
+    usePrefs.setState({ syncedPrefsAt: 123 })
+    useActivity.getState().linger(story('g', 'zorblax'))
+    for (const visit of [0, 1, 2]) {
+      resetVisits(visit * day)
+      useActivity.getState().noteImpression(story('h', 'quux'))
+    }
+    expect(usePrefs.getState().affinity['k:zorblax']).toBeGreaterThan(0)
+    expect(usePrefs.getState().affinity['k:quux']).toBeLessThan(0)
+    expect(usePrefs.getState().syncedPrefsAt).toBe(123)
+  })
+})

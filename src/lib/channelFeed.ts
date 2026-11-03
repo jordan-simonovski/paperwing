@@ -115,7 +115,7 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
  * answered), re-checked against the topic a keyword search was run for, moderated, and merged
  * and ranked for the reader.
  */
-export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[]): Ranked[] {
+export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[], fetchedAt: number[] = []): Ranked[] {
   const topicsOf = (ref: FeedRef) =>
     ('topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []).map((id) => findTopic(id, reader.interests)).filter((t): t is Topic => !!t)
   const joined = new Set(reader.boards.map((b) => b.uri))
@@ -137,7 +137,7 @@ export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[]
     native: plan.channel.native,
     boost: plan.channel.boost,
     // Gaining fast right now, from what this device has fetched (momentum.ts).
-    momentum: momentumOf(checked.flat()),
+    momentum: momentumOf(checked.map((stories, i) => ({ stories, at: fetchedAt[i] || Date.now() }))),
     // For you takes a few strong stories from outside your usual.
     explore: forYou,
   })

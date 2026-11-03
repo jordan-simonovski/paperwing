@@ -46,5 +46,11 @@ export function useImpression(ref: RefObject<Element | null>, story: Story & { t
       window.clearTimeout(timers.get(el))
       timers.delete(el)
     }
-  }, [ref, story, enabled])
+    // A refetch hands the row a new story object: keep its timer, just look at the newer story.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref, story.key, enabled])
+  useEffect(() => {
+    const el = ref.current
+    if (el && keys.has(el)) keys.set(el, story)
+  }, [ref, story])
 }

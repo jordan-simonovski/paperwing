@@ -73,3 +73,14 @@ export function memoryOf(impressions: Record<string, number>, glimpses: Record<s
   }
   return out
 }
+
+/**
+ * Looks kept within `cap`, trimmed together to the `keep` most recently seen: a count and its look
+ * stay in step, and what's new to the ranking (last visit's looks) is never what goes.
+ */
+export function capLooks(impressions: Record<string, number>, glimpses: Record<string, Glimpse>, cap: number, keep: number) {
+  if (Object.keys(impressions).length <= cap && Object.keys(glimpses).length <= cap) return { impressions, glimpses }
+  const recent = [...new Set([...Object.keys(impressions), ...Object.keys(glimpses)])].sort((a, b) => (glimpses[b]?.at ?? -Infinity) - (glimpses[a]?.at ?? -Infinity)).slice(0, keep)
+  const pick = <T>(m: Record<string, T>) => Object.fromEntries(recent.filter((k) => k in m).map((k) => [k, m[k]]))
+  return { impressions: pick(impressions), glimpses: pick(glimpses) }
+}

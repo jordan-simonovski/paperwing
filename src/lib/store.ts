@@ -7,7 +7,7 @@ import { fade, learn, storyFeatures } from './features'
 import type { MixSource } from './mixSources'
 import type { Labeler, WarningMode } from './moderation'
 import type { Story } from './types'
-import { firstLookThisVisit, look, type Glimpse } from './visits'
+import { capLooks, firstLookThisVisit, look, type Glimpse } from './visits'
 import type { PublisherFeed } from './publishers'
 
 export interface Interest {
@@ -128,8 +128,13 @@ export interface Prefs {
   set: (patch: Partial<Omit<Prefs, 'set' | 'toggleFollow' | 'addInterest' | 'nudge' | 'learn'>>) => void
   /** Moves these exact features by delta ("more" or "fewer" on one topic or site). */
   nudge: (keys: string[], delta: number) => void
-  /** Moves the profile towards a story's features, or away with a negative delta: scaled by LESSON. */
-  learn: (story: Story & { topics?: string[] }, delta: number) => void
+  /**
+   * Moves the profile towards a story's features, or away with a negative delta: scaled by LESSON.
+   * A passive lesson (staying with a story, passing one on) doesn't make this device's settings
+   * newer for sync: it rides along with the next thing you choose, never over another device's.
+   * `spareLiked` leaves what you already like alone (a pass is volume, not a verdict).
+   */
+  learn: (story: Story & { topics?: string[] }, delta: number, how?: { passive?: boolean; spareLiked?: boolean }) => void
   toggleFollow: (id: string) => void
   addInterest: (query: string) => Interest
 }
@@ -213,10 +218,14 @@ export const usePrefs = create<Prefs>()(
           }
           return { affinity, affinityAt: now, syncedPrefsAt: now }
         }),
-      learn: (story, delta) =>
+      learn: (story, delta, how = {}) =>
         set((s) => {
           const now = Date.now()
-          return { affinity: learn(faded(s.affinity, s.affinityAt, now), storyFeatures(story), delta), affinityAt: now, syncedPrefsAt: now }
+          const profile = faded(s.affinity, s.affinityAt, now)
+          const features = storyFeatures(story)
+          const taught = how.spareLiked ? new Map([...features].filter(([k]) => !((profile[k] ?? 0) > 0))) : features
+          if (!taught.size) return {}
+          return { affinity: learn(profile, taught, delta), affinityAt: now, ...(how.passive ? {} : { syncedPrefsAt: now }) }
         }),
       toggleFollow: (id) => set((s) => ({ followed: s.followed.includes(id) ? s.followed.filter((f) => f !== id) : [...s.followed, id], syncedPrefsAt: Date.now() })),
       addInterest: (query) => {
@@ -254,12 +263,6 @@ function capped(map: Record<string, number>): Record<string, number> {
   const entries = Object.entries(map)
   if (entries.length <= CAP) return map
   return Object.fromEntries(entries.sort((a, b) => b[1] - a[1]).slice(0, CAP * 0.8))
-}
-/** Glimpses keep the most recently seen. */
-function cappedGlimpses(map: Record<string, Glimpse>): Record<string, Glimpse> {
-  const entries = Object.entries(map)
-  if (entries.length <= CAP) return map
-  return Object.fromEntries(entries.sort((a, b) => b[1].at - a[1].at).slice(0, CAP * 0.8))
 }
 
 /**
@@ -363,17 +366,15 @@ export const useActivity = create<Activity>()(
         // Once a visit: scrolling past the same row twice in one sitting isn't a second look.
         if (!firstLookThisVisit(key)) return
         const looks = (get().impressions[key] ?? 0) + 1
-        set((s) => ({
-          impressions: capped({ ...s.impressions, [key]: looks }),
-          glimpses: cappedGlimpses({ ...s.glimpses, [key]: look(s.glimpses[key], comments) }),
-        }))
-        // Passed on, unopened, visit after visit: a faint lesson, once.
-        if (looks === PASSED_ON && !get().read[key]) usePrefs.getState().learn(story, -LESSON.pass)
+        set((s) => capLooks({ ...s.impressions, [key]: looks }, { ...s.glimpses, [key]: look(s.glimpses[key], comments) }, CAP, CAP * 0.8))
+        // Passed on, unopened, visit after visit: a faint lesson, once. Never against what you already
+        // like: passing on stories about it is volume, not a verdict.
+        if (looks === PASSED_ON && !get().read[key]) usePrefs.getState().learn(story, -LESSON.pass, { passive: true, spareLiked: true })
       },
       linger: (story) => {
         if (get().lingered[story.key]) return
         set((s) => ({ lingered: capped({ ...s.lingered, [story.key]: Date.now() }) }))
-        usePrefs.getState().learn(story, LESSON.linger)
+        usePrefs.getState().learn(story, LESSON.linger, { passive: true })
       },
       markRead: (key) => {
         if (!get().read[key]) set((s) => ({ read: capped({ ...s.read, [key]: Date.now() }) }))

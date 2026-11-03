@@ -31,6 +31,7 @@ import { SelfPostBody } from './SelfPostBody'
 import { FollowSite } from './FollowBlogs'
 import { StoryActions, useCommentActions } from './Social'
 import { SummaryCard } from './SummaryCard'
+import { watchLinger } from '../lib/linger'
 import { MediaGallery } from './Media'
 import { thumbFor } from './Thumb'
 import { VideoEmbed } from './VideoEmbed'
@@ -46,10 +47,6 @@ import { TopicTag } from './TopicTag'
 const EMPTY_STORY: Story = { key: '', source: 'rss', sourceLabel: '', title: '', url: null, discussionUrl: null, createdAt: 0, hasThread: false }
 
 export type PaneTab = 'discussion' | 'article' | 'related'
-
-/** How long in sight counts as staying with a story, and how often that's checked. */
-const LINGER = 45_000
-const LINGER_TICK = 5_000
 
 interface Props {
   itemKey: string
@@ -139,15 +136,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
   const lingering = story
   useEffect(() => {
     if (!lingering) return
-    let seen = 0
-    const tick = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return
-      seen += LINGER_TICK
-      if (seen < LINGER) return
-      useActivity.getState().linger(lingering)
-      window.clearInterval(tick)
-    }, LINGER_TICK)
-    return () => window.clearInterval(tick)
+    return watchLinger(() => useActivity.getState().linger(lingering))
     // One count a story: a refetch of the same story doesn't restart it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lingering?.key])

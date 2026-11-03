@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { AWAY, currentVisit, firstLookThisVisit, look, memoryOf, noteVisibility, resetVisits } from './visits'
+import { AWAY, capLooks, currentVisit, firstLookThisVisit, look, memoryOf, noteVisibility, resetVisits } from './visits'
 
 const minute = 60_000
 const hour = 60 * minute
@@ -49,5 +49,22 @@ describe('what Hot remembers from earlier visits', () => {
   it('remembers a story opened straight from a link, never scrolled past', () => {
     resetVisits(5 * hour)
     expect(memoryOf({}, {}, { 'hn-4': hour })).toEqual({ 'hn-4': { looks: 0, at: hour, openedAt: hour } })
+  })
+})
+
+describe('how much it keeps', () => {
+  it('keeps the most recently seen stories, their counts and looks together', () => {
+    const impressions: Record<string, number> = {}
+    const glimpses: Record<string, { at: number; v: number }> = {}
+    for (let i = 0; i < 12; i++) {
+      // The oldest have been seen the most: a cap by count would keep exactly the wrong ones.
+      impressions[`k${i}`] = 20 - i
+      glimpses[`k${i}`] = { at: i, v: i }
+    }
+    const kept = capLooks(impressions, glimpses, 10, 8)
+    expect(Object.keys(kept.impressions).sort()).toEqual(['k10', 'k11', 'k4', 'k5', 'k6', 'k7', 'k8', 'k9'])
+    expect(Object.keys(kept.glimpses).sort()).toEqual(Object.keys(kept.impressions).sort())
+    // Under the cap, nothing changes.
+    expect(capLooks({ a: 1 }, { a: { at: 1, v: 1 } }, 10, 8).impressions).toEqual({ a: 1 })
   })
 })

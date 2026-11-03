@@ -347,25 +347,40 @@ function explore(stories: Ranked[], affinity: Record<string, number> | undefined
   if (!affinity || !Object.keys(affinity).length || stories.length <= EXPLORE_AT[0]) return stories
   const busiest = [...stories].sort((a, b) => b.heat - a.heat)[Math.floor(stories.length / 3)]?.heat ?? 1
   const candidates = stories.filter((r, i) => {
-    if (i < EXPLORE_AT[0] || r.seenBefore || r.pinned || r.heat < busiest) return false
+    if (i < EXPLORE_AT[0] || r.seenBefore || r.heat < busiest) return false
     const f = affinityFactor(r, affinity)
     return f > 0.85 && f < 1.15
   })
   const out = [...stories]
-  for (const [n, at] of EXPLORE_AT.entries()) {
-    const pick = candidates[n]
-    if (!pick || at >= out.length) break
+  let next = 0
+  for (const at of EXPLORE_AT) {
+    if (at >= out.length) break
+    // Only ever a lift: the next candidate still below this slot (an earlier lift can carry one past it).
+    while (next < candidates.length && out.indexOf(candidates[next]) <= at) next++
+    const pick = candidates[next++]
+    if (!pick) break
     out.splice(out.indexOf(pick), 1)
     out.splice(at, 0, { ...pick, explore: true })
   }
   return out
 }
 
-/** Where Hot's stories turn to ones you've seen before: the caught-up line, when there's something on each side. */
-export function caughtUpAt(stories: Pick<Ranked, 'seenBefore'>[]): number | undefined {
-  let at = stories.length
-  while (at > 0 && stories[at - 1].seenBefore) at--
-  return at > 0 && at < stories.length ? at : undefined
+/** How many stories after the turn must be ones you've seen, for it to be where you're caught up. */
+const TURN = 5
+
+/**
+ * Where Hot turns to what you've seen before: the first story you've seen (not one back with new
+ * comments) from which most of the next few are seen too, with something new above it. Quiet new
+ * stories can still come below; one seen story among new ones isn't the turn.
+ */
+export function caughtUpAt(stories: Pick<Ranked, 'seenBefore' | 'sinceSeen'>[]): number | undefined {
+  const seen = (r: Pick<Ranked, 'seenBefore' | 'sinceSeen'>) => !!r.seenBefore && !r.sinceSeen
+  for (let i = 1; i < stories.length; i++) {
+    if (!seen(stories[i]) || stories.slice(0, i).every(seen)) continue
+    const next = stories.slice(i, i + TURN)
+    if (next.filter(seen).length * 2 > next.length) return i
+  }
+  return undefined
 }
 
 /** Each story already placed from a source costs that source this much on its next one. */
@@ -380,13 +395,19 @@ const topicRepeat = (k: number) => Math.max(0.6, 0.85 ** k)
 const DEPTH = 8
 
 /** What a story shares with the ones above it: its source, its blog, its site, its author and its main topic. */
+/**
+ * Sources whose stories link anywhere on the web, so a site can repeat among them. A blog pays as a
+ * publisher already, a social post's link is often not the point, and papers, repos, releases and
+ * the rest all come from one site each: they already pay as a source.
+ */
+const MANY_SITES = new Set<SourceKind>(['hn', 'lobsters', 'lemmy', 'frontpage'])
+
 function groupsOf(r: Ranked): { source: string; publisher?: string; site?: string; author?: string; topic?: string } {
   const social = SOCIAL.has(r.source)
   return {
-    source: r.source,
+    source: `s:${r.source}`,
     publisher: r.source === 'rss' ? `rss:${r.sourceLabel}` : undefined,
-    // A blog pays as a publisher already; a social post's link is often a different site from its own.
-    site: r.source === 'rss' || social ? undefined : domainKey(r.url),
+    site: MANY_SITES.has(r.source) ? domainKey(r.url) : undefined,
     author: social && r.author ? `a:${r.author}` : undefined,
     topic: r.topics[0] ? `t:${r.topics[0]}` : undefined,
   }

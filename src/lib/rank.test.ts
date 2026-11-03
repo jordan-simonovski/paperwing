@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { affinityFactor, canonicalUrl, caughtUpAt, engagement, merge } from './rank'
 import type { Story } from './types'
 
@@ -218,6 +218,13 @@ describe('Hot between visits', () => {
     expect(caughtUpAt(ranked)).toBe(1)
     expect(caughtUpAt(ranked.slice(0, 1))).toBeUndefined()
     expect(caughtUpAt(ranked.slice(1))).toBeUndefined()
+    // A real Hot list: new first, then mostly what you've seen, with quiet new stories mixed in below.
+    const row = (seenBefore: boolean, sinceSeen?: { comments: number }) => ({ seenBefore, sinceSeen })
+    const list = [row(false), row(false), row(true, { comments: 40 }), row(false), row(true), row(true), row(false), row(true), row(true), row(true), row(false)]
+    // The story back with new comments isn't where you're caught up; the turn is where seen ones take over.
+    expect(caughtUpAt(list)).toBe(4)
+    // One seen story among new ones isn't the turn.
+    expect(caughtUpAt([row(false), row(true), row(false), row(false), row(false), row(false), row(false)])).toBeUndefined()
   })
 })
 
@@ -234,6 +241,13 @@ describe('Hot rewards what’s moving, not what’s fighting', () => {
     const calm = s('hn-calm', 'https://a.example/calm', 120, { comments: 60 })
     const fight = s('hn-fight', 'https://a.example/fight', 120, { comments: 400 })
     expect(keys(merge([[fight, calm]], { sort: 'hot', filters }))).toEqual(['hn-calm', 'hn-fight'])
+    // Held back, not buried: a busy flamewar still beats a quiet story.
+    const quietOne = s('hn-quiet1', 'https://a.example/quiet1', 10, { comments: 2 })
+    expect(keys(merge([[fight, quietOne]], { sort: 'hot', filters }))[0]).toBe('hn-fight')
+    // Social posts count replies as their engagement: no votes to weigh them against.
+    const thread = s('bs-thread', 'https://a.example/thread', 50, { source: 'bluesky', comments: 400 })
+    const calmPost = s('bs-calm', 'https://a.example/calmpost', 50, { source: 'bluesky', comments: 20 })
+    expect(keys(merge([[calmPost, thread]], { sort: 'hot', filters }))[0]).toBe('bs-thread')
     // A small thread with more comments than votes is just a conversation.
     const chat = s('hn-chat', 'https://a.example/chat', 10, { comments: 30 })
     const quiet = s('hn-quiet', 'https://a.example/quiet', 10, { comments: 2 })
@@ -250,6 +264,25 @@ describe('Hot spreads things out', () => {
     expect(keys(merge([[...same, other]], { sort: 'hot', filters })).indexOf('hn-other')).toBeLessThan(3)
   })
 
+  it('makes one person earn their second slot on social networks', () => {
+    const posts = [0, 1, 2].map((i) => s(`bs-${i}`, `https://link${i}.example/x`, 300 - i, { source: 'bluesky', author: 'prolific.example' }))
+    const other = s('bs-other', 'https://other.example/x', 250, { source: 'bluesky', author: 'someone.example' })
+    expect(keys(merge([[...posts, other]], { sort: 'hot', filters })).indexOf('bs-other')).toBe(1)
+  })
+
+  it('doesn’t charge a source whose stories all come from one site twice for it', () => {
+    // Papers all come from arxiv.org: as a source they already pay for repeats, so they alternate with HN stories.
+    const at = Date.now() - 3_600_000
+    const papers = [0, 1, 2].map((i) => s(`ax-${i}`, `https://arxiv.org/abs/2410.0000${i}`, 100, { source: 'arxiv', score: undefined, weight: 70, createdAt: at }))
+    const stories = [0, 1, 2].map((i) => s(`hn-${i}`, `https://site${i}.example/x`, 100, { createdAt: at }))
+    // (A third paper may wait: papers share a topic, and topics earn their repeats too.)
+    expect(
+      keys(merge([papers, stories], { sort: 'hot', filters }))
+        .slice(0, 4)
+        .map((k) => k.slice(0, 2)),
+    ).toEqual(['ax', 'hn', 'ax', 'hn'])
+  })
+
   it('puts a few strong stories from outside your usual into For you, labelled, never ones you’ve turned from', () => {
     // Things you've voted up a lot, each its own subject, lifted well above their numbers.
     const liked = Array.from({ length: 20 }, (_, i) => s(`hn-liked${i}`, `https://liked${i}.example/x`, 60 + i, { title: `zorblax ${'abcdefghijklmnopqrst'[i]}quux` }))
@@ -262,33 +295,57 @@ describe('Hot spreads things out', () => {
     expect(picks.map((r) => r.key)).toEqual(['hn-outside'])
     expect(ranked.findIndex((r) => r.explore)).toBeGreaterThanOrEqual(5)
     expect(merge([[...liked, outside]], { sort: 'hot', filters, affinity }).some((r) => r.explore)).toBe(false)
+    // Nothing to explore from without a taste profile.
+    expect(merge([[...liked, outside]], { sort: 'hot', filters, explore: true }).some((r) => r.explore)).toBe(false)
+  })
+
+  it('only ever lifts a pick from outside your usual, never moves one down', () => {
+    const liked = Array.from({ length: 30 }, (_, i) => s(`hn-liked${i}`, `https://liked${i}.example/x`, 60 + i, { title: `zorblax ${'abcdefghijklmnopqrstuvwxyzABCD'[i]}quux` }))
+    const outside = [0, 1, 2, 3].map((i) => s(`hn-out${i}`, `https://out${i}.example/x`, 150 - i * 5, { title: `octopus ${'wxyz'[i]}fact` }))
+    const affinity = { 'k:zorblax': 3 }
+    const before = merge([[...liked, ...outside]], { sort: 'hot', filters, affinity })
+    const after = merge([[...liked, ...outside]], { sort: 'hot', filters, affinity, explore: true })
+    for (const r of after.filter((x) => x.explore)) expect(after.indexOf(r)).toBeLessThanOrEqual(before.findIndex((x) => x.key === r.key))
+    expect(after.filter((x) => x.explore).length).toBeGreaterThan(0)
   })
 })
 
 describe('checking Hot through the day (a replay)', () => {
-  it('shows mostly new stories at the top of each visit, without burying a big one you haven’t seen', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('shows mostly new stories at the top of each visit, says where you’re caught up, and never buries a big new one', () => {
     const hour = 3_600_000
-    let now = Date.now()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    let now = Date.parse('2026-11-03T07:00:00Z')
+    vi.setSystemTime(now)
     let n = 0
     const feed: Story[] = []
     // Stories arrive through the day, scores spread out; you look every three hours.
     const arrive = (count: number, overHours: number) => {
-      for (let i = 0; i < count; i++, n++) feed.push(s(`hn-${n}`, `https://site${n}.example/x`, 30 + ((n * 37) % 200), { createdAt: now - (i % overHours) * hour }))
+      for (let i = 0; i < count; i++, n++) feed.push(s(`hn-${n}`, `https://site${n}.example/x`, 30 + ((n * 37) % 200), { createdAt: now - (i % overHours) * hour, comments: 5 }))
     }
     arrive(40, 12)
-    const memory: Record<string, { looks: number; at: number; openedAt?: number }> = {}
+    const memory: Record<string, { looks: number; at: number; comments?: number; openedAt?: number }> = {}
     const fresh: number[] = []
     for (let visit = 0; visit < 5; visit++) {
-      const top = merge([feed], { sort: 'hot', filters, memory }).slice(0, 10)
+      const ranked = merge([feed], { sort: 'hot', filters, memory })
+      const top = ranked.slice(0, 10)
       fresh.push(top.filter((r) => !memory[r.key]).length)
-      for (const r of top) memory[r.key] = { looks: (memory[r.key]?.looks ?? 0) + 1, at: now }
+      if (visit > 0) expect(caughtUpAt(ranked)).toBeDefined()
+      for (const r of top) memory[r.key] = { looks: (memory[r.key]?.looks ?? 0) + 1, at: now, comments: r.comments }
       // You open two of what you see.
       for (const r of top.slice(0, 2)) memory[r.key].openedAt = now
       now += 3 * hour
+      vi.setSystemTime(now)
       arrive(8, 3)
     }
     expect(fresh[0]).toBe(10)
     for (const f of fresh.slice(1)) expect(f).toBeGreaterThanOrEqual(7)
+    // A story you opened whose discussion took off comes back, saying so.
+    const opened = Object.keys(memory).find((k) => memory[k].openedAt)!
+    const story = feed.find((x) => x.key === opened)!
+    story.comments = 120
+    expect(merge([feed], { sort: 'hot', filters, memory }).find((r) => r.key === opened)?.sinceSeen).toEqual({ comments: 115 })
     // A huge story posted since still leads, however much you've already seen.
     feed.push(s('hn-big', 'https://big.example/x', 900, { createdAt: now - hour }))
     expect(merge([feed], { sort: 'hot', filters, memory })[0].key).toBe('hn-big')

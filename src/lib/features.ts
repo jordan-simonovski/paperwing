@@ -151,11 +151,6 @@ export function tasteFactor(f: Features, profile: Record<string, number>): numbe
 const PROFILE_CAP = 400
 const LIMIT = 3
 
-/**
- * Moves a profile towards (delta > 0) or away from (delta < 0) a story, by as much as the signal
- * is worth (store.ts LESSON: a vote 1.5, a save 0.75, a hide 0.6). Each feature moves by its share of the story, so one vote on a story
- * with a topic, a site and six keywords moves the topic most.
- */
 /** How long a lesson takes to count for half as much: newer ones weigh more, and one hide doesn't exile a topic for good. */
 const HALF_LIFE_DAYS = 45
 
@@ -171,6 +166,11 @@ export function fade(profile: Record<string, number>, days: number): Record<stri
   return out
 }
 
+/**
+ * Moves a profile towards (delta > 0) or away from (delta < 0) a story, by as much as the signal
+ * is worth (store.ts LESSON: a vote 1.5, a save 0.75, a hide 0.6). Each feature moves by its share of the story, so one vote on a story
+ * with a topic, a site and six keywords moves the topic most.
+ */
 export function learn(profile: Record<string, number>, f: Features, delta: number): Record<string, number> {
   const next = { ...profile }
   const n = norm(f)
