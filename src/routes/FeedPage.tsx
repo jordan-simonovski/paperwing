@@ -10,6 +10,7 @@ import { RowSkeleton, StoryRow } from '../components/StoryRow'
 import { TypesetLoader } from '../components/pretext/TypesetLoader'
 import { BoardContext, useBoard } from '../lib/boards'
 import { usePullToRefresh } from '../lib/gestures'
+import { Pip } from '../components/Pip'
 import { useChannelFeed, useNow } from '../lib/hooks'
 import { usePretext, useTypesetIn } from '../lib/pretext'
 import { kindOf, type SortMode } from '../lib/rank'
@@ -125,6 +126,7 @@ export function FeedPage() {
         list={
           <>
             <div ref={ptr} className="ptr" aria-hidden>
+              <Pip variant="head" className="ptr-pip" />
               <span className="ptr-pull">Pull to refresh</span>
               <span className="ptr-release">Release to refresh</span>
             </div>

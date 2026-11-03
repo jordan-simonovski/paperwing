@@ -1,3 +1,4 @@
+import { usePretext } from '../lib/pretext'
 import { AddToMix } from './AddToMix'
 import { RssButton } from './RssButton'
 import { BoardHeader } from './BoardHeader'
@@ -105,6 +106,8 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
   const blend = forYou ? (channel.boost ?? []).map((id) => findTopic(id, interests)).filter((t): t is Topic => !!t) : []
   const hues = blend.length ? blend.slice(0, 4).map((t) => t.hue) : [28, 300, 210]
   const glyphs = forYou ? (blend.length ? blend.slice(0, 3).map((t) => topicIcon(t.id)) : [Sparkles]) : channel.topic ? [topicIcon(channel.topic.id)] : []
+  // Switching channels, the field's colour glides to the next topic's hue (with Motion on).
+  const glide = usePretext()
   const fieldClass = channel.topic ? 'topic' : forYou ? 'topic blend' : ''
   const fieldStyle = (
     forYou
@@ -125,7 +128,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
         <ProfileHeader actor={channel.person} />
       ) : (
         <header className="px-3 pt-3 md:px-4 md:pt-4">
-          <div className={`field relative isolate overflow-hidden px-4 pb-3.5 pt-4 md:px-5 ${fieldClass}`} style={fieldStyle}>
+          <div className={`field relative isolate overflow-hidden px-4 pb-3.5 pt-4 md:px-5 ${fieldClass}${glide ? ' field-glide' : ''}`} style={fieldStyle}>
             {glyphs.map((G, i) => (
               <G key={i} className={`field-glyph g${i}`} aria-hidden strokeWidth={1.5} />
             ))}
