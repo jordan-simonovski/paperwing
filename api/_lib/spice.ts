@@ -145,19 +145,21 @@ const clip = (c: SpiceComment) => {
 export function buildState(title: string, tree: SpiceComment[]): { state: SpiceState; total: number } {
   const keep = new Set<SpiceComment>()
   let chars = 0
-  const take = (c: SpiceComment, depth: number, cap: number) => {
-    if (keep.size >= cap || chars >= MAX_CHARS) return
+  const take = (c: SpiceComment, depth: number, cap: number, charCap: number) => {
+    if (keep.size >= cap || chars >= charCap) return
     const text = clip(c)
     if (text && !keep.has(c)) {
       keep.add(c)
       chars += text.length + c.author.length + 24
     }
-    if (depth < MAX_DEPTH) for (const r of c.children) take(r, depth + 1, cap)
+    if (depth < MAX_DEPTH) for (const r of c.children) take(r, depth + 1, cap, charCap)
   }
   const tops = tree.slice(0, MAX_TOPS)
+  // A share of the slots and of the words: long comments mustn't spend the words before the last conversations.
   const share = Math.floor(MAX_COMMENTS / Math.max(1, tops.length))
-  for (const top of tops) take(top, 0, keep.size + share)
-  for (const top of tree) take(top, 0, MAX_COMMENTS)
+  const words = Math.floor(MAX_CHARS / Math.max(1, tops.length))
+  for (const top of tops) take(top, 0, keep.size + share, chars + words)
+  for (const top of tree) take(top, 0, MAX_COMMENTS, MAX_CHARS)
 
   // Numbered in reading order, whichever pass picked them.
   const comments: SpiceState['comments'] = []

@@ -74,6 +74,21 @@ describe('spice grading', () => {
     expect(state.comments.length).toBeLessThanOrEqual(80)
   })
 
+  it('shares the words as well as the slots, so long comments reach every conversation', () => {
+    const long = 'x'.repeat(600)
+    const tops = Array.from({ length: 20 }, (_, i) =>
+      c(
+        `top${i}`,
+        long,
+        Array.from({ length: 10 }, (_, j) => c(`r${i}-${j}`, long)),
+      ),
+    )
+    const { state } = buildState('Wordy', tops)
+    expect(state.comments.filter((x) => x.reply_to === null)).toHaveLength(16)
+    // Numbered in reading order: every reply answers a comment that came before it.
+    for (const x of state.comments) if (x.reply_to !== null) expect(x.reply_to).toBeLessThan(x.id)
+  })
+
   it('gives a small thread all its slots', () => {
     const { state } = buildState('Small', [
       c(
