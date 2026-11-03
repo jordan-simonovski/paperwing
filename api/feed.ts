@@ -41,6 +41,8 @@ const nothing = (cache: string, headers: Record<string, string> = {}) => new Res
 interface Source {
   /** Seconds a JSON answer may be cached at the edge. Sources that build their own Response set their own. */
   ttl: number
+  /** Seconds a stale answer may still be served while it refreshes (four times ttl unless said). */
+  stale?: number
   run(p: URLSearchParams, request: Request): Promise<unknown>
 }
 
@@ -72,9 +74,11 @@ export const SOURCES: Record<string, Source> = {
   board: { ttl: 60, run: (p) => boardFront(p.get('did') ?? '', p.get('rkey') ?? '', sortOf(p.get('sort'))) },
   // A board's own record (name, moderators, rules), without its listings or moderation: what its
   // editor and header need, and still there when the board's moderation can't be read.
-  boardinfo: { ttl: 60, run: (p) => readBoard(need(p, 'did'), need(p, 'rkey')) },
+  // Its owner checks their changes (a new moderator, new rules): a minute or two, not five.
+  boardinfo: { ttl: 60, stale: 60, run: (p) => readBoard(need(p, 'did'), need(p, 'rkey')) },
   // Every community board, for Explore.
-  boards: { ttl: 300, run: () => allBoards() },
+  // Someone who just made a board goes looking for it: a minute or two at most, not the usual twenty.
+  boards: { ttl: 60, stale: 60, run: () => allBoards() },
   // Margin notes on an article, from anyone.
   notes: { ttl: 120, run: (p) => marginNotes(need(p, 'url')) },
   // Someone's PaperWing profile: their listings and mixes, from their own repo.
@@ -136,7 +140,7 @@ export async function GET(request: Request): Promise<Response> {
   const source = SOURCES[src]
   try {
     const out = await source.run(p, request)
-    return out instanceof Response ? out : json(out, source.ttl)
+    return out instanceof Response ? out : json(out, source.ttl, 200, source.stale)
   } catch (err) {
     if (err instanceof BadRequest) return fail(err.message)
     return fail(err instanceof Error ? err.message : 'fetch failed', 502)

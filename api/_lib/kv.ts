@@ -16,6 +16,8 @@ export interface Kv {
   get(key: string): Promise<string | null>
   mget(keys: string[]): Promise<(string | null)[]>
   set(key: string, value: string, seconds: number): Promise<void>
+  /** Removes keys outright, whatever they hold. */
+  del(keys: string[]): Promise<void>
   /** Sets a key that never expires, unless it already exists. True if this call set it. */
   setOnce(key: string, value: string): Promise<boolean>
   /** Adds `by` (1 unless given) to a counter that expires `seconds` after it was first created; returns the new value. */
@@ -88,6 +90,9 @@ const upstash: Kv = {
   async setOnce(key, value) {
     return (await pipeline([['SET', key, value, 'NX']]))[0] === 'OK'
   },
+  async del(keys) {
+    if (keys.length) await pipeline([['DEL', ...keys]])
+  },
   async bump(key, seconds, by = 1) {
     const [n] = await pipeline([
       ['INCRBY', key, by],
@@ -141,6 +146,13 @@ const memory: Kv = {
   },
   async set(key, value, seconds) {
     mem.strings.set(key, { value, until: Date.now() + seconds * 1000 })
+  },
+  async del(keys) {
+    for (const k of keys) {
+      mem.strings.delete(k)
+      mem.hashes.delete(k)
+      mem.zsets.delete(k)
+    }
   },
   async setOnce(key, value) {
     const hit = mem.strings.get(key)

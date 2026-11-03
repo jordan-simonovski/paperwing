@@ -218,4 +218,5 @@ export const SELF_POST_BODY: SelfPostBody = {
     { body: SELF_BEFORE, seenAt: NOW - 3 * HOUR },
     { body: SELF_NOW, seenAt: NOW - 2 * HOUR },
   ],
+  editedAt: NOW - 2 * HOUR,
 }

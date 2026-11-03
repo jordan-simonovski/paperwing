@@ -46,7 +46,7 @@ export function WritePost({ board: given, edit, onClose }: { board?: string; edi
         const words = body.trim()
         qc.setQueryData<Thread | null>(keys.thread(edit.key), (t) =>
           t?.story.selfPost && t.story.selfPost.body !== words
-            ? { ...t, story: withSelfPost(t.story, { body: words, versions: [...t.story.selfPost.versions, { body: words, seenAt: Date.now() }] }) }
+            ? { ...t, story: withSelfPost(t.story, { body: words, versions: [...t.story.selfPost.versions, { body: words, seenAt: Date.now() }], editedAt: Date.now() }) }
             : t,
         )
         toast('Saved')

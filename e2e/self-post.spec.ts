@@ -24,8 +24,9 @@ test('a self post opens to its words, says it was edited, and shows what it said
 
   await story.getByRole('button', { name: 'Edited 2h ago' }).click()
   const versions = page.getByRole('dialog', { name: 'Versions' })
-  await expect(versions.getByRole('region', { name: 'Original version' })).toContainText('I’m on Piranesi.')
-  await expect(versions.getByRole('region', { name: 'Original version' })).not.toContainText('wonderfully strange')
+  const before = versions.getByRole('region', { name: /^Earlier version/ })
+  await expect(before).toContainText('I’m on Piranesi.')
+  await expect(before).not.toContainText('wonderfully strange')
 })
 
 test('writing a post: a title, Markdown with a toolbar and a preview, then where it goes', async ({ page }) => {

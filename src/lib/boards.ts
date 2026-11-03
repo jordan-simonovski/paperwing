@@ -52,7 +52,8 @@ async function fetchBoardInfo(did: string, rkey: string): Promise<BoardView> {
 }
 
 export const useBoard = (did: string | undefined, rkey: string | undefined) =>
-  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoardInfo(did!, rkey!), enabled: !!did && !!rkey, staleTime: 60_000 })
+  // Two minutes: as long as the edge may serve a board from before its owner's last change.
+  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoardInfo(did!, rkey!), enabled: !!did && !!rkey, staleTime: 2 * 60_000 })
 
 export const useAllBoards = () => useAllBoardsWhen(true)
 
@@ -64,7 +65,9 @@ export const useAllBoardsWhen = (enabled: boolean) =>
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const res = await fetch('/api/feed?src=boards')
-      return res.ok ? ((await res.json()) as BoardView[]) : []
+      // A failed read keeps the list already on screen rather than emptying it.
+      if (!res.ok) throw new Error('The boards didn’t load')
+      return (await res.json()) as BoardView[]
     },
   })
 
@@ -73,12 +76,45 @@ export function toggleJoin(board: { uri: string; name: string }) {
   set({ boards: boards.some((b) => b.uri === board.uri) ? boards.filter((b) => b.uri !== board.uri) : [...boards, { uri: board.uri, name: board.name }] })
 }
 
-/** Creates or updates a board in your own account. Returns its at:// URI. */
-export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'> & { createdAt?: string }, rkey = tid()): Promise<string> {
+/**
+ * Creates or updates a board in your own account. Returns its at:// URI. `handles` names its
+ * moderators (DID to handle) where they're known, so they show by name straight away.
+ */
+export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'> & { createdAt?: string }, rkey = tid(), handles: Record<string, string> = {}): Promise<string> {
   if (!useAtproto.getState().did) throw new Error('Sign in with Bluesky to make a board (Settings, Sources)')
-  const ref = await putRecord(BOARD_NSID, rkey, boardRecord(board))
-  void qc.invalidateQueries({ queryKey: keys.anyBoard })
-  void qc.invalidateQueries({ queryKey: keys.boards })
+  const record = boardRecord(board)
+  const ref = await putRecord(BOARD_NSID, rkey, record)
+  // The board list and the board's own details take a minute or two to catch up (the open
+  // network's index, then the edge's cache), and asking now would bring back what was there
+  // before. Put the saved board in both ourselves, keeping what only the server knows, and stop
+  // any read already on its way from landing on top.
+  const { did, handle } = useAtproto.getState()
+  await Promise.all([qc.cancelQueries({ queryKey: keys.board(did!, rkey) }), qc.cancelQueries({ queryKey: keys.boards })])
+  const viewOf = (old: BoardView | undefined): BoardView => {
+    const named = { ...old?.moderatorHandles, ...handles }
+    return {
+      ...old,
+      // Every field the board has, from what was saved: a cleared one is gone, not left as it was.
+      name: record.name,
+      description: record.description,
+      rules: record.rules,
+      topic: record.topic,
+      moderators: record.moderators,
+      blockList: record.blockList,
+      modsOnly: record.modsOnly,
+      createdAt: record.createdAt,
+      uri: ref.uri,
+      owner: did!,
+      ownerHandle: handle ?? old?.ownerHandle,
+      moderatorHandles: Object.fromEntries(record.moderators.flatMap((m) => (named[m] ? [[m, named[m]]] : []))),
+    }
+  }
+  qc.setQueryData<BoardView>(keys.board(did!, rkey), (old) => viewOf(old))
+  qc.setQueryData<BoardView[]>(keys.boards, (list) => {
+    if (!list) return list
+    const old = list.find((b) => b.uri === ref.uri)
+    return old ? list.map((b) => (b === old ? viewOf(old) : b)) : [viewOf(undefined), ...list]
+  })
   return ref.uri
 }
 
@@ -105,17 +141,17 @@ export async function keepOut(qc: QueryClient, list: string, did: string) {
   void qc.invalidateQueries({ queryKey: keys.feeds })
 }
 
-/** Resolves handles to DIDs through Bluesky's public API, for naming moderators. */
-export async function resolveHandles(handles: string[]): Promise<string[]> {
-  const out: string[] = []
+/** Accounts by handle (or DID), in the order given, each with the handle it was found by: Bluesky's public API, for naming moderators. */
+export async function resolveHandles(handles: string[]): Promise<{ did: string; handle?: string }[]> {
+  const out: { did: string; handle?: string }[] = []
   for (const h of handles.map((x) => x.trim().replace(/^@/, '')).filter(Boolean)) {
     if (/^did:/.test(h)) {
-      out.push(h)
+      out.push({ did: h })
       continue
     }
     const res = await fetch(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(h)}`)
     if (!res.ok) throw new Error(`Couldn’t find @${h} on Bluesky`)
-    out.push(((await res.json()) as { did: string }).did)
+    out.push({ did: ((await res.json()) as { did: string }).did, handle: h })
   }
   return out
 }

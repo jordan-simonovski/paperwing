@@ -33,6 +33,30 @@ describe('the feed function', () => {
     expect(res.headers.get('cache-control')).toContain(`s-maxage=${SOURCES.lobsters.ttl}`)
   })
 
+  it('lets a board’s details go stale for a minute or two at most: its owner checks their changes', () => {
+    expect(SOURCES.boardinfo).toMatchObject({ ttl: 60, stale: 60 })
+  })
+
+  it('lets the board list go stale for a minute or two at most: a new board is looked for straight away', async () => {
+    net
+      .get('https://constellation.microcosm.blue')
+      .intercept({ path: (p) => p.startsWith('/links?') })
+      .reply(200, { linking_records: [], cursor: null })
+    const res = await call(GET, '/api/feed?src=boards')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('cache-control')).toBe('public, s-maxage=60, stale-while-revalidate=60')
+  })
+
+  it('says so when the board index can’t be read, rather than serving (and caching) no boards', async () => {
+    net
+      .get('https://constellation.microcosm.blue')
+      .intercept({ path: (p) => p.startsWith('/links?') })
+      .reply(503, 'busy')
+    const res = await call(GET, '/api/feed?src=boards')
+    expect(res.status).toBe(502)
+    expect(res.headers.get('cache-control')).toBe('no-store')
+  })
+
   it('reads a publisher’s feed, following its redirect', async () => {
     net
       .get('https://blog.example')

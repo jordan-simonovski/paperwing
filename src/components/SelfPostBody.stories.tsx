@@ -45,8 +45,17 @@ export const Edited: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Edited 1h ago' }))
     const sheet = within(document.body)
-    await waitFor(() => expect(sheet.getByRole('region', { name: 'Original version' })).toBeVisible())
-    await expect(within(sheet.getByRole('region', { name: 'Original version' })).queryByText(/loving it/)).toBeNull()
+    await waitFor(() => expect(sheet.getByRole('region', { name: /^Earlier version/ })).toBeVisible())
+    await expect(within(sheet.getByRole('region', { name: /^Earlier version/ })).queryByText(/loving it/)).toBeNull()
     await expect(within(sheet.getByRole('region', { name: 'Current version' })).getByText(/loving it/)).toBeVisible()
+  },
+}
+
+/** Edited more than a day ago: it still says so, but what it said before is gone. */
+export const EditedLongAgo: Story = {
+  args: { body: now, versions: [{ body: now, seenAt: NOW - 30 * HOUR }], editedAt: NOW - 30 * HOUR },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText(/Edited 1d ago/)).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /Edited/ })).toBeNull()
   },
 }
