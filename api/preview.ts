@@ -126,7 +126,9 @@ export async function GET(request: Request): Promise<Response> {
   const path = url.searchParams.get('path') ?? ''
   const match = /^\/(t\/[A-Za-z0-9:@._%-]{1,200}|today)\/([A-Za-z0-9._@-]{3,1200})$/.exec(path)
   const profile = /^\/u\/([A-Za-z0-9:@._%-]{3,260})$/.exec(path)
-  const canonical = `https://${HOME}${match || profile ? path : '/'}`
+  // A story link that opens on the article keeps doing so (src/lib/storyLink.ts); only the tabs there are.
+  const tab = match && ['article', 'discussion', 'related'].includes(url.searchParams.get('tab') ?? '') ? `?tab=${url.searchParams.get('tab')}` : ''
+  const canonical = `https://${HOME}${match || profile ? path + tab : '/'}`
   let card: Card | undefined
   // A lookup that failed (a slow site, a bad escape in the path) is cached briefly, so the next
   // share gets the real card rather than a day of the generic one.

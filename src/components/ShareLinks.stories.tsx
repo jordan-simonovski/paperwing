@@ -19,6 +19,7 @@ export const Links: Story = {
   play: async () => {
     await waitFor(() => expect(page().getByRole('dialog', { name: 'Share' })).toBeVisible())
     await waitFor(() => expect(page().getByText('PaperWing link')).toBeVisible())
+    await expect(page().getByText('Opens on the article, with every discussion of it')).toBeVisible()
     await waitFor(() => expect(page().getByText('Original article')).toBeVisible())
     await waitFor(() => expect(page().getByText('The Hacker News discussion')).toBeVisible())
   },
@@ -27,6 +28,9 @@ export const Links: Story = {
 /** A Bluesky text post has no article link. */
 export const PostWithoutLink: Story = {
   args: { story: story({ key: 'bs-1', source: 'bluesky', sourceLabel: 'Bluesky', url: null, discussionUrl: 'https://bsky.app/profile/paperwing.io/post/1' }) },
+  play: async () => {
+    await waitFor(() => expect(page().getByText('With every discussion of it')).toBeVisible())
+  },
 }
 
 export const SignedInWithBluesky: Story = {
