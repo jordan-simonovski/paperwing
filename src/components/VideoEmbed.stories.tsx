@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent } from 'storybook/test'
+import { expect, userEvent, waitFor } from 'storybook/test'
 import { VideoEmbed } from './VideoEmbed'
 
 const poster = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="9"><rect width="16" height="9" fill="%232f4d7d"/></svg>'
@@ -19,6 +19,14 @@ export const YouTube: Story = {
     await expect(canvas.getByRole('button', { name: 'Play A talk about feeds from YouTube' })).toBeVisible()
     await expect(canvas.getByText(/Plays from YouTube when you press play/)).toBeVisible()
     await expect(canvasElement.querySelector('iframe')).toBeNull()
+  },
+}
+
+/** A preview picture that won't load leaves just the play button, never a broken image. */
+export const PictureMissing: Story = {
+  args: { thumb: '/api/feed?src=og&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ' },
+  play: async ({ canvasElement }) => {
+    await waitFor(() => expect(canvasElement.querySelector('img')).toBeNull())
   },
 }
 

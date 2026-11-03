@@ -12,6 +12,8 @@ type State = { at: 'poster' } | { at: 'loading' } | { at: 'frame' } | { at: 'fil
 export function VideoEmbed({ url, title, thumb }: { url: string | null | undefined; title: string; thumb?: string }) {
   const video = videoEmbedOf(url)
   const [state, setState] = useState<State>({ at: 'poster' })
+  // A preview picture that won't load leaves just the play button.
+  const [noPicture, setNoPicture] = useState(false)
   if (!video || !url) return null
   const from = videoHost(video)
 
@@ -48,7 +50,7 @@ export function VideoEmbed({ url, title, thumb }: { url: string | null | undefin
           </div>
         ) : (
           <button type="button" className="absolute inset-0 block h-full w-full bg-sunk" onClick={() => void play()} aria-label={`Play ${title} from ${from}`} disabled={state.at === 'loading'}>
-            {thumb && <img src={thumb} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-cover" />}
+            {thumb && !noPicture && <img src={thumb} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={() => setNoPicture(true)} />}
             <span className="absolute inset-0 grid place-items-center">
               <span className="grid size-16 place-items-center rounded-full bg-ink/75 text-ground">
                 {state.at === 'loading' ? <Loader2 size={26} className="spin" /> : <Play size={26} fill="currentColor" aria-hidden />}
