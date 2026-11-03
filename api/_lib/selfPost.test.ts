@@ -82,6 +82,45 @@ describe('a self post’s body', () => {
     const later = await selfPostBody(KEY, minutes(10 + 25 * 60))
     expect(later.versions.map((v) => v.body)).toEqual(['second'])
     expect(later.editedAt).toBe(minutes(10))
+    // And from the stored copy within the minute, too.
+    expect((await selfPostBody(KEY, minutes(10 + 25 * 60 + 0.5))).editedAt).toBe(minutes(10))
+  })
+
+  it('still says a post was edited when its history was kept before edits were dated', async () => {
+    written('second', 'v2')
+    const old = {
+      checkedAt: t0,
+      cid: 'v2',
+      versions: [
+        { body: 'first', seenAt: t0 },
+        { body: 'second', seenAt: minutes(5) },
+      ],
+    }
+    await kv().set(`pw:self:${POST}`, JSON.stringify(old), 3600)
+    const week = minutes(7 * 24 * 60)
+    for (const at of [week, week + 30_000]) {
+      const got = await selfPostBody(KEY, at)
+      expect(got.versions.map((v) => v.body)).toEqual(['second'])
+      expect(got.editedAt).toBe(minutes(5))
+    }
+  })
+
+  it('still says a post was edited when nobody opened it for days: the edit is dated in its own record', async () => {
+    written('second', 'v2')
+    ;(repo[SUB].value as Record<string, unknown>).editedAt = '2026-11-02T10:05:00.000Z'
+    const got = await selfPostBody(KEY, minutes(5 * 24 * 60))
+    expect(got.versions).toHaveLength(1)
+    expect(got.editedAt).toBe(Date.parse('2026-11-02T10:05:00.000Z'))
+  })
+
+  it('keeps its history when the account can’t be looked up, which isn’t the words being deleted', async () => {
+    written('first', 'v1')
+    await selfPostBody(KEY, t0)
+    reads.mockImplementationOnce(() => {
+      throw new Error('Upstream 400 for plc.directory')
+    })
+    await expect(selfPostBody(KEY, minutes(2))).rejects.toThrow(/plc/)
+    expect(await kv().get(`pw:self:${POST}`)).not.toBeNull()
   })
 
   it('forgets every version once its words are deleted, but not when its server is only down', async () => {

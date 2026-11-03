@@ -10,7 +10,7 @@ import { blocked } from './paperwing.js'
 // server sees, for a day after it's replaced, so a fresh edit shows what it changed; and when the
 // post was last edited, so it says so after that. Delete the words and all of it goes.
 
-/** How many versions are kept at most: the oldest still within its day, and the newest after it. */
+/** How many versions are kept at most: the newest ones still within their day. */
 export const VERSIONS_KEPT = 10
 /** How long a read of the author's repo stands before it's asked again. */
 const FRESH_FOR = 60_000
@@ -29,8 +29,19 @@ interface Kept {
 /** Versions replaced more than a day ago are gone; the current one always stays. */
 const recent = (versions: SelfPostVersion[], now: number) => versions.filter((v, i) => i === versions.length - 1 || now - versions[i + 1].seenAt < HISTORY_FOR)
 
-/** The author's server said the record isn't there (not that it's down): RecordNotFound is a 400. */
-const deleted = (err: unknown) => err instanceof Error && /\bUpstream 400\b/.test(err.message)
+/**
+ * The author's server said the record isn't there (not that it's down): RecordNotFound is a 400.
+ * A 400 from looking the account up (the PLC directory) says nothing about the words.
+ */
+const deleted = (err: unknown) => err instanceof Error && /\bUpstream 400 for (?!plc\.directory\b)/.test(err.message)
+
+/** When it was last edited: the later of what's kept here (or what an older history shows) and what its record says. */
+function lastEdit(kept: Kept | undefined, recorded?: string): number | undefined {
+  const fromHistory = kept?.editedAt ?? (kept && kept.versions.length > 1 ? kept.versions.at(-1)!.seenAt : undefined)
+  const fromRecord = recorded ? Date.parse(recorded) : undefined
+  const latest = Math.max(fromHistory ?? 0, fromRecord ?? 0)
+  return latest || undefined
+}
 
 export class NotSelfPost extends Error {
   constructor(message = 'That isn’t a self post') {
@@ -62,7 +73,8 @@ export async function selfPostBody(key: string, now = Date.now()): Promise<SelfP
     : undefined
   if (kept && now - kept.checkedAt < FRESH_FOR) {
     const versions = recent(kept.versions, now)
-    return { body: versions.at(-1)!.body, versions, ...(kept.editedAt ? { editedAt: kept.editedAt } : {}) }
+    const editedAt = lastEdit(kept)
+    return { body: versions.at(-1)!.body, versions, ...(editedAt ? { editedAt } : {}) }
   }
 
   // Words that are gone take what's kept here with them.
@@ -79,7 +91,7 @@ export async function selfPostBody(key: string, now = Date.now()): Promise<SelfP
   if (!sub?.body || sub.post.uri !== uri) return forget('That isn’t a self post')
 
   let versions = kept?.versions ?? []
-  let editedAt = kept?.editedAt
+  let editedAt = lastEdit(kept, sub.editedAt)
   if (!kept || kept.cid !== record.cid) {
     if (versions.at(-1)?.body !== sub.body) {
       if (versions.length) editedAt = now

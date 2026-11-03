@@ -52,7 +52,8 @@ async function fetchBoardInfo(did: string, rkey: string): Promise<BoardView> {
 }
 
 export const useBoard = (did: string | undefined, rkey: string | undefined) =>
-  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoardInfo(did!, rkey!), enabled: !!did && !!rkey, staleTime: 60_000 })
+  // Two minutes: as long as the edge may serve a board from before its owner's last change.
+  useQuery({ queryKey: keys.board(did, rkey), queryFn: () => fetchBoardInfo(did!, rkey!), enabled: !!did && !!rkey, staleTime: 2 * 60_000 })
 
 export const useAllBoards = () => useAllBoardsWhen(true)
 
@@ -64,7 +65,9 @@ export const useAllBoardsWhen = (enabled: boolean) =>
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const res = await fetch('/api/feed?src=boards')
-      return res.ok ? ((await res.json()) as BoardView[]) : []
+      // A failed read keeps the list already on screen rather than emptying it.
+      if (!res.ok) throw new Error('The boards didn’t load')
+      return (await res.json()) as BoardView[]
     },
   })
 
@@ -83,17 +86,27 @@ export async function saveBoard(qc: QueryClient, board: Omit<Board, 'createdAt'>
   const ref = await putRecord(BOARD_NSID, rkey, record)
   // The board list and the board's own details take a minute or two to catch up (the open
   // network's index, then the edge's cache), and asking now would bring back what was there
-  // before. Put the saved board in both ourselves, keeping what only the server knows.
+  // before. Put the saved board in both ourselves, keeping what only the server knows, and stop
+  // any read already on its way from landing on top.
   const { did, handle } = useAtproto.getState()
+  await Promise.all([qc.cancelQueries({ queryKey: keys.board(did!, rkey) }), qc.cancelQueries({ queryKey: keys.boards })])
   const viewOf = (old: BoardView | undefined): BoardView => {
     const named = { ...old?.moderatorHandles, ...handles }
     return {
       ...old,
-      ...(record as unknown as Board),
+      // Every field the board has, from what was saved: a cleared one is gone, not left as it was.
+      name: record.name,
+      description: record.description,
+      rules: record.rules,
+      topic: record.topic,
+      moderators: record.moderators,
+      blockList: record.blockList,
+      modsOnly: record.modsOnly,
+      createdAt: record.createdAt,
       uri: ref.uri,
       owner: did!,
       ownerHandle: handle ?? old?.ownerHandle,
-      moderatorHandles: Object.fromEntries((record as unknown as Board).moderators.flatMap((m) => (named[m] ? [[m, named[m]]] : []))),
+      moderatorHandles: Object.fromEntries(record.moderators.flatMap((m) => (named[m] ? [[m, named[m]]] : []))),
     }
   }
   qc.setQueryData<BoardView>(keys.board(did!, rkey), (old) => viewOf(old))
@@ -128,8 +141,7 @@ export async function keepOut(qc: QueryClient, list: string, did: string) {
   void qc.invalidateQueries({ queryKey: keys.feeds })
 }
 
-/** Resolves handles to DIDs through Bluesky's public API, for naming moderators. */
-/** Accounts by handle (or DID), in the order given, each with the handle it was found by. */
+/** Accounts by handle (or DID), in the order given, each with the handle it was found by: Bluesky's public API, for naming moderators. */
 export async function resolveHandles(handles: string[]): Promise<{ did: string; handle?: string }[]> {
   const out: { did: string; handle?: string }[] = []
   for (const h of handles.map((x) => x.trim().replace(/^@/, '')).filter(Boolean)) {

@@ -57,6 +57,32 @@ describe('saving a board', () => {
   })
 })
 
+describe('clearing a board’s details', () => {
+  it('shows what was cleared as gone, not as it was before', async () => {
+    const qc = new QueryClient()
+    const rkey = '3m2bbbbbbbbbb'
+    const before: BoardView = {
+      uri: `at://${DID}/io.paperwing.board/${rkey}`,
+      owner: DID,
+      name: 'Kitchen',
+      description: 'Old words',
+      rules: 'Be kind',
+      modsOnly: true,
+      moderators: [],
+      moderatorHandles: {},
+      createdAt: '2026-11-03T00:00:00.000Z',
+    }
+    qc.setQueryData(keys.board(DID, rkey), before)
+    qc.setQueryData<BoardView[]>(keys.boards, [before])
+    await saveBoard(qc, { name: 'Kitchen', moderators: [], createdAt: before.createdAt }, rkey)
+    for (const view of [qc.getQueryData<BoardView>(keys.board(DID, rkey))!, qc.getQueryData<BoardView[]>(keys.boards)![0]]) {
+      expect(view.description).toBeUndefined()
+      expect(view.rules).toBeUndefined()
+      expect(view.modsOnly).toBeUndefined()
+    }
+  })
+})
+
 describe('editing a board’s moderators', () => {
   it('shows the new moderators on the board straight away, by name', async () => {
     const qc = new QueryClient()

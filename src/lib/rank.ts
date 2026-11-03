@@ -187,7 +187,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         const shareNote = existing.shareNote ?? s.shareNote
         const followed = existing.followed || s.followed
         // Keep the hotter copy as primary so the row links to the liveliest discussion.
-        if (e > leadOf.get(existing)! && s.hasThread) {
+        // PaperWing's pinned announcement keeps its row (and takes it): no other copy carries the pin.
+        if (s.pinned || (!existing.pinned && e > leadOf.get(existing)! && s.hasThread)) {
           const { alsoOn, topics, ...old } = existing
           Object.assign(existing, s, { alsoOn: [old as Story, ...alsoOn], topics })
           leadOf.set(existing, e)
@@ -215,7 +216,11 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
 
   // Different links about one event become one row, led by the most engaged copy.
   if (!opts.native && order.length > 2) {
-    const strongest = order.map((_, i) => i).sort((a, b) => engagementOf.get(order[b])! - engagementOf.get(order[a])!)
+    // A pinned announcement is never folded into another row's coverage.
+    const strongest = order
+      .map((_, i) => i)
+      .filter((i) => !order[i].pinned)
+      .sort((a, b) => engagementOf.get(order[b])! - engagementOf.get(order[a])!)
     const absorbed = new Set<number>()
     for (const [l, members] of clusterEvents(order, strongest)) {
       const leader = order[l]

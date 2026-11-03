@@ -32,6 +32,13 @@ describe('a self post', () => {
     expect(cleanSubmission({ ...record, body: 42 })?.body).toBeUndefined()
   })
 
+  it('carries when its words were last edited, if it says so properly', () => {
+    const record = submissionRecord(ref, selfPostUrl(POST), 'T', undefined, { body: 'B' })
+    expect(cleanSubmission({ ...record, editedAt: '2026-11-03T01:00:00.000Z' })?.editedAt).toBe('2026-11-03T01:00:00.000Z')
+    expect(cleanSubmission({ ...record, editedAt: 'yesterday' })?.editedAt).toBeUndefined()
+    expect(cleanSubmission(record)?.editedAt).toBeUndefined()
+  })
+
   it('a link listing has no body', () => {
     expect(submissionRecord(ref, 'https://a.example/x', 'T', 'space')).not.toHaveProperty('body')
   })

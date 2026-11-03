@@ -27,6 +27,17 @@ describe('canonicalUrl', () => {
 })
 
 describe('merge', () => {
+  it('keeps a pinned announcement leading its row: a busier copy of the same link can’t take the pin', () => {
+    const announcement = s('bs-welcome', 'https://paperwing.io/blog/welcome', 0, { source: 'bluesky', sourceLabel: 'PaperWing', pinned: true })
+    const busier = s('hn-9', 'https://paperwing.io/blog/welcome', 500)
+    const [row] = merge([[announcement], [busier]], { sort: 'hot', filters })
+    expect(row).toMatchObject({ key: 'bs-welcome', pinned: true })
+    expect(row.alsoOn.map((a) => a.key)).toEqual(['hn-9'])
+    // The other way round, the pinned copy takes the row.
+    const [other] = merge([[busier], [announcement]], { sort: 'hot', filters })
+    expect(other).toMatchObject({ key: 'bs-welcome', pinned: true })
+  })
+
   it('leads Hot with an official announcement PaperWing pinned, however quiet it is so far', () => {
     const busy = [s('hn-1', 'https://a.example/1', 900), s('hn-2', 'https://a.example/2', 400)]
     const announcement = s('bs-welcome', null, 0, { source: 'bluesky', sourceLabel: 'PaperWing', pinned: true, comments: 0 })
