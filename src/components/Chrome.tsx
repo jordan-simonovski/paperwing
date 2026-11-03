@@ -1,6 +1,6 @@
 import { profilePath, useMe } from '../lib/people'
 import { Avatar } from './Avatar'
-import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Link2, Menu as MenuIcon, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X } from 'lucide-react'
+import { Bell, Bookmark, CalendarDays, Compass, Download, Layers, Menu as MenuIcon, Moon, Newspaper, Plus, Search, Settings, Sparkles, Sun, Users, WifiOff, X, SquarePen } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router'
 import { bskyFeedChannel, findTopic, followsTech, sourceChannels } from '../lib/channels'
@@ -307,8 +307,9 @@ function PostLinkButton({ onPost }: { onPost?: () => void }) {
       }}
       title="Post a link"
     >
+      {/* A pen on a page: writing to PaperWing, the way other apps mark a new post. */}
       <span className="rail-glyph">
-        <Link2 size={16} />
+        <SquarePen size={16} />
       </span>
       <span className="rail-label">Post a link</span>
     </button>
