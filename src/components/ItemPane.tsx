@@ -12,6 +12,7 @@ import type { Ranked } from '../lib/rank'
 import { useActivity, usePrefs } from '../lib/store'
 import { useAtproto } from '../lib/atproto'
 import { judge, moderateComments } from '../lib/moderation'
+import { useSpoilers } from '../lib/spice'
 import { useOutlets } from '../lib/coverage'
 import { Covered } from './Covered'
 import type { Story } from '../lib/types'
@@ -74,7 +75,8 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
   const verdict = useMemo(() => (story ? judge(story.labels, story.authorDid, labelers) : {}), [story, labelers])
   const cw = warnings === 'show' ? undefined : (verdict.warning ?? story?.warning)
   const cwMediaOnly = verdict.warning ? verdict.mediaOnly : story?.warnMediaOnly
-  const comments = useMemo(() => moderateComments(thread.data?.comments ?? [], mutedWords, labelers), [thread.data, mutedWords, labelers])
+  const spoilers = useSpoilers(known ?? story)
+  const comments = useMemo(() => moderateComments(thread.data?.comments ?? [], mutedWords, labelers, spoilers), [thread.data, mutedWords, labelers, spoilers])
   const alsoOn = (known as Ranked | undefined)?.alsoOn
   const coverage = (known as Ranked | undefined)?.coverage
   // How many outlets are covering it: starts the news search as the story opens, so the Related tab has it ready.

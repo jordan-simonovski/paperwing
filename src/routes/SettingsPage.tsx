@@ -614,6 +614,7 @@ function AppearanceSettings() {
         <Toggle label="Show excerpts for papers, blogs and repos" checked={p.showExcerpts} onChange={(showExcerpts) => p.set({ showExcerpts })} />
         <Toggle label="Show thumbnails (off when your browser asks to save data)" checked={p.thumbnails} onChange={(thumbnails) => p.set({ thumbnails })} />
         <Toggle label="Show chillies, and what discussions are like" checked={p.spice} onChange={(spice) => p.set({ spice })} />
+        <Toggle label="Fold comments that may spoil a film, show, book or game" checked={p.hideSpoilers} onChange={(hideSpoilers) => p.set({ hideSpoilers })} />
         <Toggle label="Colour comment threads by reply depth" checked={p.threadColours} onChange={(threadColours) => p.set({ threadColours })} />
         <Toggle label="Pip dresses up for holidays (Christmas, Halloween, New Year, Valentine's, Easter)" checked={p.seasonal} onChange={(seasonal) => p.set({ seasonal })} />
         <Toggle label="Hide stories I've already opened" checked={p.hideRead} onChange={(hideRead) => p.set({ hideRead })} />

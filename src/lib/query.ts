@@ -33,6 +33,7 @@ export const keys = {
   feeds: ['feed'] as const,
   feed: (id: string) => ['feed', id] as const,
   thread: (key: string) => ['thread', key] as const,
+  spoilers: (key: string | undefined, comments: number | undefined) => ['spoilers', key, comments] as const,
   article: (url: string | null | undefined) => ['article', url] as const,
   discussions: (url: string | null | undefined) => ['discussions', url] as const,
   coverage: (key: string | undefined) => ['coverage', key] as const,

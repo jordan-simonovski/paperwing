@@ -1,5 +1,6 @@
 import type { Page, Request, Route } from '@playwright/test'
 import type { SelfPostBody } from '../../src/lib/paperwing'
+import type { SpiceGrade } from '../../src/lib/spiceTypes'
 import type { Article, Story } from '../../src/lib/types'
 import type { FoundFeed } from '../../src/lib/publishers'
 import { HN_TOP, SEABED, MELTING, WEB_WE_LOST_ARTICLE, WEB_WE_LOST_THREAD, type HnHit, type HnItem, type LemmyPostView } from '../fixtures/upstream'
@@ -46,6 +47,8 @@ export interface Stubs {
   cards: Record<string, { title?: string; description?: string }>
   /** Whether this deployment has sync (`/api/sync?status`). */
   sync: boolean
+  /** Spice grades by story key, and the comment ids each thread's spoiler check flags; unset, spice is off. */
+  spice?: { grades: Record<string, SpiceGrade>; spoilers: Record<string, string[]> }
 }
 
 const DEFAULTS: Stubs = {
@@ -120,7 +123,11 @@ const HOSTS: Record<string, Handler> = {
     // Bluesky's own feeds need a deployment with a feed generator: this one has none.
     if (p === '/api/atproto') return q.get('route') === 'status' ? { enabled: false } : []
     if (p === '/api/outages') return { checkedAt: Date.now(), scanned: 0, providers: [] }
-    if (p === '/api/spice') return {}
+    if (p === '/api/spice') {
+      if (!s.spice) return {}
+      if (q.has('spoilers')) return { ids: s.spice.spoilers[(q.get('spoilers') ?? '').split('~')[0]] ?? [], pending: false }
+      return { enabled: true, grades: s.spice.grades, pending: [] }
+    }
     return undefined
   },
   'hacker-news.firebaseio.com': (url, _req, s) => {

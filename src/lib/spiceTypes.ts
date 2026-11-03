@@ -52,8 +52,25 @@ export interface SpiceInsights {
   delighted: number
   warm: number
   political: number
+  /** How likely the post is about fiction (films, shows, books, games): whether its comments are checked for spoilers. */
+  fiction?: number
   /** Top-level comments saying the title or main claim is wrong: set only when two or more people do. */
   disputed: SpiceRef[]
   /** Answers to what the post asks readers: set only when it asks something. */
   answers: SpiceRef[]
+}
+
+/** A thread's comments checked for spoilers (api/spice.ts?spoilers). */
+export interface SpoilerCheck {
+  /** Comment ids, as the reader's thread has them, that likely give the plot away. */
+  ids: string[]
+  /** Comments in the thread when checked. */
+  comments: number
+  at: number
+}
+
+export interface SpoilerResponse {
+  ids: string[]
+  /** Being checked now: worth asking again shortly. */
+  pending: boolean
 }

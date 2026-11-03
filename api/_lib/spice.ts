@@ -1,6 +1,6 @@
 import { keyId, parseStoryKey } from '../../src/lib/storyKey.js'
 import type { Comment } from '../../src/lib/types.js'
-import { spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceRef } from '../../src/lib/spiceTypes.js'
+import { spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceRef, type SpoilerCheck } from '../../src/lib/spiceTypes.js'
 import { parseLemmyKey } from '../../src/lib/lemmyKey.js'
 import { fetchJson, stripHtml } from './http.js'
 import { lobstersThread } from './sources.js'
@@ -259,6 +259,12 @@ export const THREAD_QUESTIONS = {
       false: 'People discuss technology, business, culture or personal experience without taking political sides',
     },
   },
+  // Whether there's a plot to spoil: only these threads get their comments checked for spoilers.
+  fiction: {
+    type: 'noul',
+    instructions: 'The post in `story` discusses one or more works of fiction: films, TV shows, books, anime or games.',
+    criteria: { true: 'It is about particular works, a genre, or recommendations of them', false: 'It is about technology, business, politics, science or real people and events' },
+  },
 } as const
 
 /**
@@ -318,6 +324,7 @@ export interface JevAnswers {
   delighted: Noul
   warm: Noul
   political: Noul
+  fiction: Noul
   /** `push_<id>` and `hostile_<id>` for each reply, `disputes_<id>` and `answers_<id>` for each top-level comment, and `asks_help`. */
   items: Record<string, Noul>
 }
@@ -382,6 +389,7 @@ export function gradeFrom({ state, sources }: Pick<Built, 'state' | 'sources'>, 
     delighted: r2(a.delighted.noul),
     warm: r2(a.warm.noul),
     political: r2(a.political.noul),
+    fiction: r2(a.fiction.noul),
     // One person saying the headline is wrong is an opinion; two is worth a look.
     disputed: disputed.length >= 2 ? disputed.slice(0, MAX_REFS) : [],
     answers: (a.items.asks_help?.noul ?? 0) >= YES ? refs('answers_').slice(0, MAX_REFS) : [],
@@ -405,7 +413,7 @@ export const quiet = (comments: number, now = Date.now()): SpiceGrade => ({
 })
 
 /** Bumped when the questions change, so older grades are redone once. */
-export const GRADE_VERSION = 5
+export const GRADE_VERSION = 6
 
 /**
  * Whether a story is worth (re)grading: big enough, and either never graded or grown by half
@@ -458,4 +466,63 @@ export async function askJev(state: SpiceState, apiKey: string): Promise<JevAnsw
     }),
   ])
   return { ...(thread as Omit<JevAnswers, 'items'>), items: { ...replies, ...tops } as JevAnswers['items'] }
+}
+
+// Spoilers: in a thread about fiction, every comment (not the sample spice reads) is asked whether
+// it gives the plot away, so the reader can fold those. Missing one costs more than folding one
+// too many, so the bar is lower than elsewhere.
+
+const SPOILER_COMMENTS = 400
+const SPOILER_CLIP = 1500
+/** Characters of comment text per request: several requests at once keep each well inside Jev's context. */
+const SPOILER_CHUNK = 90_000
+const SPOILER_YES = 0.5
+/** A grade's `insights.fiction` at or above this gets its comments checked. */
+export const FICTION_YES = 0.7
+
+/** Every comment with words, at any depth (a spoiler can be anywhere), each clipped. */
+export function spoilerComments(tree: SpiceComment[]): Pick<SpiceComment, 'id' | 'author' | 'text'>[] {
+  const out: Pick<SpiceComment, 'id' | 'author' | 'text'>[] = []
+  const walk = (cs: SpiceComment[]) => {
+    for (const c of cs) {
+      if (out.length >= SPOILER_COMMENTS) return
+      const text = c.text.replace(/\s+/g, ' ').trim()
+      if (text && c.id) out.push({ id: c.id, author: c.author, text: text.length > SPOILER_CLIP ? `${text.slice(0, SPOILER_CLIP)}…` : text })
+      walk(c.children)
+    }
+  }
+  walk(tree)
+  return out
+}
+
+export const spoilerQuestion = (c: Pick<SpiceComment, 'author' | 'text'>) => ({
+  type: 'noul',
+  instructions: { question: 'Does the comment give away what happens in the plot of a film, show, book or game?', comment: { author: c.author, text: c.text } },
+  criteria: {
+    true: 'It reveals a twist, an ending, who did it, or a character’s death or fate',
+    false: 'It names, rates, recommends or discusses a work, its makers or its themes without saying what happens in it',
+  },
+})
+
+/** Checks a thread's comments for spoilers: the ids of the likely ones. */
+export async function checkSpoilers(key: string, apiKey: string, now = Date.now()): Promise<SpoilerCheck> {
+  const { title, comments } = await fetchDiscussion(key)
+  const all = spoilerComments(comments)
+  const chunks: Record<string, unknown>[] = []
+  let size = Infinity
+  all.forEach((c, i) => {
+    if (size + c.text.length > SPOILER_CHUNK) {
+      chunks.push({})
+      size = 0
+    }
+    chunks[chunks.length - 1][`spoiler_${i}`] = spoilerQuestion(c)
+    size += c.text.length
+  })
+  const answers = Object.assign({}, ...(await Promise.all(chunks.map((q) => systemOne({ story: { title } }, q, apiKey))))) as Record<string, Noul>
+  return { ids: all.filter((_, i) => answers[`spoiler_${i}`].noul >= SPOILER_YES).map((c) => c.id), comments: count(comments), at: now }
+}
+
+/** Checked again once a thread has grown by a fifth (at least ten comments), and not within half an hour. */
+export function needsSpoilerCheck(held: SpoilerCheck | undefined, comments: number, now = Date.now()): boolean {
+  return !held || (comments >= held.comments + Math.max(10, held.comments * 0.2) && now - held.at > 30 * 60_000)
 }

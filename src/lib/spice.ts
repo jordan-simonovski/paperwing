@@ -1,5 +1,9 @@
 import { create } from 'zustand'
-import { spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceResponse } from './spiceTypes'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { keys } from './query'
+import { usePrefs } from './store'
+import { spiceMin, type SpiceGrade, type SpiceInsights, type SpiceLevel, type SpiceResponse, type SpoilerResponse } from './spiceTypes'
 import type { Story } from './types'
 
 // Spice grades for the stories on screen, from /api/spice. Rows ask for their story as they
@@ -110,4 +114,34 @@ const MOODS: [keyof Pick<SpiceInsights, 'sad' | 'delighted' | 'warm' | 'politica
 /** What a discussion is like, in a word or two each: only what Jev is fairly sure of. */
 export function describeMood(i: SpiceInsights): string[] {
   return MOODS.filter(([k]) => i[k] >= 0.7).map(([, name]) => name)
+}
+
+/** How sure the grade must be that a thread is about fiction before its comments are checked (as on the server). */
+const FICTION_YES = 0.7
+const NO_SPOILERS: ReadonlySet<string> = new Set()
+
+/**
+ * The comments in a thread about fiction that likely give the plot away, by id, for the reader to
+ * fold. Asks for the thread's grade even with the chillies off, since the grade says whether it's
+ * about fiction; asks again while the server is still checking, a few times.
+ */
+export function useSpoilers(story: Pick<Story, 'key' | 'source' | 'comments'> | undefined): ReadonlySet<string> {
+  const on = usePrefs((p) => p.hideSpoilers)
+  useEffect(() => {
+    if (on && story) wantSpice(story)
+  })
+  const fiction = useSpiceStore((st) => (story ? (st.grades[story.key]?.insights?.fiction ?? 0) : 0) >= FICTION_YES)
+  const { data } = useQuery({
+    queryKey: keys.spoilers(story?.key, story?.comments),
+    enabled: on && fiction && !!story,
+    queryFn: async () => {
+      const res = await fetch(`/api/spice?spoilers=${story!.key}~${story!.comments ?? 0}`)
+      if (!res.ok) throw new Error(`Spoiler check failed (${res.status})`)
+      return (await res.json()) as Partial<SpoilerResponse>
+    },
+    refetchInterval: (q) => (q.state.data?.pending && q.state.dataUpdateCount < 6 ? 15_000 : false),
+    staleTime: 5 * 60_000,
+  })
+  const ids = data?.ids
+  return useMemo(() => (on && ids?.length ? new Set(ids) : NO_SPOILERS), [on, ids])
 }

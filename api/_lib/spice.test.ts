@@ -1,7 +1,21 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { spicyOrder, describeSpice } from '../../src/lib/spice'
-import type { SpiceGrade, SpiceResponse } from '../../src/lib/spiceTypes'
-import { buildState, GRADE_VERSION, gradeFrom, lemmyTree, levelOf, needsGrade, replyQuestions, topQuestions, validKey, type JevAnswers, type SpiceComment } from './spice'
+import type { SpiceGrade, SpiceResponse, SpoilerResponse } from '../../src/lib/spiceTypes'
+import {
+  buildState,
+  GRADE_VERSION,
+  gradeFrom,
+  lemmyTree,
+  levelOf,
+  needsGrade,
+  needsSpoilerCheck,
+  replyQuestions,
+  spoilerComments,
+  topQuestions,
+  validKey,
+  type JevAnswers,
+  type SpiceComment,
+} from './spice'
 
 // The background grade runs as soon as it's handed over; tests wait for it by polling.
 const background: Promise<unknown>[] = []
@@ -38,6 +52,7 @@ const answers: Omit<JevAnswers, 'items'> = {
   delighted: { noul: 0.1 },
   warm: { noul: 0.75 },
   political: { noul: 0.05 },
+  fiction: { noul: 0.02 },
 }
 let made = 0
 const c = (author: string, text: string, children: SpiceComment[] = []): SpiceComment => ({ id: `c${++made}`, author, text, children })
@@ -213,6 +228,26 @@ describe('spice grading', () => {
     expect(Object.keys(topQuestions(state)).sort()).toEqual(['answers_1', 'answers_3', 'asks_help', 'disputes_1', 'disputes_3'])
   })
 
+  it('checks every comment for spoilers, to a limit, and again once the thread grows', () => {
+    const tree = [
+      c(
+        'a',
+        'y'.repeat(2000),
+        Array.from({ length: 450 }, (_, i) => c(`r${i}`, 'reply')),
+      ),
+      c('gone', ''),
+    ]
+    const all = spoilerComments(tree)
+    expect(all).toHaveLength(400)
+    expect(all[0].text.length).toBe(1501)
+    const now = Date.now()
+    const held = { ids: [], comments: 100, at: now - 3600e3 }
+    expect(needsSpoilerCheck(undefined, 10, now)).toBe(true)
+    expect(needsSpoilerCheck(held, 115, now)).toBe(false)
+    expect(needsSpoilerCheck(held, 120, now)).toBe(true)
+    expect(needsSpoilerCheck({ ...held, at: now - 60e3 }, 500, now)).toBe(false)
+  })
+
   it('puts heated discussions first and keeps hot order otherwise', () => {
     const s = (key: string, alsoOn: string[] = []) => ({ key, alsoOn: alsoOn.map((k) => ({ key: k })) })
     const order = spicyOrder([s('a'), s('b'), s('c', ['lb-x']), s('d')], { b: grade({ level: 1, heat: 1.1 }), 'lb-x': grade({ level: 3, heat: 2.6 }) })
@@ -243,10 +278,13 @@ describe('/api/spice', () => {
               delighted: { noul: 0.1 },
               warm: { noul: 0.2 },
               political: { noul: 0.9 },
+              // About fiction, so its comments can be checked for spoilers.
+              fiction: { noul: 0.9 },
             },
           })
         // Per reply: pushing back, not hostile; one answer missing when a test asks for it.
-        const answers = Object.fromEntries(Object.keys(body.questions).map((q) => [q, { noul: q.startsWith('push_') ? 0.8 : 0.1 }]))
+        // The second comment in reading order gives the plot away.
+        const answers = Object.fromEntries(Object.keys(body.questions).map((q) => [q, { noul: q.startsWith('push_') || q === 'spoiler_1' ? 0.8 : 0.1 }]))
         if (dropOne || (dropTop && body.questions.asks_help)) delete answers[Object.keys(answers)[0]]
         return Response.json({ answers })
       }
@@ -302,6 +340,27 @@ describe('/api/spice', () => {
     const res = await get('hn-7~5,hn-8~5')
     expect(res.grades['hn-7'].level).toBe(2)
     expect(res.grades['hn-8'].level).toBe(2)
+  })
+
+  it('checks every comment of a thread about fiction for spoilers, and only such a thread', async () => {
+    const spoilers = async (key: string) => (await (await spice.GET(new Request(`https://readout.test/api/spice?spoilers=${key}`))).json()) as SpoilerResponse
+    // hn-1 was graded above, as about fiction.
+    const asked = jevBodies.length
+    expect(await spoilers('hn-1~30')).toEqual({ ids: [], pending: true })
+    await Promise.all(background)
+    const check = jevBodies.slice(asked)
+    expect(check).toHaveLength(1)
+    expect(Object.keys(check[0].questions)).toHaveLength(30)
+    // Reading order across the whole thread: the first top-level comment, then its replies.
+    expect(await spoilers('hn-1~30')).toEqual({ ids: ['1001'], pending: false })
+    expect(jevBodies).toHaveLength(asked + 1)
+
+    // A thread its grade doesn't call fiction is never checked, whatever the caller asks.
+    const { kv } = await import('./kv')
+    await kv().set('rd:spice:hn-9', JSON.stringify(grade({ insights: { sad: 0, delighted: 0, warm: 0, political: 0, fiction: 0.2, disputed: [], answers: [] } })), 600)
+    expect(await spoilers('hn-9~5000')).toEqual({ ids: [], pending: false })
+    expect(await spoilers('hn-404~5000')).toEqual({ ids: [], pending: false })
+    expect(jevBodies).toHaveLength(asked + 1)
   })
 
   it('rests a source that rate-limited the server', async () => {
