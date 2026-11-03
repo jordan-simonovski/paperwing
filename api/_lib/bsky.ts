@@ -1,6 +1,6 @@
 import { storyKey } from '../../src/lib/storyKey.js'
 import { BSKY_FEED_BY_RKEY, BSKY_FEEDS, isOffTopic, searchQueries, strongHits, strongTerms, type BskyFeedDef } from '../../src/lib/bskyFeeds.js'
-import { isGifLink, postMedia, postWords, quotedPost, sharedLink, type Shareable } from '../../src/lib/bskyPost.js'
+import { isGifLink, postMedia, postWords, quotedPost, selfPostOf, sharedLink, type Shareable } from '../../src/lib/bskyPost.js'
 import type { Story } from '../../src/lib/types.js'
 import { UA } from './http.js'
 import { escapeHtml } from './text.js'
@@ -238,7 +238,7 @@ export function toStory(p: PostView): Story {
   return {
     key: bskyKey(p.uri),
     source: 'bluesky',
-    sourceLabel: 'Bluesky',
+    sourceLabel: selfPostOf(p) ? 'PaperWing' : 'Bluesky',
     title,
     url: sharedLink(p) ?? null,
     discussionUrl: postUrl(p),
