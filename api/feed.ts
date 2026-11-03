@@ -85,7 +85,8 @@ export const SOURCES: Record<FeedSource, Source> = {
   // Someone who just made a board goes looking for it: a minute or two at most, not the usual twenty.
   boards: { ttl: 60, stale: 60, run: () => allBoards() },
   // Suggestions from the liveliest boards for For you: the same for everyone, two minutes at the edge (and in KV).
-  boardpicks: { ttl: 120, stale: 60, run: () => boardPicks() },
+  // One answer for everyone, kept in KV: a miss walks the boards once for all callers, so it costs a caller little.
+  boardpicks: { ttl: 120, stale: 60, cost: 1, run: () => boardPicks() },
   // Margin notes on an article, from anyone.
   notes: { ttl: 120, cost: 2, run: (p) => marginNotes(need(p, 'url')) },
   // Someone's PaperWing profile: their listings and mixes, from their own repo.

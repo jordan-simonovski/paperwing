@@ -215,7 +215,7 @@ export async function overLimit(key: string, seconds: number, limit: number, by 
  * so the app's own busiest minute fits (api/_test/feed.test.ts pins it): this stops a script, not a
  * reader. A one-fetch answer (a feed, an icon, a card) costs nothing and never comes here.
  */
-export const FAN_OUT_PER_MINUTE = 120
+export const FAN_OUT_PER_MINUTE = 150
 
 /** Counts `cost` against the caller's fan-out allowance; true when this call goes over it. Fails closed. */
 export function fanOutLimited(request: Request, cost: number): Promise<boolean> {
