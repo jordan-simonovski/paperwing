@@ -49,9 +49,8 @@ function NoticeRow({ n, fresh, onOpen, now, selected }: { n: Notice; fresh: bool
       <span className="min-w-0 flex-1 text-left">
         <span className="block text-[0.9375rem] leading-snug">
           <span className="font-semibold">{who(n.actors)}</span> <span className="text-ink-2">{verb(n)}</span>
-          <span className="text-ink-3" title={fullDate(n.at)}>
-            {' '}
-            · {timeAgo(n.at, now)}
+          <span className="ml-2 text-ink-3" title={fullDate(n.at)}>
+            {timeAgo(n.at, now)}
           </span>
         </span>
         {n.text && <span className="mt-1 line-clamp-3 block text-[0.9375rem] leading-snug text-ink">{n.text}</span>}
@@ -71,15 +70,15 @@ function MineRow({ m, onOpen, now, selected }: { m: Mine; onOpen: (m: Mine) => v
       <span className="min-w-0 flex-1 text-left">
         {m.on && <span className="mb-0.5 line-clamp-1 block text-[0.8125rem] text-ink-3">on “{m.on}”</span>}
         <span className={`line-clamp-3 block leading-snug ${m.kind === 'post' ? 'text-[1rem] font-semibold' : 'text-[0.9375rem]'}`}>{m.text}</span>
-        <span className="mt-1 block text-[0.8125rem] text-ink-3">
-          {NETWORK_NAMES[m.network]} · <span title={fullDate(m.at)}>{timeAgo(m.at, now)}</span>
+        <span className="meta mt-1">
+          <span>{NETWORK_NAMES[m.network]}</span>
+          <span title={fullDate(m.at)}>{timeAgo(m.at, now)}</span>
           {m.score !== undefined && m.score > 0 && (
             <span className="num">
-              {' '}
-              · {compact(m.score)} {m.network === 'hn' || m.network === 'frontpage' || m.network === 'lemmy' ? 'points' : 'likes'}
+              {compact(m.score)} {m.network === 'hn' || m.network === 'frontpage' || m.network === 'lemmy' ? 'points' : 'likes'}
             </span>
           )}
-          {m.replies !== undefined && m.replies > 0 && <span className="num"> · {compact(m.replies)} replies</span>}
+          {m.replies !== undefined && m.replies > 0 && <span className="num">{compact(m.replies)} replies</span>}
         </span>
       </span>
     </button>

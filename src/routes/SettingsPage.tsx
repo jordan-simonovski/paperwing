@@ -941,12 +941,13 @@ const SECTIONS: SettingsSection[] = [
 function BuildInfo() {
   const unread = useUnreadRelease()
   return (
-    <p className="text-[0.8125rem] text-ink-3">
-      <span className="num">Version {__BUILD__.version}</span> · {fullDate(Date.parse(__BUILD__.at))} ·{' '}
+    <p className="meta">
+      <span className="num">Version {__BUILD__.version}</span>
+      <span>{fullDate(Date.parse(__BUILD__.at))}</span>
       <Link to="/whats-new" className="font-semibold text-ink-2 underline-offset-2 hover:text-ink hover:underline">
         What’s new
       </Link>
-      {unread && <span className="ml-1.5 inline-block size-2 rounded-full bg-signal align-middle" aria-label="New release" />}
+      {unread && <span className="-ml-3 inline-block size-2 self-center rounded-full bg-signal" aria-label="New release" />}
     </p>
   )
 }

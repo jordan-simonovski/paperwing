@@ -18,7 +18,7 @@ export function WebMentions({ url, now }: { url: string | null | undefined; now:
       <button className="flex w-full items-center gap-2.5 px-4 py-3 text-left" onClick={() => setOpen(!open)} aria-expanded={open} disabled={!talk.length}>
         <Globe size={16} className="flex-none text-ink-3" />
         <span className="min-w-0 flex-1 text-[0.875rem]">
-          <span className="font-semibold">Around the web</span> <span className="text-ink-3">· {summary}, from personal sites</span>
+          <span className="font-semibold">Around the web</span> <span className="ml-2 text-ink-3">{summary}, from personal sites</span>
         </span>
         {talk.length > 0 && <ChevronDown size={16} className={`flex-none text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
@@ -37,7 +37,7 @@ export function WebMentions({ url, now }: { url: string | null | undefined; now:
                     {m.author}
                   </a>{' '}
                   {m.kind === 'reply' ? 'replied' : 'wrote about it'}
-                  {m.at ? ` · ${timeAgo(m.at, now)}` : ''}
+                  {m.at ? <span className="ml-2 text-ink-3">{timeAgo(m.at, now)}</span> : null}
                 </p>
                 {m.text && <p className="mt-0.5 leading-snug text-ink-2">{m.text}</p>}
                 <a className="mt-0.5 inline-block text-[0.8125rem] text-ink-3 underline underline-offset-2" href={m.url} target="_blank" rel="noopener noreferrer">

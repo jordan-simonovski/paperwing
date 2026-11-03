@@ -63,7 +63,12 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
   const untitled = !!known && known.title === known.url
   const article = useArticle(known?.url, itemKey, untitled)
   const articleTitle = untitled ? article.data?.title : undefined
-  const story = useMemo(() => thread.data?.story ?? (articleTitle && known ? { ...known, title: articleTitle } : known), [thread.data, articleTitle, known])
+  // A PaperWing listing's thread is a Bluesky post: it keeps PaperWing's name when the thread loads.
+  const story = useMemo(() => {
+    const loaded = thread.data?.story
+    if (loaded) return known?.sourceLabel === 'PaperWing' ? { ...loaded, sourceLabel: 'PaperWing' } : loaded
+    return articleTitle && known ? { ...known, title: articleTitle } : known
+  }, [thread.data, articleTitle, known])
   // Content warnings and folded comments: judged here too, since an opened thread arrives unjudged.
   const { labelers, warnings, mutedWords } = usePrefs()
   const verdict = useMemo(() => (story ? judge(story.labels, story.authorDid, labelers) : {}), [story, labelers])
@@ -150,6 +155,8 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
 
   const domain = domainOf(story.url)
   const sourceName = sourceLabel(story)
+  // Where the thread itself lives, for links out: a PaperWing post's is Bluesky.
+  const network = SOURCE_NAMES[story.source]
 
   return (
     <div className="relative flex h-full flex-col">
@@ -192,7 +199,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
           </button>
           {story.discussionUrl && (
             // The source's own logo: a speech bubble read as "reply" when it means "open the discussion there".
-            <a className="icon-btn" href={story.discussionUrl} target="_blank" rel="noopener noreferrer" title={`Open on ${sourceName}`} aria-label={`Open on ${sourceName}`}>
+            <a className="icon-btn" href={story.discussionUrl} target="_blank" rel="noopener noreferrer" title={`Open on ${network}`} aria-label={`Open on ${network}`}>
               <SourceIcon source={story.source} size={16} />
             </a>
           )}
@@ -336,7 +343,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                       <p className="mt-1 text-[0.875rem] text-ink-3">{thread.error.message}</p>
                       {story.discussionUrl && (
                         <a className="btn mt-4" href={story.discussionUrl} target="_blank" rel="noopener noreferrer">
-                          Read them on {sourceName}
+                          Read them on {network}
                         </a>
                       )}
                     </div>

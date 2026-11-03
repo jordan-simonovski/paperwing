@@ -89,7 +89,8 @@ export function postStory(p: PostView, key = bskyKeyOf(p.uri)): Story {
   return {
     key,
     source: 'bluesky',
-    sourceLabel: 'Bluesky',
+    // A PaperWing post lives on Bluesky, but it's shown as PaperWing's own wherever it's read.
+    sourceLabel: selfPostOf(p) ? 'PaperWing' : 'Bluesky',
     title: ext?.title?.trim() || (first.length > 140 ? first.slice(0, 140).replace(/\s+\S*$/, '') + '…' : first),
     url: sharedLink(p) ?? null,
     discussionUrl: postUrl(p),

@@ -38,7 +38,15 @@ export const Joined: Story = { parameters: { app: { queries: [[['board', OWNER, 
 export const YourBoard: Story = { parameters: { app: { queries: [[['board', OWNER, RKEY], board]], atproto: { did: OWNER, handle: 'paperwing.io' } } } }
 export const NoRulesOrTopic: Story = { parameters: { app: { queries: [[['board', OWNER, RKEY], { ...board, rules: undefined, topic: undefined, description: undefined }]] } } }
 /** The board was deleted, or its owner's server is down. */
-export const DidNotLoad: Story = { parameters: { app: { queries: [] } }, args: { did: READER.did } }
+export const DidNotLoad: Story = {
+  parameters: { app: { queries: [] } },
+  args: { did: READER.did },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('This board didn’t load', {}, { timeout: 5000 })).toBeVisible()
+    // Like every state that failed: a way on.
+    await expect(canvas.getByRole('button', { name: /Try again/ })).toBeVisible()
+  },
+}
 
 export const ReadTheRulesAndJoin: Story = {
   play: async ({ canvas }) => {

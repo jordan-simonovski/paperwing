@@ -55,7 +55,7 @@ type Story = StoryObj<typeof meta>
 export const OthersNotes: Story = {
   args: { url: URL, html: HTML, container: { current: null } },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('heading', { name: /Margin notes · 2/ })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: /Margin notes\s*2/ })).toBeVisible()
     await expect(canvas.queryByRole('button', { name: /Remove/ })).toBeNull()
   },
 }

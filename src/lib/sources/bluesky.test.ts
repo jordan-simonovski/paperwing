@@ -74,3 +74,30 @@ describe('Bluesky feeds and lists', () => {
     await expect(resolveBlueskyFeed('https://example.com')).rejects.toThrow('Paste a bsky.app link')
   })
 })
+
+describe('a PaperWing post read from Bluesky', () => {
+  const author = { did: 'did:plc:writer', handle: 'writer.example' }
+  const base = (uri: string, extra: object) =>
+    ({ uri, cid: 'bafy', author, record: { text: '', createdAt: '2026-11-01T00:00:00Z' }, indexedAt: '2026-11-01T00:00:00Z', likeCount: 0, replyCount: 0, ...extra }) as never
+
+  it('is shown as PaperWing’s own, not as a Bluesky post', async () => {
+    const { postStory } = await import('./bluesky')
+    const { selfPostUrl } = await import('../paperwing')
+    const uri = 'at://did:plc:writer/app.bsky.feed.post/3kself'
+    const own = postStory(
+      base(uri, {
+        record: { text: 'Notes on bread', createdAt: '2026-11-01T00:00:00Z' },
+        embed: { $type: 'app.bsky.embed.external#view', external: { uri: selfPostUrl(uri), title: 'Notes on bread' } },
+      }),
+    )
+    expect(own.sourceLabel).toBe('PaperWing')
+    // The thread still lives on Bluesky.
+    expect(own.source).toBe('bluesky')
+  })
+
+  it('leaves an ordinary Bluesky post as Bluesky', async () => {
+    const { postStory } = await import('./bluesky')
+    const post = postStory(base('at://did:plc:writer/app.bsky.feed.post/3kplain', { record: { text: 'Just a thought', createdAt: '2026-11-01T00:00:00Z' } }))
+    expect(post.sourceLabel).toBe('Bluesky')
+  })
+})

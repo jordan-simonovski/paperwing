@@ -68,6 +68,8 @@ export const NoBoardsYet: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText('No community boards yet')).toBeVisible()
     await expect(canvas.getByRole('link', { name: /Start the first one/ })).toHaveAttribute('href', '/boards')
+    // One way to start, not two.
+    await expect(canvas.queryByRole('link', { name: /Start a board/ })).toBeNull()
   },
 }
 

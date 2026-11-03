@@ -30,7 +30,8 @@ export function Blogroll({ feeds, who, mine }: { feeds: Feed[]; who: string; min
       <button className="flex w-full items-center gap-2 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
         <BookOpen size={15} className="flex-none text-ink-3" />
         <span className="flex-1 text-[0.8125rem] font-semibold text-ink-3">
-          {mine ? 'Your blogroll' : 'Blogroll'} · {plural(feeds.length, 'blog')}
+          {mine ? 'Your blogroll' : 'Blogroll'}
+          <span className="ml-2 font-normal">{plural(feeds.length, 'blog')}</span>
           {!mine && missing.length < feeds.length ? `, ${feeds.length - missing.length} you follow` : ''}
         </span>
         <ChevronDown size={15} className={`flex-none text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`} />

@@ -82,9 +82,11 @@ function MixPicker({ source, label, onClose }: { source: MixSource; label: strin
                   <span className={`grid size-6 flex-none place-items-center rounded-full ${has ? 'bg-ink text-ground' : 'border border-line'}`}>{has && <Check size={14} />}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[0.9375rem] font-semibold">{m.name || 'Untitled mix'}</span>
-                    <span className="block text-[0.8125rem] text-ink-3">
-                      {m.sources.length} {m.sources.length === 1 ? 'source' : 'sources'}
-                      {m.published ? ' · published' : ''}
+                    <span className="meta">
+                      <span>
+                        {m.sources.length} {m.sources.length === 1 ? 'source' : 'sources'}
+                      </span>
+                      {m.published && <span>published</span>}
                     </span>
                   </span>
                 </button>
