@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { HOME, HOSTS } from './oauthClient'
+import { storyPath } from './storyLink'
+import type { Story } from './types'
 
 export interface Toast {
   id: number
@@ -66,8 +68,9 @@ export function keysBelongElsewhere(e: KeyboardEvent): boolean {
  */
 export const homeOrigin = () => (HOSTS.includes(location.hostname) ? `https://${HOME}` : location.origin)
 
-export function storyLink(key: string): string {
-  return `${homeOrigin()}/t/for-you/${key}`
+/** A story's PaperWing link as shared: on the article when it has one (storyLink.ts). */
+export function storyLink(story: Pick<Story, 'key' | 'url'>): string {
+  return `${homeOrigin()}${storyPath(story)}`
 }
 
 export async function share(title: string, url: string) {

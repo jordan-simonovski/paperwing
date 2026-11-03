@@ -17,6 +17,14 @@ describe('story preview cards', () => {
     expect(html).toContain('<meta property="og:image" content="https://example.com/pic.jpg">')
     expect(html).toContain(`<link rel="canonical" href="https://paperwing.io/t/for-you/${key}">`)
   })
+  it('keeps a link that opens on the article opening on the article', async () => {
+    const key = 'ln-' + Buffer.from('https://example.com/post').toString('base64url')
+    const html = await (await GET(new Request(`https://paperwing.io/api/preview?path=${encodeURIComponent(`/t/for-you/${key}`)}&tab=article`))).text()
+    expect(html).toContain(`<link rel="canonical" href="https://paperwing.io/t/for-you/${key}?tab=article">`)
+    // Only the tabs there are: anything else is left off.
+    const odd = await (await GET(new Request(`https://paperwing.io/api/preview?path=${encodeURIComponent(`/t/for-you/${key}`)}&tab=%22%3E%3Cx`))).text()
+    expect(odd).toContain(`<link rel="canonical" href="https://paperwing.io/t/for-you/${key}">`)
+  })
   it('falls back to the PaperWing card for anything it does not know', async () => {
     const html = await card('/t/for-you/zz-unknown')
     expect(html).toContain('<meta property="og:title" content="PaperWing">')
