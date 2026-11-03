@@ -95,6 +95,11 @@ export function newTid(now = Date.now()): string {
 const POST = /^at:\/\/did:[a-z0-9:._%-]+\/app\.bsky\.feed\.post\/[a-z2-7]{13}$/
 /** A community board's record: at://<owner>/io.paperwing.board/<rkey>. */
 export const AT_COMMUNITY = /^at:\/\/(did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+))\/io\.paperwing\.board\/([a-z2-7]{13})$/
+/** A community board's owner and record key, from its at:// URI; undefined for anything else. */
+export const boardParts = (uri: string) => {
+  const m = AT_COMMUNITY.exec(uri)
+  return m ? { did: m[1], rkey: m[2] } : undefined
+}
 /** A community board's page, which its listings link to (Constellation finds them by it). */
 export const communityUrl = (did: string, rkey: string) => `${PAPERWING_SITE}/c/${did}/${rkey}`
 

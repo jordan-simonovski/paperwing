@@ -28,6 +28,10 @@ export interface Reader {
   followedMixes: FollowedMix[]
   people: FollowedPerson[]
   boards: { uri: string; name: string }[]
+  /** Suggestions from boards they haven't joined, in For you. */
+  boardPicks: boolean
+  /** PaperWing's announcements: in For you and pinned, or neither. */
+  announcements: boolean
   releaseRepos: string[]
   /** Hosts of the status pages they follow beyond the built-in ones. */
   statusHosts: string[]
@@ -88,6 +92,7 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
     followedMixes: reader.followedMixes,
     people: reader.people,
     boards: reader.boards,
+    boardPicks: reader.boardPicks,
     releaseRepos: reader.releaseRepos,
     mastodon: !!reader.mastodon?.signedIn,
     bluesky: !!reader.bluesky,
@@ -112,13 +117,30 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
 export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[]): Ranked[] {
   const topicsOf = (ref: FeedRef) =>
     ('topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []).map((id) => findTopic(id, reader.interests)).filter((t): t is Topic => !!t)
+  const joined = new Set(reader.boards.map((b) => b.uri))
+  const forYou = plan.channel.id === 'for-you'
+  const ownBoard = plan.channel.board?.uri
   const checked = plan.feeds.map((f, i) => {
     const topics = topicsOf(f.ref)
-    const data = batches[i] ?? []
+    let data = batches[i] ?? []
     // Keyword searches are noisy: keep only results that really are about the topic they were run for.
-    return topics.length ? data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s)))) : data
+    if (topics.length) data = data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s))))
+    if (f.ref.kind === 'boardpicks') data = unsuggestJoined(data, joined)
+    if (!reader.announcements) data = withoutAnnouncements(data, forYou)
+    // On a board's own page, every post is from it: no need to say so.
+    if (ownBoard) data = data.map((s) => (s.board?.uri === ownBoard ? { ...s, board: undefined } : s))
+    return data
   })
   return rankStories(reader, checked, { sort: plan.sort, native: plan.channel.native, boost: plan.channel.boost })
+}
+
+/** Suggestions are the same for everyone: from a board you've joined, a post is just a post (it stays on screen when you join). */
+const unsuggestJoined = (data: Story[], joined: Set<string>): Story[] => data.map((s) => (s.board && joined.has(s.board.uri) ? { ...s, recommended: undefined } : s))
+
+/** Announcements turned off: out of For you altogether, and never pinned anywhere else. */
+function withoutAnnouncements(data: Story[], forYou: boolean): Story[] {
+  if (forYou) return data.filter((s) => !s.pinned && !s.board?.official)
+  return data.map((s) => (s.pinned ? { ...s, pinned: undefined } : s))
 }
 
 /** Any batches of stories (search results, say), moderated and ranked for the reader the way a channel is. */

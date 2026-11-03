@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent } from 'storybook/test'
+import { useActivity, usePrefs } from '../lib/store'
 import { NOW, ranked, story } from '../test/fixtures'
 import { RowSkeleton, StoryRow } from './StoryRow'
 
@@ -98,5 +99,61 @@ export const OfficialAnnouncement: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByLabelText('Official PaperWing board')).toBeVisible()
     await expect(canvas.getByText('Pinned')).toBeVisible()
+  },
+}
+
+const kitchen = ranked({ source: 'bluesky', sourceLabel: 'PaperWing', author: 'cook.example', title: 'Sourdough starters compared', board: { uri: BOARD, name: 'Home Cooking', official: false } })
+
+/** A post from a board you haven't joined: Join is one tap, and the row stays where it is. */
+export const JoinFromTheFeed: Story = {
+  args: { story: kitchen },
+  play: async ({ canvas, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Join Home Cooking' }))
+    await expect(usePrefs.getState().boards).toEqual([{ uri: BOARD, name: 'Home Cooking' }])
+    await expect(canvas.queryByRole('button', { name: 'Join Home Cooking' })).toBeNull()
+    await expect(args.onOpen).not.toHaveBeenCalled()
+  },
+}
+
+/** Already joined: no button, just where it's from. */
+export const FromABoardYouJoined: Story = {
+  args: { story: kitchen },
+  parameters: { app: { prefs: { boards: [{ uri: BOARD, name: 'Home Cooking' }] } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('link', { name: 'in Home Cooking' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /Join/ })).toBeNull()
+  },
+}
+
+/** A suggestion from a board you haven't joined says so. */
+export const Suggested: Story = {
+  args: { story: { ...kitchen, recommended: true } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Suggested')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Join Home Cooking' })).toBeVisible()
+  },
+}
+
+/** An announcement can be dismissed: it's hidden on this device, and your taste learns nothing from it. */
+export const DismissAnnouncement: Story = {
+  args: {
+    story: ranked({
+      key: 'bs-welcome',
+      source: 'bluesky',
+      sourceLabel: 'PaperWing',
+      author: 'paperwing.io',
+      board: { uri: NEWS, name: 'Announcements', official: true },
+      pinned: true,
+      title: 'Welcome to PaperWing',
+    }),
+  },
+  play: async ({ canvas, args }) => {
+    const before = usePrefs.getState().affinity
+    await userEvent.click(canvas.getByRole('button', { name: 'Dismiss this announcement' }))
+    await expect(useActivity.getState().hidden['bs-welcome']).toBeGreaterThan(0)
+    await expect(usePrefs.getState().affinity).toEqual(before)
+    await expect(args.onOpen).not.toHaveBeenCalled()
+    // Official boards have no Join button: you can't leave PaperWing's own.
+    await expect(canvas.queryByRole('button', { name: /Join/ })).toBeNull()
   },
 }

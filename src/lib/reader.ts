@@ -19,6 +19,8 @@ type ReaderPrefs = Pick<
   | 'followedMixes'
   | 'people'
   | 'boards'
+  | 'boardPicks'
+  | 'announcements'
   | 'releaseRepos'
   | 'statusPages'
   | 'mutedWords'
@@ -37,6 +39,8 @@ const pickPrefs = (p: Prefs): ReaderPrefs => ({
   followedMixes: p.followedMixes,
   people: p.people,
   boards: p.boards,
+  boardPicks: p.boardPicks,
+  announcements: p.announcements,
   releaseRepos: p.releaseRepos,
   statusPages: p.statusPages,
   mutedWords: p.mutedWords,

@@ -91,6 +91,10 @@ export function PrivacyPage() {
             public results so other readers get them faster. Our host, Vercel, keeps short-lived request logs, as any website’s host does.
           </p>
           <p>
+            Suggested posts from community boards in For you are picked from how lively each board is across PaperWing, only from posts their posters also put on the front page, and are the same for
+            everyone. Nothing about you is sent to pick them: the boards you’ve joined are left out on your device. You can turn suggestions, and PaperWing’s announcements, off under Settings, Tuning.
+          </p>
+          <p>
             To stop abuse, some actions are rate-limited by a one-way hash of your network address (IPv6 addresses are grouped by network). The counters expire within a day, and the address itself
             isn’t stored.
           </p>

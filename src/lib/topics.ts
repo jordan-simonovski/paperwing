@@ -28,6 +28,8 @@ export type FeedRef =
   | { kind: 'person'; actor: string; label?: string }
   /** A community board's listings (api/_lib/boards.ts). */
   | { kind: 'board'; did: string; rkey: string; sort: 'hot' | 'new' | 'top'; name?: string }
+  /** The liveliest community boards' best posts, suggested in For you: the same for everyone. */
+  | { kind: 'boardpicks' }
   /** Incidents from providers' status pages (api/_lib/statuspages.ts); every provider when `providers` is unset. */
   | { kind: 'status'; providers?: string[]; active?: boolean; hosts?: string[] }
 

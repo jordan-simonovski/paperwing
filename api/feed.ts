@@ -11,6 +11,7 @@ import { paperwingFront } from './_lib/paperwing.js'
 import { actorOf, person } from './_lib/people.js'
 import { marginNotes } from './_lib/notes.js'
 import { allBoards, boardFront, readBoard } from './_lib/boards.js'
+import { boardPicks } from './_lib/boardPicks.js'
 import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './_lib/sources.js'
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
 
@@ -83,6 +84,9 @@ export const SOURCES: Record<FeedSource, Source> = {
   // Every community board, for Explore.
   // Someone who just made a board goes looking for it: a minute or two at most, not the usual twenty.
   boards: { ttl: 60, stale: 60, run: () => allBoards() },
+  // Suggestions from the liveliest boards for For you: the same for everyone, two minutes at the edge (and in KV).
+  // One answer for everyone, kept in KV: a miss walks the boards once for all callers, so it costs a caller little.
+  boardpicks: { ttl: 120, stale: 60, cost: 1, run: () => boardPicks() },
   // Margin notes on an article, from anyone.
   notes: { ttl: 120, cost: 2, run: (p) => marginNotes(need(p, 'url')) },
   // Someone's PaperWing profile: their listings and mixes, from their own repo.

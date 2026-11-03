@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { FAN_OUT_PER_MINUTE } from '../_lib/kv.js'
 import { call, fakeUpstreams } from './harness.js'
 import { GET } from '../atproto.js'
 
@@ -40,7 +41,7 @@ describe('the feed generator', () => {
 describe('a reader’s search', () => {
   it('counts against the caller’s fan-out allowance: it searches as PaperWing’s own account', async () => {
     const ask = () => call(GET, '/api/atproto?route=search&q=lisp', { headers: { 'x-forwarded-for': '203.0.113.9' } })
-    for (let i = 0; i < 120; i++) expect((await ask()).status).not.toBe(429)
+    for (let i = 0; i < FAN_OUT_PER_MINUTE; i++) expect((await ask()).status).not.toBe(429)
     expect((await ask()).status).toBe(429)
   })
 })

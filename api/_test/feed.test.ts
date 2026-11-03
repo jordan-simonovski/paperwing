@@ -38,6 +38,10 @@ describe('the feed function', () => {
     expect(SOURCES.boardinfo).toMatchObject({ ttl: 60, stale: 60 })
   })
 
+  it('lets board suggestions go stale for a few minutes at most, so a moderator’s hide reaches them soon', () => {
+    expect(SOURCES.boardpicks).toMatchObject({ ttl: 120, stale: 60 })
+  })
+
   it('lets the board list go stale for a minute or two at most: a new board is looked for straight away', async () => {
     net
       .get('https://constellation.microcosm.blue')
@@ -134,8 +138,9 @@ describe('the fan-out allowance', () => {
   const allowed = (src: keyof typeof SOURCES, query = '') => Math.floor(FAN_OUT_PER_MINUTE / costOf(src, query))
 
   // The app's own busiest minute must fit: a library import filling 30 links (each asks who's
-  // discussing it), For you reading 20 followed people, Follow blogs looking up 6 suggestions, a
-  // status channel with 5 custom pages, a releases channel of 40 projects, and a few boards and notes.
+  // discussing it), For you reading 20 followed people, 10 joined boards and board suggestions,
+  // Follow blogs looking up 6 suggestions, a status channel with 5 custom pages, a releases channel
+  // of 40 projects, and a few notes.
   it('leaves room for the app’s own busiest minute', () => {
     const burst =
       30 * costOf('atlinks') +
@@ -144,7 +149,8 @@ describe('the fan-out allowance', () => {
       costOf('status', 'hosts=a,b,c,d,e') +
       costOf('releases', `repos=${Array.from({ length: 40 }, (_, i) => `o/r${i}`).join(',')}`) +
       3 * costOf('notes') +
-      2 * costOf('board')
+      10 * costOf('board') +
+      costOf('boardpicks')
     expect(burst).toBeLessThanOrEqual(FAN_OUT_PER_MINUTE)
   })
 

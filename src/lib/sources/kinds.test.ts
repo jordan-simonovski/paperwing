@@ -44,6 +44,7 @@ const SAMPLES: { [K in FeedRef['kind']]: Ref<K>[] } = {
   ],
   person: [{ kind: 'person', actor: 'did:plc:anil', label: '@anil.example' }],
   board: [{ kind: 'board', did: 'did:plc:mod', rkey: 'open-web', sort: 'hot', name: 'The Open Web' }],
+  boardpicks: [{ kind: 'boardpicks' }],
   status: [{ kind: 'status' }, { kind: 'status', providers: ['github'], active: true }],
 }
 const all = Object.values(SAMPLES).flat() as FeedRef[]
@@ -90,6 +91,29 @@ describe('every kind of feed', () => {
     for (const ref of all) await fetchFeed(ref).catch(() => {})
     expect(asked.length).toBeGreaterThan(5)
     for (const src of asked) expect(Object.keys(SOURCES), src).toContain(src)
+  })
+
+  it('says which board each of a board’s posts is from', async () => {
+    const board = { uri: 'at://did:plc:mod/io.paperwing.board/open-web', name: 'The Open Web', official: false }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ board, stories: [{ key: 'bs-1', title: 'A post' }] }), { headers: { 'content-type': 'application/json' } })),
+    )
+    const [story] = await fetchFeed(SAMPLES.board[0])
+    expect(story.board).toEqual(board)
+  })
+
+  it('asks for board suggestions with nothing about the reader: everyone gets the same', async () => {
+    let asked: URL | undefined
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        asked = new URL(String(input), 'https://paperwing.test')
+        return new Response('[]', { headers: { 'content-type': 'application/json' } })
+      }),
+    )
+    await fetchFeed({ kind: 'boardpicks' })
+    expect([...asked!.searchParams.keys()]).toEqual(['src'])
   })
 
   it('is in the table', () => {

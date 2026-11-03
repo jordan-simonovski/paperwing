@@ -38,6 +38,25 @@ describe('merge', () => {
     expect(other).toMatchObject({ key: 'bs-welcome', pinned: true })
   })
 
+  it('ranks a suggestion from a board you haven’t joined below an equal story you chose', () => {
+    const chosen = s('hn-chosen', 'https://a.example/chosen', 50)
+    const suggested = s('hn-suggested', 'https://a.example/suggested', 50, { recommended: true })
+    expect(merge([[suggested], [chosen]], { sort: 'hot', filters }).map((r) => r.key)).toEqual(['hn-chosen', 'hn-suggested'])
+  })
+
+  it('is a suggestion only while every copy of it is: a link you chose too is yours', () => {
+    const chosen = s('hn-mine', 'https://a.example/same', 10)
+    const suggested = s('bs-pick', 'https://a.example/same', 300, { source: 'bluesky', recommended: true })
+    for (const batches of [
+      [[chosen], [suggested]],
+      [[suggested], [chosen]],
+    ]) {
+      const [row] = merge(batches, { sort: 'hot', filters })
+      expect(row.recommended).toBeFalsy()
+    }
+    expect(merge([[suggested]], { sort: 'hot', filters })[0].recommended).toBe(true)
+  })
+
   it('leads Hot with an official announcement PaperWing pinned, however quiet it is so far', () => {
     const busy = [s('hn-1', 'https://a.example/1', 900), s('hn-2', 'https://a.example/2', 400)]
     const announcement = s('bs-welcome', null, 0, { source: 'bluesky', sourceLabel: 'PaperWing', pinned: true, comments: 0 })

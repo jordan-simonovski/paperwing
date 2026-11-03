@@ -47,6 +47,7 @@ export type FeedSource =
   | 'board'
   | 'boardinfo'
   | 'boards'
+  | 'boardpicks'
   | 'notes'
   | 'person'
   | 'mix'

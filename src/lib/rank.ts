@@ -100,6 +100,8 @@ export function engagement(s: Pick<Story, 'source' | 'score' | 'comments' | 'wei
 const COMMENTARY = 0.5
 /** Posts from people you follow on Mastodon. */
 const FOLLOWED = 1.5
+/** A suggestion from a board you haven't joined counts for less than what you chose. */
+const SUGGESTED = 0.6
 
 export interface Filters {
   mutedWords: string[]
@@ -186,6 +188,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         const sharedBy = [...new Set([...(existing.sharedBy ?? []), ...(s.sharedBy ?? [])])]
         const shareNote = existing.shareNote ?? s.shareNote
         const followed = existing.followed || s.followed
+        // A suggestion only while every copy of it is: a link you chose in your own feeds is yours.
+        const recommended = existing.recommended && s.recommended
         // Keep the hotter copy as primary so the row links to the liveliest discussion.
         // PaperWing's pinned announcement keeps its row (and takes it): no other copy carries the pin.
         if (s.pinned || (!existing.pinned && e > leadOf.get(existing)! && s.hasThread)) {
@@ -198,6 +202,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         if (sharedBy.length) existing.sharedBy = sharedBy
         if (shareNote) existing.shareNote = shareNote
         if (followed) existing.followed = true
+        if (recommended) existing.recommended = true
+        else delete existing.recommended
         // Discussion in several places adds up.
         const total = Math.min(CAP, engagementOf.get(existing)! + e)
         engagementOf.set(existing, total)
@@ -231,6 +237,7 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         coverage.push(plain(r), ...r.alsoOn)
         total += engagementOf.get(r)!
         for (const t of r.topics) if (!leader.topics.includes(t)) leader.topics.push(t)
+        if (!r.recommended) delete leader.recommended
         absorbed.add(m)
       }
       total = Math.min(CAP, total)
@@ -258,11 +265,13 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
     const taste = affinityFactor(r, opts.affinity) * (opts.votes?.[r.key] ? VOTED[opts.votes[r.key]] : 1)
     // Someone you chose to follow said it: worth more than a stranger's post with the same numbers.
     const voice = r.followed ? FOLLOWED : mixed && SOCIAL.has(r.source) && kindOf(r) === 'discussions' ? COMMENTARY : 1
+    // A suggestion from a board you haven't joined seasons the list; it doesn't take it over.
+    const suggested = r.recommended ? SUGGESTED : 1
     // HN-style gravity on engagement, damped so a big story doesn't swamp everything fresh.
     // Votes decay fast because they arrive fast. Blogs, papers and releases have no votes, so a
     // two-day-old post shouldn't be buried the way a two-day-old HN story is.
     const gravity = unscored(r) ? 1.3 : 1.5
-    return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice) / Math.pow(ageH + 2, gravity)
+    return (Math.pow(engagementOf.get(r)!, 0.8) * crossPosted * interest * stale * taste * voice * suggested) / Math.pow(ageH + 2, gravity)
   }
   // PaperWing's official announcement leads Hot wherever its front page is part of the list, the
   // way it leads the front page: only the server pins, and only for its first few days.

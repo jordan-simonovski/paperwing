@@ -1,10 +1,10 @@
 import { useComposer } from '../lib/compose'
 import { FriendsLine } from './FriendsLine'
 import { profilePath } from '../lib/people'
-import { boardPath } from '../lib/boards'
+import { boardPath, toggleJoin } from '../lib/boards'
 import { OfficialBadge } from './OfficialBadge'
 import { Link } from 'react-router'
-import { ArrowBigDown, ArrowBigUp, Bookmark, BookmarkCheck, EyeOff, Image as ImageIcon, Loader2, MessageSquare, Play, Newspaper, Share2 } from 'lucide-react'
+import { ArrowBigDown, ArrowBigUp, Bookmark, BookmarkCheck, EyeOff, Image as ImageIcon, Loader2, MessageSquare, Play, Newspaper, Plus, Share2, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { memo, useMemo, useRef } from 'react'
 import { compact, domainOf, fullDate, fullNumber, timeAgo } from '../lib/format'
@@ -99,7 +99,14 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               {s.board.official && <OfficialBadge size={13} />}
             </>
           )}
-          {s.pinned && <span className="pinned-chip">Pinned</span>}
+          {s.pinned && (
+            <span className="pinned-chip inline-flex items-center">
+              Pinned
+              <button type="button" className="row-chip-x" aria-label="Dismiss this announcement" title="Dismiss" onClick={(e) => (e.stopPropagation(), dismissAnnouncement(s.key))}>
+                <X size={12} />
+              </button>
+            </span>
+          )}
           <span aria-hidden>·</span>
           {/* The full date is only for hovering, and formatting it for every row costs on phones: set it on the way in. */}
           <time dateTime={new Date(s.createdAt).toISOString()} onPointerEnter={(e) => (e.currentTarget.title ||= fullDate(s.createdAt))}>
@@ -171,8 +178,15 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               </p>
             )}
             {note}
-            {(s.topics.length > 0 || also.length > 0 || covered.length > 0) && (
+            {(s.topics.length > 0 || also.length > 0 || covered.length > 0 || s.recommended || (s.board && !s.board.official)) && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {/* A board's post: what it's for, and joining its board, down here where there's room on a phone. */}
+                {s.recommended && (
+                  <span className="pinned-chip ml-0" title="From a board you haven’t joined. Turn suggestions off in Settings, Tuning.">
+                    Suggested
+                  </span>
+                )}
+                {s.board && !s.board.official && <JoinBoard board={s.board} />}
                 {s.topics.slice(0, 2).map((t) => (
                   <TopicTag key={t} id={t} />
                 ))}
@@ -261,6 +275,33 @@ export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1
 
 /** What a story says about your taste: its topics and its site. */
 export const tasteKeys = (s: Story) => [...(('topics' in s ? (s as Ranked).topics : null) ?? topicsForStory(s)).slice(0, 2).map((t) => `t:${t}`), domainKey(s.url)].filter((k): k is string => !!k)
+
+/** Join a board from a post of its: it shows up in your menu, and its posts in For you. Shown only until you have. */
+function JoinBoard({ board }: { board: { uri: string; name: string } }) {
+  const joined = usePrefs((p) => p.boards.some((b) => b.uri === board.uri))
+  if (joined) return null
+  return (
+    <button
+      type="button"
+      className="row-join"
+      aria-label={`Join ${board.name}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        toggleJoin(board)
+        toast(`Joined ${board.name}: its posts show in For you`, { action: { label: 'Undo', run: () => toggleJoin(board) } })
+      }}
+    >
+      <Plus size={12} /> Join
+    </button>
+  )
+}
+
+/** Puts an announcement away on this device. Unlike Hide it teaches your taste nothing. */
+export function dismissAnnouncement(key: string) {
+  const { toggleHidden } = useActivity.getState()
+  toggleHidden(key)
+  toast('Dismissed. Turn announcements off under Settings, Tuning.', { action: { label: 'Undo', run: () => toggleHidden(key) } })
+}
 
 export function hideStory(key: string, story?: Story) {
   const { toggleHidden } = useActivity.getState()
