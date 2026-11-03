@@ -26,6 +26,13 @@ describe('recognising a video link', () => {
     expect(videoEmbedOf('https://vimeo.com/76979871/a1b2c3d4e5')).toEqual({ kind: 'vimeo', id: '76979871', hash: 'a1b2c3d4e5' })
   })
 
+  it('finds the Vimeo video inside a showcase, channel or group, whatever its numbers', () => {
+    expect(videoEmbedOf('https://vimeo.com/showcase/7019227/video/434335290')).toEqual({ kind: 'vimeo', id: '434335290' })
+    expect(videoEmbedOf('https://vimeo.com/channels/1234567/76979871')).toEqual({ kind: 'vimeo', id: '76979871' })
+    expect(videoEmbedOf('https://vimeo.com/groups/123456/videos/76979871')).toEqual({ kind: 'vimeo', id: '76979871' })
+    expect(videoEmbedOf('https://vimeo.com/channels/1234567')).toBeUndefined()
+  })
+
   it('reads an unlisted Vimeo hash from the query, and ignores one that isn’t a hash', () => {
     expect(videoEmbedOf('https://player.vimeo.com/video/76979871?h=a1b2c3d4e5')).toEqual({ kind: 'vimeo', id: '76979871', hash: 'a1b2c3d4e5' })
     expect(videoEmbedOf('https://player.vimeo.com/video/76979871?h=<script>')).toEqual({ kind: 'vimeo', id: '76979871' })
@@ -150,6 +157,27 @@ describe('a PeerTube video', () => {
     expect(await peertubeVideo(video)).toEqual({ src: 'https://tilvids.com/x-360.mp4', sensitive: false })
     answer({ aspectRatio: 0, files: [{ resolution: { id: 360 }, fileUrl: 'https://tilvids.com/x-360.mp4' }] })
     expect((await peertubeVideo(video)).aspect).toBeUndefined()
+  })
+
+  it('plays a server’s stream where the browser can, when sound and picture are kept apart', async () => {
+    const split = {
+      files: [],
+      streamingPlaylists: [
+        {
+          playlistUrl: 'https://tilvids.com/static/streaming-playlists/hls/x/master.m3u8',
+          files: [
+            { resolution: { id: 720 }, fileUrl: 'https://tilvids.com/v-720.mp4', hasAudio: false },
+            { resolution: { id: 0 }, fileUrl: 'https://tilvids.com/a.mp4', hasVideo: false },
+          ],
+        },
+      ],
+    }
+    answer(split)
+    expect((await peertubeVideo(video, { hls: true })).src).toBe('https://tilvids.com/static/streaming-playlists/hls/x/master.m3u8')
+    answer(split)
+    await expect(peertubeVideo(video, { hls: false })).rejects.toThrow(/can’t be played here/)
+    answer({ streamingPlaylists: [{ playlistUrl: 'http://tilvids.com/master.m3u8', files: [] }] })
+    await expect(peertubeVideo(video, { hls: true })).rejects.toThrow(/can’t be played here/)
   })
 
   it('never picks a file that’s only sound', async () => {

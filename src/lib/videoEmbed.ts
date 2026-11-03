@@ -44,9 +44,12 @@ export function videoEmbedOf(link: string | null | undefined): VideoEmbed | unde
   }
 
   if (VIMEO.test(host)) {
-    const at = parts.findIndex((p) => /^\d{6,12}$/.test(p))
-    // A showcase, album or event is a collection, not a video.
-    if (at < 0 || ['showcase', 'album', 'event'].includes(parts[at - 1])) return undefined
+    // The video's number, by where it sits: after video(s)/ (in a showcase or group), after a
+    // channel's name, or first. A showcase, album or event on its own is a collection, not a video.
+    const numeric = (i: number) => i >= 0 && /^\d{6,12}$/.test(parts[i] ?? '')
+    const after = parts.findIndex((p, i) => (p === 'video' || p === 'videos') && numeric(i + 1))
+    const at = after >= 0 ? after + 1 : parts[0] === 'channels' && numeric(2) ? 2 : numeric(0) ? 0 : -1
+    if (at < 0) return undefined
     const hash = parts[at + 1] && /^[0-9a-f]{6,20}$/.test(parts[at + 1]) ? parts[at + 1] : (u.searchParams.get('h') ?? undefined)
     return { kind: 'vimeo', id: parts[at], ...(hash && /^[0-9a-f]{6,20}$/.test(hash) ? { hash } : {}) }
   }
@@ -87,7 +90,7 @@ function fileOf(raw: unknown): { url: string; height: number } | undefined {
 }
 
 /** The PeerTube video's own file, read from its server's public API on the tap: the largest no bigger than 720p. */
-export async function peertubeVideo(v: Extract<VideoEmbed, { kind: 'peertube' }>): Promise<PlayableVideo> {
+export async function peertubeVideo(v: Extract<VideoEmbed, { kind: 'peertube' }>, can: { hls?: boolean } = {}): Promise<PlayableVideo> {
   const cant = () => new Error('This video can’t be played here: watch it on its own site')
   const res = await fetch(`https://${v.host}/api/v1/videos/${encodeURIComponent(v.id)}`, {
     credentials: 'omit',
@@ -96,10 +99,13 @@ export async function peertubeVideo(v: Extract<VideoEmbed, { kind: 'peertube' }>
   }).catch(() => undefined)
   if (!res?.ok) throw cant()
   const data = obj(await res.json().catch(() => undefined))
-  const files = [...list(data.files), ...list(data.streamingPlaylists).flatMap((p) => list(obj(p).files))].flatMap((f) => fileOf(f) ?? [])
-  if (!files.length) throw cant()
+  const playlists = list(data.streamingPlaylists).map(obj)
+  const files = [...list(data.files), ...playlists.flatMap((p) => list(p.files))].flatMap((f) => fileOf(f) ?? [])
   const fits = files.filter((f) => f.height <= 720).sort((a, b) => b.height - a.height)
-  const pick = fits[0] ?? [...files].sort((a, b) => a.height - b.height)[0]
+  // No one file with both picture and sound (a server keeping them apart): the stream itself, where the browser plays it.
+  const stream = can.hls ? playlists.map((p) => p.playlistUrl).find((u): u is string => typeof u === 'string' && u.startsWith('https://')) : undefined
+  const pick = fits[0] ?? [...files].sort((a, b) => a.height - b.height)[0] ?? (stream ? { url: stream } : undefined)
+  if (!pick) throw cant()
   const aspect = typeof data.aspectRatio === 'number' && data.aspectRatio > 0.2 && data.aspectRatio < 5 ? data.aspectRatio : undefined
   const poster = typeof data.previewPath === 'string' && /^\/[^/]/.test(data.previewPath) ? `https://${v.host}${data.previewPath}` : undefined
   return { src: pick.url, ...(poster ? { poster } : {}), ...(aspect ? { aspect } : {}), sensitive: !!data.nsfw }

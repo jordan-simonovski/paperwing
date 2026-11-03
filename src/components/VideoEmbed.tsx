@@ -2,6 +2,7 @@ import { ExternalLink, Loader2, Play } from 'lucide-react'
 import { useState } from 'react'
 import { frameProps, peertubeVideo, videoEmbedOf, videoHost, type PlayableVideo } from '../lib/videoEmbed'
 import { Covered } from './Covered'
+import { nativeHls } from './Media'
 
 type State = { at: 'poster' } | { at: 'loading' } | { at: 'frame' } | { at: 'file'; video: PlayableVideo } | { at: 'failed' }
 
@@ -21,7 +22,7 @@ export function VideoEmbed({ url, title, thumb }: { url: string | null | undefin
     if (video.kind !== 'peertube') return setState({ at: 'frame' })
     setState({ at: 'loading' })
     try {
-      setState({ at: 'file', video: await peertubeVideo(video) })
+      setState({ at: 'file', video: await peertubeVideo(video, { hls: nativeHls }) })
     } catch {
       // A fixed message: nothing a server sent is shown.
       setState({ at: 'failed' })
