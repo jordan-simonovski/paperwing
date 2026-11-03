@@ -60,7 +60,8 @@ export const selfPostOf = (p: Shareable) =>
 /** A post's words; a self post's without the link back to its page here (where they're being read). */
 export const postWords = (p: Shareable) => {
   const text = p.record.text.trim()
-  return selfPostOf(p) && text.endsWith(SELF_LINK_TEXT) ? text.slice(0, -SELF_LINK_TEXT.length).trim() : text
+  // Only a picture post (no card) has the link back in its words.
+  return selfPostOf(p) && !cardOf(p) && text.endsWith(SELF_LINK_TEXT) ? text.slice(0, -SELF_LINK_TEXT.length).trim() : text
 }
 
 /** The link a post shares: its preview card, else the first link typed into the text (not other Bluesky posts). A self post shares none. */

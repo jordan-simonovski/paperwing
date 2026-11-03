@@ -69,7 +69,7 @@ export function PicturePicker({ pictures, onChange, label, onLabel, requireAlt }
     URL.revokeObjectURL(p.url)
     onChange((now) => now.filter((x) => x.id !== p.id))
     // A content warning is for the pictures: it goes with the last of them.
-    if (pictures.length === 1) onLabel('')
+    if (pictures.length === 1 && !reading) onLabel('')
   }
 
   return (

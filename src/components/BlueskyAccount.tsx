@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { profilePath } from '../lib/people'
 import { useState } from 'react'
-import { canReadNotifications, canReadTimeline, canUpdate, canWrite, finishWithCode, signIn, signOut, useAtproto } from '../lib/atproto'
+import { canReadNotifications, canReadTimeline, canUpdate, canUpload, canWrite, finishWithCode, signIn, signOut, useAtproto } from '../lib/atproto'
 import { MIX_NSID } from '../lib/mixSources'
 import { SUBMISSION_NSID } from '../lib/paperwing'
 import { SHARE_NSID } from '../lib/social'
@@ -42,7 +42,8 @@ export function BlueskyAccount() {
           canWrite(scope, MIX_NSID) === false ||
           canWrite(scope, SUBMISSION_NSID) === false ||
           canUpdate(scope, SUBMISSION_NSID) === false ||
-          canWrite(scope, SHARE_NSID) === false) && (
+          canWrite(scope, SHARE_NSID) === false ||
+          canUpload(scope) === false) && (
           <div className="flex flex-wrap items-center gap-3 rounded-xl bg-sunk px-4 py-3">
             <p className="flex-1 text-[0.875rem] text-ink-2">
               This sign-in is from before{' '}
@@ -54,6 +55,7 @@ export function BlueskyAccount() {
                   canWrite(scope, SUBMISSION_NSID) === false && 'posting to PaperWing',
                   canWrite(scope, SUBMISSION_NSID) !== false && canUpdate(scope, SUBMISSION_NSID) === false && 'editing your posts',
                   canWrite(scope, SHARE_NSID) === false && 'sharing, notes, blogrolls and boards',
+                  canUpload(scope) === false && 'posting pictures',
                 ].filter((x): x is string => !!x),
               )}
               . Bluesky shows what’s asked before you approve.

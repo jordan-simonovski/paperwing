@@ -36,6 +36,10 @@ describe('sharedLink', () => {
     // Its words without the link back to the page they're shown on.
     expect(postWords(pictures)).toBe('Our new kitchen')
     expect(postWords({ uri: 'at://did:plc:x/app.bsky.feed.post/3m2abcdefghik', record: { text: 'Look\n\npaperwing.io' } })).toBe('Look\n\npaperwing.io')
+    // A self post with its card has no link back in its words: words that end with the name are its own.
+    const own = 'at://did:plc:x/app.bsky.feed.post/3m2abcdefghil'
+    const card = { uri: own, record: { text: 'Why I moved my blog to paperwing.io' }, embed: { $type: 'app.bsky.embed.external#view', external: { uri: selfPostUrl(own) } } }
+    expect(postWords(card)).toBe('Why I moved my blog to paperwing.io')
   })
   it('ignores links to other Bluesky posts', () => {
     expect(sharedLink({ record: { text: 'x', facets: [link('https://bsky.app/profile/a/post/1')] } })).toBeUndefined()
