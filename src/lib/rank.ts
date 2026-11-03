@@ -188,6 +188,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         const sharedBy = [...new Set([...(existing.sharedBy ?? []), ...(s.sharedBy ?? [])])]
         const shareNote = existing.shareNote ?? s.shareNote
         const followed = existing.followed || s.followed
+        // A suggestion only while every copy of it is: a link you chose in your own feeds is yours.
+        const recommended = existing.recommended && s.recommended
         // Keep the hotter copy as primary so the row links to the liveliest discussion.
         // PaperWing's pinned announcement keeps its row (and takes it): no other copy carries the pin.
         if (s.pinned || (!existing.pinned && e > leadOf.get(existing)! && s.hasThread)) {
@@ -200,6 +202,8 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         if (sharedBy.length) existing.sharedBy = sharedBy
         if (shareNote) existing.shareNote = shareNote
         if (followed) existing.followed = true
+        if (recommended) existing.recommended = true
+        else delete existing.recommended
         // Discussion in several places adds up.
         const total = Math.min(CAP, engagementOf.get(existing)! + e)
         engagementOf.set(existing, total)
@@ -233,6 +237,7 @@ export function merge(batches: Story[][], opts: MergeOptions): Ranked[] {
         coverage.push(plain(r), ...r.alsoOn)
         total += engagementOf.get(r)!
         for (const t of r.topics) if (!leader.topics.includes(t)) leader.topics.push(t)
+        if (!r.recommended) delete leader.recommended
         absorbed.add(m)
       }
       total = Math.min(CAP, total)

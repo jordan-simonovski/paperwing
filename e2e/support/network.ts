@@ -98,6 +98,12 @@ const HOSTS: Record<string, Handler> = {
       // Site icons are images; without one the app draws a letter.
       if (src === 'icon') return fail(404, 'No icon')
       if (src === 'card') return s.cards[q.get('url') ?? ''] ?? {}
+      // A community board answers with itself and its posts (stories under "board:<did>").
+      if (src === 'board') {
+        const did = q.get('did') ?? ''
+        const rkey = q.get('rkey') ?? ''
+        return { board: { uri: `at://${did}/io.paperwing.board/${rkey}`, name: 'Board', official: false, moderators: [], moderatorHandles: {} }, stories: s.feeds[`board:${did}`] ?? [] }
+      }
       return s.feeds[`${src}:${q.get('label')}`] ?? s.feeds[src] ?? []
     }
     if (p === '/api/extract') return s.extract[q.get('url') ?? ''] ?? fail(422, 'Could not extract an article')

@@ -51,6 +51,9 @@ export async function readBoard(did: string, rkey: string): Promise<BoardView> {
  * served or cached without its moderation.
  */
 export async function boardFront(did: string, rkey: string, sort: PaperwingSort): Promise<{ board: BoardView; stories: Story[] }> {
+  // A board PaperWing keeps off its pages (or whose owner it does) isn't served anywhere.
+  const blockedNow = blocked()
+  if (blockedNow.has(did) || blockedNow.has(`at://${did}/${BOARD_NSID}/${rkey}`)) throw new Error('That board isn’t on PaperWing')
   return cachedInKv(`rd:board:${did}:${rkey}:${sort}`, 60, async () => {
     const board = await readBoard(did, rkey)
     const [uris, mod] = await Promise.all([submissions(communityUrl(did, rkey), '.boardUrl', 200), moderationOf(board.uri, board)])
@@ -64,9 +67,10 @@ export async function boardFront(did: string, rkey: string, sort: PaperwingSort)
       return [s]
     })
     const found: PostView[] = (await posts([...new Set(subs.map((s) => s.post.uri))])).filter((p) => !unlisted(p))
+    const onFront = new Set(subs.filter((s) => s.front).map((s) => s.post.uri))
     const stories = rank(found, sort)
       .slice(0, 80)
-      .map((p) => ({ ...toStory(p), sourceLabel: board.name }))
+      .map((p): Story => ({ ...toStory(p), sourceLabel: board.name, ...(onFront.has(p.uri) ? { onFront: true } : {}) }))
     return { board, stories }
   })
 }

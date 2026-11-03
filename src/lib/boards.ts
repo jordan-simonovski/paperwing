@@ -2,7 +2,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { createContext, useContext } from 'react'
 import { createRecord, putRecord, useAtproto } from './atproto'
 import { tid } from './mixes'
-import { AT_COMMUNITY } from './paperwing'
+import { boardParts } from './paperwing'
 import { keys } from './query'
 import { BOARD_HIDE_NSID, BOARD_NSID, boardRecord, type Board } from './social'
 import { usePrefs } from './store'
@@ -29,10 +29,7 @@ export interface JoinedBoard {
   name: string
 }
 
-export const boardParts = (uri: string) => {
-  const m = AT_COMMUNITY.exec(uri)
-  return m ? { did: m[1], rkey: m[2] } : undefined
-}
+export { boardParts }
 export const boardPath = (uri: string) => {
   const p = boardParts(uri)
   return p ? `/c/${p.did}/${p.rkey}` : '/explore/boards'

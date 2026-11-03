@@ -197,7 +197,11 @@ export const FEED_KINDS: { [K in FeedRef['kind']]: FeedKind<K> } = {
     label: (r) => r.name ?? 'Community board',
     brand: (r) => r.name ?? 'Community board',
     mark: () => ({ own: 'paperwing' }),
-    fetch: async (r) => (await fetchBoard(r.did, r.rkey, r.sort)).stories,
+    // Each story says which board it's from, so it can be told apart in For you (and joined from there).
+    fetch: async (r) => {
+      const { board, stories } = await fetchBoard(r.did, r.rkey, r.sort)
+      return stories.map((s) => ({ ...s, board: s.board ?? { uri: board.uri, name: board.name, official: !!board.official } }))
+    },
   },
   status: {
     id: (r) => `st:${r.providers?.join(',') ?? 'all'}:${r.active ? 'active' : 'week'}:${r.hosts?.join(',') ?? ''}`,

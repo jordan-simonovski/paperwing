@@ -24,7 +24,7 @@ export function BoardSettings() {
     <div className="space-y-4">
       <Option
         label="Suggest posts from boards I haven’t joined"
-        hint="A few of the best posts from PaperWing’s liveliest boards, marked Suggested, with a Join button. They’re the same for everyone: nothing about you is used to pick them."
+        hint="A few of the best posts from PaperWing’s liveliest boards (only ones their posters also put on the front page), marked Suggested, with a Join button. They’re the same for everyone: nothing about you is used to pick them."
         checked={boardPicks}
         onChange={(boardPicks) => set({ boardPicks })}
       />

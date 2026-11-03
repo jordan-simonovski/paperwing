@@ -119,18 +119,28 @@ export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[]
     ('topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []).map((id) => findTopic(id, reader.interests)).filter((t): t is Topic => !!t)
   const joined = new Set(reader.boards.map((b) => b.uri))
   const forYou = plan.channel.id === 'for-you'
+  const ownBoard = plan.channel.board?.uri
   const checked = plan.feeds.map((f, i) => {
     const topics = topicsOf(f.ref)
     let data = batches[i] ?? []
     // Keyword searches are noisy: keep only results that really are about the topic they were run for.
     if (topics.length) data = data.filter((s) => topics.some((t) => matchesTopic(t, storyText(s))))
-    // Suggestions are the same for everyone; the boards you've joined come in on their own.
-    if (f.ref.kind === 'boardpicks') data = data.filter((s) => !s.board || !joined.has(s.board.uri))
-    // Announcements turned off: out of For you, and never pinned anywhere.
-    if (!reader.announcements) data = data.flatMap((s) => (forYou && (s.pinned || s.board?.official) ? [] : s.pinned ? [{ ...s, pinned: undefined }] : [s]))
+    if (f.ref.kind === 'boardpicks') data = unsuggestJoined(data, joined)
+    if (!reader.announcements) data = withoutAnnouncements(data, forYou)
+    // On a board's own page, every post is from it: no need to say so.
+    if (ownBoard) data = data.map((s) => (s.board?.uri === ownBoard ? { ...s, board: undefined } : s))
     return data
   })
   return rankStories(reader, checked, { sort: plan.sort, native: plan.channel.native, boost: plan.channel.boost })
+}
+
+/** Suggestions are the same for everyone: from a board you've joined, a post is just a post (it stays on screen when you join). */
+const unsuggestJoined = (data: Story[], joined: Set<string>): Story[] => data.map((s) => (s.board && joined.has(s.board.uri) ? { ...s, recommended: undefined } : s))
+
+/** Announcements turned off: out of For you altogether, and never pinned anywhere else. */
+function withoutAnnouncements(data: Story[], forYou: boolean): Story[] {
+  if (forYou) return data.filter((s) => !s.pinned && !s.board?.official)
+  return data.map((s) => (s.pinned ? { ...s, pinned: undefined } : s))
 }
 
 /** Any batches of stories (search results, say), moderated and ranked for the reader the way a channel is. */

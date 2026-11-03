@@ -37,6 +37,10 @@ describe('the feed function', () => {
     expect(SOURCES.boardinfo).toMatchObject({ ttl: 60, stale: 60 })
   })
 
+  it('lets board suggestions go stale for a few minutes at most, so a moderator’s hide reaches them soon', () => {
+    expect(SOURCES.boardpicks).toMatchObject({ ttl: 120, stale: 60 })
+  })
+
   it('lets the board list go stale for a minute or two at most: a new board is looked for straight away', async () => {
     net
       .get('https://constellation.microcosm.blue')

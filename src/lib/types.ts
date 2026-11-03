@@ -55,6 +55,8 @@ export interface Story {
   pinned?: boolean
   /** Suggested from a community board the reader hasn't joined (the same suggestions for everyone). */
   recommended?: boolean
+  /** A board's listing its poster also put on PaperWing's front page: only these are suggested. */
+  onFront?: boolean
   thumbnail?: string
   /** True when comments can be rendered in-app. */
   hasThread: boolean

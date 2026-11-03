@@ -15,6 +15,7 @@ const board = (n: number, active: number, extra: Partial<BoardView> = {}): Board
   active,
   ...extra,
 })
+// Every board's posts alternate: odd ones also on PaperWing's front page, even ones on the board only.
 const post = (n: number, i: number): Story => ({
   key: `bs-${n}-${i}`,
   source: 'bluesky',
@@ -24,9 +25,11 @@ const post = (n: number, i: number): Story => ({
   discussionUrl: null,
   createdAt: 0,
   hasThread: true,
+  ...(i % 2 ? { onFront: true } : {}),
 })
 
-const boards = [board(1, 5), board(2, 0), board(3, 9), board(4, 2, { official: true }), ...Array.from({ length: 10 }, (_, i) => board(10 + i, 1))]
+// Board 30 is lively but listed last: picking by activity, not list order, has to find it.
+const boards = [board(1, 5), board(2, 0), board(3, 9), board(4, 2, { official: true }), ...Array.from({ length: 10 }, (_, i) => board(10 + i, 1)), board(30, 7)]
 const unreadable = new Set(['did:plc:owner3'])
 const reads: string[] = []
 vi.mock('./boards.js', () => ({
@@ -35,7 +38,7 @@ vi.mock('./boards.js', () => ({
     reads.push(did)
     if (unreadable.has(did)) throw new Error('moderation unreadable')
     const n = Number(did.replace('did:plc:owner', ''))
-    return { board: boards.find((b) => b.owner === did)!, stories: [post(n, 1), post(n, 2), post(n, 3), post(n, 4)] }
+    return { board: boards.find((b) => b.owner === did)!, stories: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => post(n, i)) }
   }),
 }))
 
@@ -46,7 +49,19 @@ describe('board suggestions', () => {
     const picks = await boardPicks()
     expect(picks.every((s) => s.recommended && s.board && !s.board.official)).toBe(true)
     expect(new Set(picks.map((s) => s.board!.uri)).size).toBeLessThanOrEqual(PICK_BOARDS)
-    expect(picks.filter((s) => s.board!.uri === boards[0].uri).map((s) => s.key)).toEqual(['bs-1-1', 'bs-1-2', 'bs-1-3'].slice(0, PICKS_PER_BOARD))
+    // Only what their authors also put on the front page: a board-only post stays on its board.
+    expect(picks.filter((s) => s.board!.uri === boards[0].uri).map((s) => s.key)).toEqual(['bs-1-1', 'bs-1-3', 'bs-1-5'].slice(0, PICKS_PER_BOARD))
+    expect(picks.some((s) => s.board!.uri === boards.at(-1)!.uri)).toBe(true)
+  })
+
+  it('is an error, not an empty list everyone keeps for minutes, when no board can be read', async () => {
+    for (const b of boards) unreadable.add(b.owner)
+    try {
+      await expect(boardPicks()).rejects.toThrow()
+    } finally {
+      unreadable.clear()
+      unreadable.add('did:plc:owner3')
+    }
   })
 
   it('never suggests an official board (announcements have their own place), a quiet one, or one whose moderation can’t be read', async () => {
@@ -56,6 +71,6 @@ describe('board suggestions', () => {
     expect(owners.has('did:plc:owner2')).toBe(false)
     expect(owners.has('did:plc:owner3')).toBe(false)
     expect(reads).toContain('did:plc:owner3')
-    expect(reads.length).toBeLessThanOrEqual(PICK_BOARDS + 1)
+    expect(reads.length).toBe(PICK_BOARDS)
   })
 })

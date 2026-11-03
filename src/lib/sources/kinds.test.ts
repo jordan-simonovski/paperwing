@@ -93,6 +93,29 @@ describe('every kind of feed', () => {
     for (const src of asked) expect(Object.keys(SOURCES), src).toContain(src)
   })
 
+  it('says which board each of a board’s posts is from', async () => {
+    const board = { uri: 'at://did:plc:mod/io.paperwing.board/open-web', name: 'The Open Web', official: false }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ board, stories: [{ key: 'bs-1', title: 'A post' }] }), { headers: { 'content-type': 'application/json' } })),
+    )
+    const [story] = await fetchFeed(SAMPLES.board[0])
+    expect(story.board).toEqual(board)
+  })
+
+  it('asks for board suggestions with nothing about the reader: everyone gets the same', async () => {
+    let asked: URL | undefined
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        asked = new URL(String(input), 'https://paperwing.test')
+        return new Response('[]', { headers: { 'content-type': 'application/json' } })
+      }),
+    )
+    await fetchFeed({ kind: 'boardpicks' })
+    expect([...asked!.searchParams.keys()]).toEqual(['src'])
+  })
+
   it('is in the table', () => {
     expect(Object.keys(FEED_KINDS).sort()).toEqual(Object.keys(SAMPLES).sort())
   })

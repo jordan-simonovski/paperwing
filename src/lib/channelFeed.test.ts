@@ -58,19 +58,56 @@ describe('ranking For you with boards and announcements', () => {
     story({ key: 'bs-joined', title: 'Sourdough starters compared', url: 'https://a.example/sourdough', recommended: true, board: { uri: JOINED, name: 'Joined', official: false } }),
     story({ key: 'bs-other', title: 'Rewiring a 1960s caravan', url: 'https://a.example/caravan', recommended: true, board: { uri: OTHER, name: 'Other', official: false } }),
   ]
-  const ranked = (r: Reader, id = 'for-you') => {
+  // What a joined board's own feed brings (the app tags each story with its board).
+  const fromBoard = (uri: string, official = false) => [
+    story({ key: `bs-on-${uri.slice(-5)}`, title: `A post on ${uri.slice(-5)}`, url: `https://a.example/${uri.slice(-5)}`, board: { uri, name: 'B', official } }),
+  ]
+  const rankedStories = (r: Reader, id = 'for-you', boardFeed: (uri: string) => ReturnType<typeof story>[] = () => []) => {
     const plan = planChannel(r, id, { sort: 'hot', blueskyEnabled: false })!
     return rankChannel(
       plan,
       r,
-      plan.feeds.map((f) => (f.ref.kind === 'paperwing' ? front : f.ref.kind === 'boardpicks' ? picks : [])),
-    ).map((s) => s.key)
+      plan.feeds.map((f) => (f.ref.kind === 'paperwing' ? front : f.ref.kind === 'boardpicks' ? picks : f.ref.kind === 'board' ? boardFeed(`at://${f.ref.did}/io.paperwing.board/${f.ref.rkey}`) : [])),
+    )
   }
+  const ranked = (r: Reader, id = 'for-you') => rankedStories(r, id).map((s) => s.key)
 
-  it('suggests only boards you haven’t joined', () => {
-    const keys = ranked(reader({ followed: ['web'], boards: [{ uri: JOINED, name: 'Joined' }] }))
-    expect(keys).toContain('bs-other')
-    expect(keys).not.toContain('bs-joined')
+  it('stops calling a board’s posts suggestions once you’ve joined it, without them leaving the screen', () => {
+    const rows = rankedStories(reader({ followed: ['web'], boards: [{ uri: JOINED, name: 'Joined' }] }))
+    expect(rows.find((s) => s.key === 'bs-other')?.recommended).toBe(true)
+    expect(rows.find((s) => s.key === 'bs-joined')).toMatchObject({ board: { uri: JOINED } })
+    expect(rows.find((s) => s.key === 'bs-joined')?.recommended).toBeUndefined()
+  })
+
+  it('keeps a joined official board’s posts out of For you too, once announcements are off', () => {
+    const NEWS = 'at://did:plc:pwpwpwpwpwpwpwpwpwpwpwpw/io.paperwing.board/3m2newsaaaaaa'
+    const r = reader({ followed: ['web'], boards: [{ uri: NEWS, name: 'Announcements' }], announcements: false })
+    expect(rankedStories(r, 'for-you', (uri) => fromBoard(uri, true)).some((s) => s.board?.uri === NEWS)).toBe(false)
+    const on = reader({ followed: ['web'], boards: [{ uri: NEWS, name: 'Announcements' }] })
+    expect(rankedStories(on, 'for-you', (uri) => fromBoard(uri, true)).some((s) => s.board?.uri === NEWS)).toBe(true)
+  })
+
+  it('leaves out an announcement past its pinned days too, but keeps it unpinned on the front page', () => {
+    const old = story({ key: 'bs-old', title: 'Boards are here', url: null, board: { uri: ANNOUNCEMENTS, name: 'Announcements', official: true } })
+    const r = reader({ followed: ['web'], announcements: false })
+    const plan = planChannel(r, 'for-you', { sort: 'hot', blueskyEnabled: false })!
+    expect(
+      rankChannel(
+        plan,
+        r,
+        plan.feeds.map((f) => (f.ref.kind === 'paperwing' ? [old] : [])),
+      ).map((s) => s.key),
+    ).not.toContain('bs-old')
+    const frontPlan = planChannel(r, 'paperwing', { sort: 'hot', blueskyEnabled: false })!
+    expect(rankChannel(frontPlan, r, [[old]]).map((s) => s.key)).toContain('bs-old')
+  })
+
+  it('doesn’t say which board a post is on, on that board’s own page', () => {
+    const BOARD = 'at://did:plc:kkkkkkkkkkkkkkkkkkkkkkkk/io.paperwing.board/3m2kitchenaaa'
+    const r = reader()
+    const plan = planChannel(r, 'cb:did:plc:kkkkkkkkkkkkkkkkkkkkkkkk:3m2kitchenaaa', { sort: 'hot', blueskyEnabled: false })
+    expect(plan).toBeDefined()
+    expect(rankChannel(plan!, r, [fromBoard(BOARD)])[0].board).toBeUndefined()
   })
 
   it('leaves announcements out of For you once you’ve turned them off, and only unpins them elsewhere', () => {

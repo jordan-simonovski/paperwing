@@ -28,5 +28,8 @@ test('a suggested board post in For you says so, and joining its board is one ta
   await expect(suggestion.getByText('Suggested')).toBeVisible()
   await suggestion.getByRole('button', { name: 'Join Home Cooking' }).click()
   await expect(page.getByText('Joined Home Cooking: its posts show in For you')).toBeVisible()
+  // The post stays where it was: now from a board you've joined, not a suggestion.
+  await expect(suggestion).toBeVisible()
   await expect(suggestion.getByRole('button', { name: 'Join Home Cooking' })).toBeHidden()
+  await expect(suggestion.getByText('Suggested')).toBeHidden()
 })

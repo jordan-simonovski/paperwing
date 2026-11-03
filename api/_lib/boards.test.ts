@@ -79,7 +79,8 @@ vi.mock('./paperwing.js', () => ({
     if (target in failing) throw new Error('Constellation timed out')
     return (linkTargets[target] ?? []).slice(0, max)
   }),
-  blocked: () => new Set<string>(),
+  // As the real one reads it: PAPERWING_BLOCKED, DIDs or at:// URIs.
+  blocked: () => new Set((process.env.PAPERWING_BLOCKED ?? '').split(/[\s,]+/).filter(Boolean)),
   unlisted: () => false,
   rank: (list: PostView[]) => list,
   submissions: vi.fn(async () => [`at://${ANN}/io.paperwing.submission/1`, `at://${ANN}/io.paperwing.submission/2`, `at://${ANN}/io.paperwing.submission/3`, `at://${BOB}/io.paperwing.submission/1`]),
@@ -119,6 +120,31 @@ describe('community boards', () => {
     down.clear()
     const { stories } = await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')
     expect(stories.map((s) => s.title)).toEqual(['aaaaaaaaaaaaa'])
+  })
+
+  it('is not served at all once PaperWing keeps the board, or its owner, off its pages', async () => {
+    for (const off of [OWNER, `at://${OWNER}/io.paperwing.board/bbbbbbbbbbbbb`]) {
+      process.env.PAPERWING_BLOCKED = off
+      try {
+        await expect(boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).rejects.toThrow(/isn’t on PaperWing/)
+      } finally {
+        delete process.env.PAPERWING_BLOCKED
+      }
+    }
+  })
+
+  it('says which of its listings are on PaperWing’s front page too', async () => {
+    expect((await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).stories[0].onFront).toBeUndefined()
+    const key = `at://${ANN}/io.paperwing.submission/1`
+    const before = records[key]
+    records[key] = { ...(before as object), front: true }
+    try {
+      const { resetMemoryKv } = await import('./kv.js')
+      resetMemoryKv()
+      expect((await boardFront(OWNER, 'bbbbbbbbbbbbb', 'hot')).stories[0].onFront).toBe(true)
+    } finally {
+      records[key] = before
+    }
   })
 
   it('reads hides from the moderators themselves: however many strangers add their own, none count and none get in the way', async () => {
