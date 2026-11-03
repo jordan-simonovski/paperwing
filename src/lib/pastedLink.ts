@@ -6,7 +6,8 @@ import { toast } from './ui'
 // read: a Bluesky feed or person, a Lemmy community, or a PaperWing board. Each opens its own channel,
 // where Follow or Join already lives. Anything else is a site (the publisher finder) or a link to post.
 
-export type Followable = { kind: 'bskyFeed'; actor: string; rkey: string; label: string } | { kind: 'path'; path: string; label: string }
+/** `guess`: recognised by its address alone (any site can have a /c/ path), so the site stays on offer too. */
+export type Followable = { kind: 'bskyFeed'; actor: string; rkey: string; label: string } | { kind: 'path'; path: string; label: string; guess?: boolean }
 
 const HANDLE = /^[a-z0-9.-]+\.[a-z]{2,}$|^did:(plc|web):[a-z0-9.:%-]+$/i
 
@@ -17,7 +18,14 @@ export function followable(link: string): Followable | undefined {
   } catch {
     return undefined
   }
-  const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent)
+  const decode = (s: string) => {
+    try {
+      return decodeURIComponent(s)
+    } catch {
+      return s
+    }
+  }
+  const parts = url.pathname.split('/').filter(Boolean).map(decode)
   const host = url.hostname.replace(/^www\./, '')
 
   if (host === 'bsky.app' && parts[0] === 'profile' && parts[1] && HANDLE.test(parts[1])) {
@@ -30,7 +38,7 @@ export function followable(link: string): Followable | undefined {
   // A Lemmy community, on any instance: /c/name, or /c/name@another.instance.
   if (parts[0] === 'c' && parts[1] && parts.length === 2 && /^[a-z0-9_]+(@[a-z0-9.-]+)?$/i.test(parts[1])) {
     const name = parts[1].includes('@') ? parts[1] : `${parts[1]}@${host}`
-    return { kind: 'path', path: `/t/${channelId({ kind: 'community', name: name.toLowerCase() })}`, label: `Open c/${name.split('@')[0]}` }
+    return { kind: 'path', path: `/t/${channelId({ kind: 'community', name: name.toLowerCase() })}`, label: `Open c/${name.split('@')[0]} on Lemmy`, guess: true }
   }
   return undefined
 }

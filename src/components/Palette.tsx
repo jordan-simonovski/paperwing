@@ -123,7 +123,8 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
       // a person, a community or a board opens its own channel, where Follow or Join is; a site, the finder.
       const own = followable(pasted)
       if (own) out.push({ id: 'open-pasted', group: 'Actions', label: <>{own.label}</>, hint: pasted, icon: <Rss size={15} />, run: () => void openFollowable(own, navigate) })
-      else out.push({ id: 'follow-pasted', group: 'Actions', label: <>Follow this site</>, hint: pasted, icon: <Rss size={15} />, run: go(`/explore/publishers?follow=${encodeURIComponent(pasted)}`) })
+      if (!own || ('guess' in own && own.guess))
+        out.push({ id: 'follow-pasted', group: 'Actions', label: <>Follow this site</>, hint: pasted, icon: <Rss size={15} />, run: go(`/explore/publishers?follow=${encodeURIComponent(pasted)}`) })
       out.push({ id: 'post-pasted', group: 'Actions', label: <>Post this link to PaperWing</>, hint: pasted, icon: <Link2 size={15} />, run: () => postLink({ url: pasted }) })
     }
     const hits = searchTopics(query, topics).slice(0, 6)
