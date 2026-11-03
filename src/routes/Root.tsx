@@ -11,12 +11,18 @@ import { Composer } from '../components/Composer'
 import { MoveHome } from '../components/MoveHome'
 import { useMediaQuery } from '../lib/hooks'
 import { useBlogrollPublisher } from '../lib/blogroll'
+import { useAtproto } from '../lib/atproto'
 
 export function Root() {
   const { theme, textSize, density, set, welcomed, followed } = usePrefs()
   const systemDark = useMediaQuery('(prefers-color-scheme: dark)')
   const { pathname } = useLocation()
   useBlogrollPublisher()
+  // Once signed in, mixes published before private feeds were kept out of them are cleaned up.
+  const did = useAtproto((a) => a.did)
+  useEffect(() => {
+    if (did) void import('../lib/mixes').then((m) => m.scrubPublishedMixes())
+  }, [did])
 
   useEffect(() => {
     const el = document.documentElement
