@@ -239,10 +239,12 @@ const YES = 0.7
  * replies and a good share of them pushing back; sides alone, with plenty of pushback, make a
  * discussion lively.
  */
-export function levelOf(a: Pick<SpiceGrade, 'sharp' | 'flame' | 'split' | 'pushback' | 'hostile'>): SpiceLevel {
+export function levelOf(a: Pick<SpiceGrade, 'sharp' | 'flame' | 'split' | 'pushback'>): SpiceLevel {
   // ponytail: thresholds set from 31 probed threads (most heated HN threads: sharp 0.5-0.75,
   // pushback 0.45-0.65; calm ones under 0.2 and 0.4). Recheck on fresh threads when the model changes.
-  if (a.flame >= 0.4 || (a.hostile >= 4 && a.sharp >= 0.6)) return 3
+  // Personal attacks in the tone itself. How many people are hostile names the reason, not the
+  // level: a few snipers in a big, sharp thread (three on one Ask HN) don't make it a flamewar.
+  if (a.flame >= 0.4) return 3
   if (a.sharp >= 0.6 && a.pushback >= 0.45) return 2
   if ((a.sharp >= 0.45 && a.pushback >= 0.4) || (a.split >= 0.7 && a.pushback >= 0.5)) return 1
   return 0

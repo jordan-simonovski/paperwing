@@ -118,7 +118,9 @@ describe('spice grading', () => {
     expect(levelOf({ ...calm, sharp: 0.5, pushback: 0.42 })).toBe(1)
     expect(levelOf({ ...calm, sharp: 0.65, pushback: 0.5 })).toBe(2)
     expect(levelOf({ ...calm, sharp: 0.9, flame: 0.45, pushback: 0.5 })).toBe(3)
-    expect(levelOf({ ...calm, sharp: 0.7, pushback: 0.5, hostile: 4 })).toBe(3)
+    // Hostile people name a reason; on their own they don't make a flamewar.
+    const sniped = { ...calm, hostile: 4 }
+    expect(levelOf({ ...sniped, sharp: 0.7, flame: 0.12, pushback: 0.5 })).toBe(2)
   })
 
   it('asks about each reply with the comment it answers', () => {
