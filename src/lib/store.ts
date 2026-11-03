@@ -3,10 +3,11 @@ import type { FollowedPerson } from './people'
 import type { ReaderKind } from './pretext/actors'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { learn, storyFeatures } from './features'
+import { fade, learn, storyFeatures } from './features'
 import type { MixSource } from './mixSources'
 import type { Labeler, WarningMode } from './moderation'
 import type { Story } from './types'
+import { capLooks, firstLookThisVisit, look, type Glimpse } from './visits'
 import type { PublisherFeed } from './publishers'
 
 export interface Interest {
@@ -120,13 +121,20 @@ export interface Prefs {
   statusPages: { host: string; name: string }[]
   /** Your taste profile: feature (see features.ts: `t:<topic>`, `d:<site>`, `k:<keyword>`…) to weight, from -3 (fewer) to 3 (more). */
   affinity: Record<string, number>
+  /** When the profile last learned something: it fades from then (features.ts, fade) as the next lesson comes in. */
+  affinityAt: number
   /** When a synced preference last changed here, so sync can tell whose is newer. */
   syncedPrefsAt: number
   set: (patch: Partial<Omit<Prefs, 'set' | 'toggleFollow' | 'addInterest' | 'nudge' | 'learn'>>) => void
   /** Moves these exact features by delta ("more" or "fewer" on one topic or site). */
   nudge: (keys: string[], delta: number) => void
-  /** Moves the profile towards a story's features, or away with a negative delta: scaled by LESSON. */
-  learn: (story: Story & { topics?: string[] }, delta: number) => void
+  /**
+   * Moves the profile towards a story's features, or away with a negative delta: scaled by LESSON.
+   * A passive lesson (staying with a story, passing one on) doesn't make this device's settings
+   * newer for sync: it rides along with the next thing you choose, never over another device's.
+   * `spareLiked` leaves what you already like alone (a pass is volume, not a verdict).
+   */
+  learn: (story: Story & { topics?: string[] }, delta: number, how?: { passive?: boolean; spareLiked?: boolean }) => void
   toggleFollow: (id: string) => void
   addInterest: (query: string) => Interest
 }
@@ -152,6 +160,7 @@ export const SYNCED_PREFS = [
   'releaseRepos',
   'statusPages',
   'affinity',
+  'affinityAt',
 ] as const
 export type SyncedPrefs = Pick<Prefs, (typeof SYNCED_PREFS)[number]>
 
@@ -195,19 +204,29 @@ export const usePrefs = create<Prefs>()(
       releaseRepos: [],
       statusPages: [],
       affinity: {},
+      affinityAt: 0,
       syncedPrefsAt: 0,
       set: (patch) => set(SYNCED_PREFS.some((k) => k in patch) ? { ...patch, syncedPrefsAt: Date.now() } : patch),
       nudge: (keys, delta) =>
         set((s) => {
-          const affinity = { ...s.affinity }
+          const now = Date.now()
+          const affinity = { ...faded(s.affinity, s.affinityAt, now) }
           for (const k of keys) {
             const v = Math.max(-3, Math.min(3, Math.round(((affinity[k] ?? 0) + delta) * 10) / 10))
             if (v === 0) delete affinity[k]
             else affinity[k] = v
           }
-          return { affinity, syncedPrefsAt: Date.now() }
+          return { affinity, affinityAt: now, syncedPrefsAt: now }
         }),
-      learn: (story, delta) => set((s) => ({ affinity: learn(s.affinity, storyFeatures(story), delta), syncedPrefsAt: Date.now() })),
+      learn: (story, delta, how = {}) =>
+        set((s) => {
+          const now = Date.now()
+          const profile = faded(s.affinity, s.affinityAt, now)
+          const features = storyFeatures(story)
+          const liked = (k: string) => (profile[k] ?? 0) > 0
+          if (how.spareLiked && [...features.keys()].every(liked)) return {}
+          return { affinity: learn(profile, features, delta, how.spareLiked ? liked : undefined), affinityAt: now, ...(how.passive ? {} : { syncedPrefsAt: now }) }
+        }),
       toggleFollow: (id) => set((s) => ({ followed: s.followed.includes(id) ? s.followed.filter((f) => f !== id) : [...s.followed, id], syncedPrefsAt: Date.now() })),
       addInterest: (query) => {
         const q = query.trim()
@@ -239,8 +258,6 @@ export const usePrefs = create<Prefs>()(
   ),
 )
 
-const seenThisSession = new Set<string>()
-
 const CAP = 5000
 function capped(map: Record<string, number>): Record<string, number> {
   const entries = Object.entries(map)
@@ -248,8 +265,16 @@ function capped(map: Record<string, number>): Record<string, number> {
   return Object.fromEntries(entries.sort((a, b) => b[1] - a[1]).slice(0, CAP * 0.8))
 }
 
-/** How much each signal teaches the taste profile: a vote the most, a save half that, a hide less. */
-export const LESSON = { vote: 1.5, save: 0.75, hide: 0.6 }
+/**
+ * How much each signal teaches the taste profile: a vote the most, a save half that, a hide less;
+ * staying with a story a little, and passing one on three visits without opening it less still.
+ */
+export const LESSON = { vote: 1.5, save: 0.75, hide: 0.6, linger: 0.3, pass: 0.15 }
+/** Visits a story is passed on, unopened, before that teaches the profile anything. */
+const PASSED_ON = 3
+
+/** The profile as it stands now: faded since it last learned (from 0, never touched, it doesn't fade). */
+const faded = (affinity: Record<string, number>, at: number, now: number) => (at ? fade(affinity, (now - at) / 86_400_000) : affinity)
 
 /** Votes keep their newest 2,000: insertion order is vote order. */
 function capVotes(votes: Record<string, 1 | -1>): Record<string, 1 | -1> {
@@ -263,8 +288,10 @@ interface Activity {
   hidden: Record<string, number>
   /** key -> previous visit to its thread, so new comments can be highlighted. */
   visits: Record<string, number>
-  /** key -> how many sessions the row was on screen without being opened. Unopened repeats sink. */
+  /** key -> how many visits the row was on screen (visits.ts). Hot sinks what you saw on earlier ones. */
   impressions: Record<string, number>
+  /** key -> its latest look and the one before this visit: when, and its comments then (visits.ts). */
+  glimpses: Record<string, Glimpse>
   /** Your votes: 1 up, -1 down. They stay on this device; what they taught the ranking syncs. */
   votes: Record<string, 1 | -1>
   /** Sites you've opened stories from, by host: what "blogs you keep reading" is worked out from. */
@@ -273,7 +300,12 @@ interface Activity {
   noteSite: (key: string, url: string) => void
   /** Votes a story up or down, or takes the vote back when it's the same direction again. */
   vote: (story: Story & { topics?: string[] }, dir: 1 | -1) => void
-  noteImpression: (key: string) => void
+  /** A row was on screen: counted once a visit, with its comments then. Passed on three visits unopened teaches the profile a little. */
+  noteImpression: (story: Story & { topics?: string[] }) => void
+  /** key -> when you stayed with it long enough for that to teach the profile (once a story). */
+  lingered: Record<string, number>
+  /** You stayed with a story: teaches the profile a little, once. */
+  linger: (story: Story & { topics?: string[] }) => void
   markRead: (key: string) => void
   toggleHidden: (key: string) => void
   /** Records a thread visit and returns the time of the previous one. */
@@ -287,6 +319,8 @@ export const useActivity = create<Activity>()(
       hidden: {},
       visits: {},
       impressions: {},
+      glimpses: {},
+      lingered: {},
       votes: {},
       sites: {},
       noteSite: (key, url) => {
@@ -327,11 +361,20 @@ export const useActivity = create<Activity>()(
         // Switching from down to up undoes the downvote's lesson and teaches the upvote's.
         usePrefs.getState().learn(story, (after - before) * LESSON.vote)
       },
-      noteImpression: (key) => {
-        // Once per session: scrolling past the same row twice in one sitting isn't a second look.
-        if (seenThisSession.has(key)) return
-        seenThisSession.add(key)
-        set((s) => ({ impressions: capped({ ...s.impressions, [key]: (s.impressions[key] ?? 0) + 1 }) }))
+      noteImpression: (story) => {
+        const { key, comments } = story
+        // Once a visit: scrolling past the same row twice in one sitting isn't a second look.
+        if (!firstLookThisVisit(key)) return
+        const looks = (get().impressions[key] ?? 0) + 1
+        set((s) => capLooks({ ...s.impressions, [key]: looks }, { ...s.glimpses, [key]: look(s.glimpses[key], comments) }, CAP, CAP * 0.8))
+        // Passed on, unopened, visit after visit: a faint lesson, once. Never against what you already
+        // like: passing on stories about it is volume, not a verdict.
+        if (looks === PASSED_ON && !get().read[key]) usePrefs.getState().learn(story, -LESSON.pass, { passive: true, spareLiked: true })
+      },
+      linger: (story) => {
+        if (get().lingered[story.key]) return
+        set((s) => ({ lingered: capped({ ...s.lingered, [story.key]: Date.now() }) }))
+        usePrefs.getState().learn(story, LESSON.linger, { passive: true })
       },
       markRead: (key) => {
         if (!get().read[key]) set((s) => ({ read: capped({ ...s.read, [key]: Date.now() }) }))

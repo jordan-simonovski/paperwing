@@ -1,7 +1,8 @@
 import { allTopics, findTopic, resolveChannel, type Channel } from './channels'
 import { moderateStory, type Labeler, type WarningMode } from './moderation'
 import type { FollowedPerson } from './people'
-import { merge, type Ranked, type SortMode } from './rank'
+import { momentumOf } from './momentum'
+import { merge, type Memory, type Ranked, type SortMode } from './rank'
 import { feedId, feedLabel, newestOf } from './sources'
 import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
 import { matchesTopic, storyText, type FeedRef, type Topic } from './topics'
@@ -54,8 +55,8 @@ export interface Reader {
 }
 
 export interface Taste {
-  /** Sessions each story has been on screen unopened. */
-  seen: Record<string, number>
+  /** What you did with each story on earlier visits (visits.ts). */
+  memory: Record<string, Memory>
   affinity: Record<string, number>
   votes: Record<string, 1 | -1>
 }
@@ -114,7 +115,7 @@ export function planChannel(reader: Reader, channelId: string, opts: PlanOptions
  * answered), re-checked against the topic a keyword search was run for, moderated, and merged
  * and ranked for the reader.
  */
-export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[]): Ranked[] {
+export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[] | undefined)[], fetchedAt: number[] = []): Ranked[] {
   const topicsOf = (ref: FeedRef) =>
     ('topic' in ref && ref.topic ? [ref.topic] : 'topics' in ref && ref.topics ? ref.topics : []).map((id) => findTopic(id, reader.interests)).filter((t): t is Topic => !!t)
   const joined = new Set(reader.boards.map((b) => b.uri))
@@ -131,7 +132,15 @@ export function rankChannel(plan: ChannelPlan, reader: Reader, batches: (Story[]
     if (ownBoard) data = data.map((s) => (s.board?.uri === ownBoard ? { ...s, board: undefined } : s))
     return data
   })
-  return rankStories(reader, checked, { sort: plan.sort, native: plan.channel.native, boost: plan.channel.boost })
+  return rankStories(reader, checked, {
+    sort: plan.sort,
+    native: plan.channel.native,
+    boost: plan.channel.boost,
+    // Gaining fast right now, from what this device has fetched (momentum.ts).
+    momentum: momentumOf(checked.map((stories, i) => ({ stories, at: fetchedAt[i] || Date.now() }))),
+    // For you takes a few strong stories from outside your usual.
+    explore: forYou,
+  })
 }
 
 /** Suggestions are the same for everyone: from a board you've joined, a post is just a post (it stays on screen when you join). */
@@ -144,16 +153,18 @@ function withoutAnnouncements(data: Story[], forYou: boolean): Story[] {
 }
 
 /** Any batches of stories (search results, say), moderated and ranked for the reader the way a channel is. */
-export function rankStories(reader: Reader, batches: Story[][], opts: { sort: SortMode; native?: boolean; boost?: string[] }): Ranked[] {
+export function rankStories(reader: Reader, batches: Story[][], opts: { sort: SortMode; native?: boolean; boost?: string[]; momentum?: Record<string, number>; explore?: boolean }): Ranked[] {
   const moderated = batches.map((b) => b.flatMap((s) => moderateStory(s, reader.labelers, reader.warnings) ?? []))
-  const { seen, affinity, votes } = reader.taste()
+  const { memory, affinity, votes } = reader.taste()
   return merge(moderated, {
     sort: opts.sort,
     native: opts.native,
     boost: opts.boost,
     extraTopics: allTopics(reader.interests).filter((t) => t.id.startsWith('q:')),
     filters: { mutedWords: reader.mutedWords, mutedDomains: reader.mutedDomains, hidden: reader.hidden },
-    seen,
+    memory,
+    momentum: opts.momentum,
+    explore: opts.explore,
     affinity,
     votes,
   })

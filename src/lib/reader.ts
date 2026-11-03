@@ -4,6 +4,7 @@ import { canReadTimeline, useAtproto } from './atproto'
 import type { Reader, Taste } from './channelFeed'
 import { useMastodon } from './mastodon'
 import { useActivity, usePrefs, type Prefs } from './store'
+import { memoryOf } from './visits'
 
 // The reader, as the channel feed module sees them, built from the app's stores. The only place
 // that knows which store each fact lives in: pages ask for a reader, never for the stores.
@@ -51,8 +52,8 @@ const pickPrefs = (p: Prefs): ReaderPrefs => ({
 
 /** Read at ranking time, not subscribed to: voting or scrolling never reorders the list on screen. */
 const taste = (): Taste => {
-  const { impressions, votes } = useActivity.getState()
-  return { seen: impressions, affinity: usePrefs.getState().affinity, votes }
+  const { impressions, glimpses, read, votes } = useActivity.getState()
+  return { memory: memoryOf(impressions, glimpses, read), affinity: usePrefs.getState().affinity, votes }
 }
 
 function toReader(p: ReaderPrefs, hidden: Record<string, number>, bluesky: { did?: string; scope?: string }, mastodon: { instance: string; signedIn: boolean }): Reader {
