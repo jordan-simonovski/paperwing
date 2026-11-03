@@ -174,6 +174,7 @@ export function usePullToRefresh(onRefresh: () => void, enabled: boolean) {
       el.style.transform = `translateY(${pull}px)`
       el.style.opacity = String(Math.min(1, pull / LIMIT))
       el.dataset.armed = pull >= LIMIT ? 'true' : 'false'
+      el.style.setProperty('--pull', String(Math.min(1, pull / LIMIT)))
     }
     const end = () => {
       if (y0 < 0) return
