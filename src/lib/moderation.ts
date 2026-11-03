@@ -93,15 +93,19 @@ export function moderateStory<T extends Story>(s: T, labelers: Labeler[], mode: 
   return warning ? { ...s, warning, warnMediaOnly: v.warning ? v.mediaOnly : s.warnMediaOnly } : s
 }
 
-/** Comments with muted words and hidden labels folded away (their replies stay reachable), and warnings marked. */
-export function moderateComments(comments: Comment[], mutedWords: string[], labelers: Labeler[]): Comment[] {
+/**
+ * Comments with muted words and hidden labels folded away (their replies stay reachable), warnings
+ * marked, and likely spoilers (by comment id) folded too.
+ */
+export function moderateComments(comments: Comment[], mutedWords: string[], labelers: Labeler[], spoilers?: ReadonlySet<string>): Comment[] {
   const muted = lower(mutedWords)
   const walk = (cs: Comment[]): Comment[] =>
     cs.map((c) => {
       const v = judge(c.labels, c.authorDid, labelers)
       const text = plain(c.html)
       const word = muted.find((w) => text.includes(w))
-      const fold = v.hide ? `Hidden: ${v.warning}` : word ? 'Contains a word you muted' : v.warning ? `Content warning: ${v.warning}` : c.warning
+      const fold =
+        (v.hide ? `Hidden: ${v.warning}` : word ? 'Contains a word you muted' : v.warning ? `Content warning: ${v.warning}` : c.warning) ?? (spoilers?.has(c.id) ? 'Possible spoiler' : undefined)
       return { ...c, folded: fold, children: walk(c.children) }
     })
   return walk(comments)

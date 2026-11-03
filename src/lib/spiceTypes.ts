@@ -8,18 +8,27 @@ export type SpiceLevel = 0 | 1 | 2 | 3
  * Lemmy threads run smaller than HN's and argue just as hard, so they need fewer.
  */
 export const SPICE_MIN: Record<string, number> = { hn: 25, bs: 25, lb: 12, lm: 15, dv: 20 }
+/** A grade's `insights.fiction` at or above this gets its comments checked for spoilers, on the server and in the reader. */
+export const FICTION_YES = 0.7
+
 export const spiceMin = (key: string): number | undefined => SPICE_MIN[key.slice(0, 2)]
 
 export interface SpiceGrade {
   level: SpiceLevel
-  /** Jev's heat score, 0 (calm) to 3 (flamewar), and how sure it was. */
+  /** The tone of the replies, 0 (friendly) to 3 (personal attacks), and how sure Jev was. */
   heat: number
   confidence: number
-  /** Probabilities (0 to 1) of what makes it heated. */
+  /** How likely the replies are sharp or worse (tone 2 or 3), and personal attacks (tone 3). */
+  sharp: number
+  flame: number
+  /** How likely people are divided into sides (0 to 1). */
   split: number
+  /** The share of replies that push back on the comment they answer (0 to 1). */
   pushback: number
+  /** How many different people insult, mock or belittle someone they reply to. */
   hostile: number
-  pileOn: number
+  /** What else the discussion is like; missing on grades from before it was asked, and on quiet ones. */
+  insights?: SpiceInsights
   /** Comments in the thread when it was graded. */
   comments: number
   at: number
@@ -32,4 +41,40 @@ export interface SpiceResponse {
   grades: Record<string, SpiceGrade>
   /** Keys being graded now: worth asking about again in a little while. */
   pending: string[]
+}
+
+/** A comment to jump to: its id at the source, as the reader's thread has it. */
+export interface SpiceRef {
+  id: string
+  author: string
+}
+
+export interface SpiceInsights {
+  /** How likely (0 to 1) commenters grieve, are delighted, are warm to each other, argue politics. */
+  sad: number
+  delighted: number
+  warm: number
+  political: number
+  /** How likely the post is about fiction (films, shows, books, games): whether its comments are checked for spoilers. */
+  fiction?: number
+  /** Top-level comments saying the title or main claim is wrong: set only when two or more people do. */
+  disputed: SpiceRef[]
+  /** Answers to what the post asks readers: set only when it asks something. */
+  answers: SpiceRef[]
+}
+
+/** A thread's comments checked for spoilers (api/spice.ts?spoilers). */
+export interface SpoilerCheck {
+  /** Comment ids, as the reader's thread has them, that likely give the plot away. */
+  ids: string[]
+  /** Comments in the thread when checked, as the server fetched it and as the reader counted it. */
+  comments: number
+  asked?: number
+  at: number
+}
+
+export interface SpoilerResponse {
+  ids: string[]
+  /** Being checked now: worth asking again shortly. */
+  pending: boolean
 }

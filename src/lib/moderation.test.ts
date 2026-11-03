@@ -56,6 +56,16 @@ describe('labels', () => {
     expect(c.folded).toBe('Contains a word you muted')
     expect(c.children[0].folded).toBeUndefined()
   })
+  it('folds likely spoilers, after anything you chose to fold', () => {
+    const tree = [
+      { id: '1', author: 'a', html: '<p>The election episode</p>', createdAt: 0, children: [{ id: '2', author: 'b', html: '<p>He dies at the end</p>', createdAt: 0, children: [] }] },
+      { id: '3', author: 'c', html: '<p>Great show</p>', createdAt: 0, children: [] },
+    ]
+    const [first, second] = moderateComments(tree, ['election'], [], new Set(['1', '2']))
+    expect(first.folded).toBe('Contains a word you muted')
+    expect(first.children[0].folded).toBe('Possible spoiler')
+    expect(second.folded).toBeUndefined()
+  })
 })
 
 describe('coverage', () => {

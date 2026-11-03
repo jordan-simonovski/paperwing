@@ -67,6 +67,8 @@ export interface Prefs {
   thumbnails: boolean
   /** Chillies on heated discussions (spice.ts). */
   spice: boolean
+  /** Comments likely to give away a film, show, book or game's plot folded until tapped (spice.ts). */
+  hideSpoilers: boolean
   /** Each reply depth's rail in its own colour, so you can tell who's answering whom. */
   threadColours: boolean
   /** Pip dresses for the season (season.ts). */
@@ -162,6 +164,7 @@ export const usePrefs = create<Prefs>()(
       showExcerpts: true,
       thumbnails: true,
       spice: true,
+      hideSpoilers: true,
       threadColours: false,
       seasonal: true,
       hideRead: false,

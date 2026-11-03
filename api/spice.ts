@@ -1,16 +1,19 @@
 import { waitUntil } from '@vercel/functions'
-import { spiceMin, type SpiceGrade, type SpiceResponse } from '../src/lib/spiceTypes.js'
+import { FICTION_YES, spiceMin, type SpiceGrade, type SpiceResponse, type SpoilerCheck, type SpoilerResponse } from '../src/lib/spiceTypes.js'
 import { clientKey, fail, json, today } from './_lib/http.js'
 import { kv, kvConfigured, overLimit } from './_lib/kv.js'
-import { askJev, buildState, fetchDiscussion, JEV_MODEL, levelOf, needsGrade, quiet, gradeFrom, validKey } from './_lib/spice.js'
+import { askJev, buildState, checkSpoilers, fetchDiscussion, GRADE_VERSION, JEV_MODEL, levelOf, needsGrade, needsSpoilerCheck, quiet, gradeFrom, validKey } from './_lib/spice.js'
 
 // GET /api/spice?keys=hn-123~240,lb-abc~55: the spice grades known for those stories (each key
 // with the comment count the client sees). Stories that are big enough and ungraded, or have grown
 // a lot since, are graded in the background after the response, and listed as pending so the
 // client asks again shortly. Grades are shared by every reader and kept for two weeks.
 //
-// Needs TYPESAFE_API_KEY (and the Upstash database). Grading is capped per day
-// (SPICE_DAILY_LIMIT), which bounds the cost whatever anyone sends.
+// GET /api/spice?spoilers=hn-123~240: the comments in that thread likely to give a plot away, for
+// the reader to fold. Only a thread whose grade says it's about fiction is ever checked.
+//
+// Needs TYPESAFE_API_KEY (and the Upstash database). Grading and spoiler checks are capped per day
+// (SPICE_DAILY_LIMIT, SPOILER_DAILY_LIMIT), which bounds the cost whatever anyone sends.
 
 const KEEP_SECONDS = 14 * 86_400
 const PER_REQUEST = 6
@@ -18,14 +21,52 @@ const DAILY_LIMIT = Number(process.env.SPICE_DAILY_LIMIT || 3000)
 const CALLER_LIMIT = 60
 const MAX_KEYS = 60
 const COOL_SECONDS = 600
+const SPOILER_DAILY_LIMIT = Number(process.env.SPOILER_DAILY_LIMIT || 500)
 
 const gradeKey = (key: string) => `rd:spice:${key}`
+const spoilerKey = (key: string) => `rd:spoilers:${key}`
+
+const failed = (key: string) => async (err: unknown) => {
+  const message = err instanceof Error ? err.message : String(err)
+  console.warn('spice', key, message)
+  await kv()
+    .set('rd:spice-error', JSON.stringify({ key, message, at: Date.now() }), 7 * 86_400)
+    .catch(() => {})
+}
+
+async function spoilers(asked: string, request: Request, apiKey: string): Promise<Response> {
+  const [key, n] = asked.split('~')
+  if (!validKey(key)) return fail('spoilers=<key>~<comments> required')
+  const comments = Math.max(0, Math.min(100_000, Number(n) || 0))
+  const store = kv()
+  const [held, graded] = await store.mget([spoilerKey(key), gradeKey(key)])
+  const check = held ? (JSON.parse(held) as SpoilerCheck) : undefined
+  const ids = check?.ids ?? []
+  // The server's own grade decides, so no request can spend the budget on a thread with no plot.
+  const fiction = graded ? ((JSON.parse(graded) as SpiceGrade).insights?.fiction ?? 0) : 0
+  if (fiction < FICTION_YES || !needsSpoilerCheck(check, comments)) return json({ ids, pending: false } satisfies SpoilerResponse, 60)
+  // One check per thread at a time; each reader's share and the day's budget as for grading.
+  const lock = `rd:spoiler-lock:${key}`
+  if (await overLimit(lock, 300, 1)) return json({ ids, pending: true } satisfies SpoilerResponse, 0)
+  const day = today()
+  if ((await overLimit(`rd:spice-caller:${clientKey(request)}:${day}`, 86_400, CALLER_LIMIT)) || (await overLimit(`rd:spoiler-budget:${day}`, 86_400, SPOILER_DAILY_LIMIT))) {
+    await store.bump(lock, 300, -1).catch(() => {})
+    return json({ ids, pending: false } satisfies SpoilerResponse, 0)
+  }
+  waitUntil(
+    checkSpoilers(key, apiKey)
+      .then((c) => store.set(spoilerKey(key), JSON.stringify({ ...c, asked: comments } satisfies SpoilerCheck), KEEP_SECONDS))
+      .catch(failed(key)),
+  )
+  return json({ ids, pending: true } satisfies SpoilerResponse, 0)
+}
 
 async function grade(key: string, apiKey: string) {
   const store = kv()
-  const { title, comments } = await fetchDiscussion(key)
-  const { state, total } = buildState(title, comments)
-  const g: SpiceGrade = total < (spiceMin(key) ?? Infinity) || state.comments.length < 8 ? quiet(total) : gradeFrom(await askJev(state, apiKey), total)
+  const { title, text, comments } = await fetchDiscussion(key)
+  const built = buildState(title, comments, text)
+  const { state, total } = built
+  const g: SpiceGrade = total < (spiceMin(key) ?? Infinity) || state.comments.length < 8 ? quiet(total) : gradeFrom(built, await askJev(state, apiKey), total)
   await store.set(gradeKey(key), JSON.stringify(g), KEEP_SECONDS)
 }
 
@@ -42,6 +83,8 @@ export async function GET(request: Request): Promise<Response> {
     return json({ enabled: !!apiKey && !!store, model: JEV_MODEL, today: Number(used) || 0, limit: DAILY_LIMIT, lastError: failed ? { at: failed.at ?? null } : null }, 0)
   }
   if (!apiKey || !kvConfigured()) return json({ enabled: false, grades: {}, pending: [] } satisfies SpiceResponse, 3600)
+  const spoilerAsk = params.get('spoilers')
+  if (spoilerAsk) return spoilers(spoilerAsk, request, apiKey)
 
   const raw = params.get('keys') ?? ''
   const asked = raw
@@ -59,9 +102,10 @@ export async function GET(request: Request): Promise<Response> {
   const grades: Record<string, SpiceGrade> = {}
   stored.forEach((s, i) => {
     if (!s) return
-    // The level is worked out again on the way out, so retuned thresholds apply to every grade.
+    // The level is worked out again on the way out, so retuned thresholds apply to every grade
+    // asked the current questions; older ones keep theirs until they're regraded.
     const g = JSON.parse(s) as SpiceGrade
-    grades[asked[i].key] = { ...g, level: g.heat ? levelOf(g) : 0 }
+    grades[asked[i].key] = g.v === GRADE_VERSION ? { ...g, level: levelOf(g) } : g
   })
 
   const pending: string[] = []

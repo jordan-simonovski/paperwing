@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { describeSpice, useSpice, wantSpice } from '../lib/spice'
+import { describeMood, describeSpice, useSpice, wantSpice } from '../lib/spice'
 import type { SpiceLevel } from '../lib/spiceTypes'
 import { usePrefs } from '../lib/store'
 import type { Story } from '../lib/types'
@@ -63,6 +63,51 @@ export function SpiceDetail({ places }: { places: Places }) {
       {open && (
         <span className="text-[0.8125rem] text-ink-2">
           {reasons.length ? `${reasons.join(', ').replace(/^./, (c) => c.toUpperCase())}.` : 'People disagree, but nothing stands out.'} Graded by Jev from the top comments.
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * In the reader: what the discussion is like (sad, wholesome…), and comments worth jumping to
+ * when people say the headline is wrong or answer what the post asks. From this thread's own
+ * grade, so every comment named is in the thread on screen.
+ */
+export function ThreadNotes({ story, onJump }: { story: Places[number]; onJump: (commentId: string) => void }) {
+  const g = useGrade([story])
+  const [open, setOpen] = useState<'disputed' | 'answers'>()
+  const i = g?.insights
+  if (!i) return null
+  const moods = describeMood(i)
+  if (!moods.length && !i.disputed.length && !i.answers.length) return null
+  const toggle = (which: 'disputed' | 'answers') => setOpen((o) => (o === which ? undefined : which))
+  const refs = open ? i[open] : []
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-2">
+      {moods.map((m) => (
+        <span key={m} className="pill">
+          {m}
+        </span>
+      ))}
+      {i.disputed.length > 0 && (
+        <button className="pill" aria-expanded={open === 'disputed'} onClick={() => toggle('disputed')} title="Commenters say the headline or main claim is wrong">
+          Disputed
+        </button>
+      )}
+      {i.answers.length > 0 && (
+        <button className="pill" aria-expanded={open === 'answers'} onClick={() => toggle('answers')} title="Comments that answer what the post asks">
+          Answered
+        </button>
+      )}
+      {open && (
+        <span className="inline-flex flex-wrap items-center gap-1.5 text-[0.8125rem] text-ink-2">
+          {open === 'disputed' ? 'Says the headline is wrong:' : 'Answers from'}
+          {refs.map((r) => (
+            <button key={r.id} className="ref-chip" title="Jump to this comment" onClick={() => onJump(r.id)}>
+              {r.author}
+            </button>
+          ))}
         </span>
       )}
     </span>

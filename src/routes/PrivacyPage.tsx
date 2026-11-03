@@ -86,6 +86,14 @@ export function PrivacyPage() {
           </p>
         </Part>
 
+        <Part title="Chillies and discussion notes">
+          <p>
+            To show how heated a busy discussion is and what it’s like, and to fold comments that may spoil a film, show, book or game, PaperWing’s server fetches the thread’s public post and comments
+            itself and sends them to TypeSafe’s Jev model to classify. Nothing about you goes with them: your device only asks the server which of the stories on screen have been graded. The results
+            (a few numbers, and the ids of a few comments to jump to) are kept on the server for two weeks and shared by every reader.
+          </p>
+        </Part>
+
         <Part title="Notifications">
           <p>
             If you turn on alerts, the server stores your browser’s push address and keys, what you asked to be alerted about (for example, threads you watch), what it has already told you, and when

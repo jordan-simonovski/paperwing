@@ -12,6 +12,7 @@ import type { Ranked } from '../lib/rank'
 import { useActivity, usePrefs } from '../lib/store'
 import { useAtproto } from '../lib/atproto'
 import { judge, moderateComments } from '../lib/moderation'
+import { useSpoilers } from '../lib/spice'
 import { useOutlets } from '../lib/coverage'
 import { Covered } from './Covered'
 import type { Story } from '../lib/types'
@@ -20,11 +21,11 @@ import { toast } from '../lib/ui'
 import { isWatching, useWatch } from '../lib/watch'
 import { landHeadline } from '../lib/pretext'
 import { ArticleView } from './ArticleView'
-import { CommentTree, nextThread, Spine } from './CommentTree'
+import { CommentTree, nextThread, revealComment, Spine } from './CommentTree'
 import { DiscussionBar, usePlaces } from './DiscussionBar'
 import { WebMentions } from './WebMentions'
 import { ModerateOnBoard } from './ModerateOnBoard'
-import { SpiceDetail } from './Spice'
+import { SpiceDetail, ThreadNotes } from './Spice'
 import { QuoteCard } from './QuoteCard'
 import { SelfPostBody } from './SelfPostBody'
 import { FollowSite } from './FollowBlogs'
@@ -74,7 +75,8 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
   const verdict = useMemo(() => (story ? judge(story.labels, story.authorDid, labelers) : {}), [story, labelers])
   const cw = warnings === 'show' ? undefined : (verdict.warning ?? story?.warning)
   const cwMediaOnly = verdict.warning ? verdict.mediaOnly : story?.warnMediaOnly
-  const comments = useMemo(() => moderateComments(thread.data?.comments ?? [], mutedWords, labelers), [thread.data, mutedWords, labelers])
+  const spoilers = useSpoilers(known ?? story)
+  const comments = useMemo(() => moderateComments(thread.data?.comments ?? [], mutedWords, labelers, spoilers), [thread.data, mutedWords, labelers, spoilers])
   const alsoOn = (known as Ranked | undefined)?.alsoOn
   const coverage = (known as Ranked | undefined)?.coverage
   // How many outlets are covering it: starts the news search as the story opens, so the Related tab has it ready.
@@ -96,6 +98,21 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
       },
       { replace: true },
     )
+
+  // A comment named above the tabs: the thread only listens for jumps once it's on screen, so the
+  // jump waits for the Discussion tab and the loaded thread. The tree's own effects run before this
+  // one, so it's listening by then.
+  const [jump, setJump] = useState<string>()
+  const jumpTo = (commentId: string) => {
+    if (tab !== 'discussion') setTab('discussion')
+    setJump(commentId)
+  }
+  const threadLoaded = !!thread.data
+  useEffect(() => {
+    if (!jump || tab !== 'discussion' || !threadLoaded) return
+    revealComment(jump)
+    setJump(undefined)
+  }, [jump, tab, threadLoaded])
 
   const savedMeta = useLibrary((l) => l.items[itemKey])
   const saved = !!savedMeta
@@ -267,6 +284,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                 </button>
               )}
               <SpiceDetail places={[story, ...(alsoOn ?? [])]} />
+              <ThreadNotes story={story} onJump={jumpTo} />
               <StoryActions story={story} root={thread.data?.story.ref ?? story.ref} />
               <ModerateOnBoard story={story} />
               <WhyRanked story={story} topics={topics} />
