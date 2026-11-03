@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 
 vi.mock('idb-keyval', () => import('../test/memoryIdb'))
 import { useLibrary, type SavedItem } from './library'
@@ -117,6 +117,9 @@ describe('preferences from another device', () => {
 
 describe('a record the server won’t store', () => {
   it('is remembered and named, without failing the sync, until it goes up', async () => {
+    // Settings go up when their timestamp moves on: keep the two changes below in different milliseconds.
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    onTestFinished(() => void vi.useRealTimers())
     usePrefs.setState({ ...usePrefs.getInitialState(), followed: ['physics'], syncedPrefsAt: Date.now() })
     // The server only ever sees sealed keys, so it can only name those back.
     vi.stubGlobal(
@@ -131,6 +134,7 @@ describe('a record the server won’t store', () => {
     expect(notSyncedText(useSync.getState().notSynced)).toBe('your settings')
 
     // Trimmed and changed: it goes up, and the notice goes with it.
+    vi.setSystemTime(Date.now() + 1000)
     usePrefs.getState().set({ followed: ['maths'] })
     vi.stubGlobal('fetch', answer(200, { records: [], cursor: 2, more: false, accepted: 1, tooLarge: [] }))
     await syncNow()
