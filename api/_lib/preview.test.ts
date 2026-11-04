@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { TOPICS } from '../../src/lib/topics.js'
 
 vi.mock('./og.js', () => ({
   pageCard: vi.fn(async () => ({ title: 'A "quoted" <title>', description: 'What it says' })),
@@ -8,6 +9,35 @@ vi.mock('./og.js', () => ({
 const { GET } = await import('../preview.js')
 const preview = (path: string) => GET(new Request(`https://paperwing.io/api/preview?path=${encodeURIComponent(path)}`))
 const card = async (path: string) => (await preview(path)).text()
+
+describe('topic preview cards', () => {
+  it.each(TOPICS)('serves static artwork for $id without contacting a source', async (topic) => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No network for topic cards'))
+    try {
+      const html = await card(`/t/${topic.id}`)
+      expect(html).toContain(`https://paperwing.io/og/topics/${topic.id}.png`)
+      expect(html).toContain(`<link rel="canonical" href="https://paperwing.io/t/${topic.id}">`)
+      expect(html).toContain('<meta property="og:type" content="website">')
+      expect(html).toContain('<meta property="og:image:width" content="1200">')
+      expect(html).toContain('<meta property="og:image:height" content="630">')
+      expect(fetch).not.toHaveBeenCalled()
+    } finally {
+      fetch.mockRestore()
+    }
+  })
+  it('escapes topic text and normalizes the trailing slash', async () => {
+    const html = await card('/t/climbing/')
+    expect(html).toContain('<meta property="og:title" content="Climbing &amp; bouldering">')
+    expect(html).toContain('<meta property="og:image:alt" content="Climbing &amp; bouldering on PaperWing">')
+    expect(html).toContain('<link rel="canonical" href="https://paperwing.io/t/climbing">')
+  })
+  it.each(['/t/not-a-topic', '/t/q:private-interest', '/t/%3Cscript%3E'])('uses the generic card for %s', async (path) => {
+    const html = await card(path)
+    expect(html).toContain('https://paperwing.io/og.png')
+    expect(html).not.toContain('/og/topics/')
+    expect(html).not.toContain('<script>')
+  })
+})
 
 describe('story preview cards', () => {
   it('describes a shared link with its own title and picture, escaped', async () => {

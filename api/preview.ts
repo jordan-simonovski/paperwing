@@ -1,6 +1,8 @@
 import { parseStoryKey } from '../src/lib/storyKey.js'
 import { HOME } from '../src/lib/oauthClient.js'
 import type { Story } from '../src/lib/types.js'
+import { TOPIC_BY_ID } from '../src/lib/topics.js'
+import { TOPIC_CARD_SIZE, topicImagePath } from '../src/lib/topicCard.js'
 import { posts } from './_lib/atlinks.js'
 import { toStory } from './_lib/bsky.js'
 import { fetchJson } from './_lib/http.js'
@@ -9,16 +11,20 @@ import { actorOf, person } from './_lib/people.js'
 import { lobstersThread } from './_lib/sources.js'
 import { escapeHtml as esc, siteOf } from './_lib/text.js'
 
-// A story link's preview card. When someone pastes a PaperWing story link into Bluesky, Mastodon,
+// A shared link's preview card. When someone pastes a PaperWing link into Bluesky, Mastodon,
 // iMessage or Slack, the site that draws the card fetches the link without running any script, so
 // the app's own page would only ever show PaperWing's generic card. vercel.json sends those
 // fetchers (and only them, by user agent) here instead: a tiny page with the story's own title,
-// description and picture. People clicking the link get the app as usual.
+// description and picture. Topic cards use build-time PNGs and need no upstream requests.
+// People clicking the link get the app as usual.
 
 interface Card {
   title: string
   description: string
   image?: string
+  imageAlt?: string
+  imageSize?: { width: number; height: number }
+  type?: 'website' | 'article'
   /** A square picture (an avatar): shown as a small card, not cropped into a wide one. */
   small?: boolean
   /** The linked page couldn't be read, so this is a stand-in: cached briefly, not for a day. */
@@ -108,15 +114,18 @@ function page(card: Card, canonical: string): string {
 <link rel="canonical" href="${esc(canonical)}">
 <meta name="description" content="${esc(description)}">
 <meta property="og:site_name" content="PaperWing">
-<meta property="og:type" content="article">
+<meta property="og:type" content="${card.type ?? 'article'}">
 <meta property="og:url" content="${esc(canonical)}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:image" content="${esc(image)}">
+${card.imageSize ? `<meta property="og:image:width" content="${card.imageSize.width}">\n<meta property="og:image:height" content="${card.imageSize.height}">` : ''}
+${card.imageAlt ? `<meta property="og:image:alt" content="${esc(card.imageAlt)}">` : ''}
 <meta name="twitter:card" content="${card.small ? 'summary' : 'summary_large_image'}">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${esc(image)}">
+${card.imageAlt ? `<meta name="twitter:image:alt" content="${esc(card.imageAlt)}">` : ''}
 </head><body><h1>${esc(title)}</h1><p>${esc(description)}</p><p><a href="${esc(canonical)}">Read it on PaperWing</a></p></body></html>`
 }
 
@@ -126,10 +135,20 @@ export async function GET(request: Request): Promise<Response> {
   const path = url.searchParams.get('path') ?? ''
   const match = /^\/(t\/[A-Za-z0-9:@._%-]{1,200}|today)\/([A-Za-z0-9._@-]{3,1200})$/.exec(path)
   const profile = /^\/u\/([A-Za-z0-9:@._%-]{3,260})$/.exec(path)
+  const topic = TOPIC_BY_ID.get(/^\/t\/([a-z0-9-]{1,80})\/?$/.exec(path)?.[1] ?? '')
   // A story link that opens on the article keeps doing so (src/lib/storyLink.ts); only the tabs there are.
   const tab = match && ['article', 'discussion', 'related'].includes(url.searchParams.get('tab') ?? '') ? `?tab=${url.searchParams.get('tab')}` : ''
-  const canonical = `https://${HOME}${match || profile ? path + tab : '/'}`
+  const canonical = `https://${HOME}${topic ? `/t/${topic.id}` : match || profile ? path + tab : '/'}`
   let card: Card | undefined
+  if (topic)
+    card = {
+      title: topic.label,
+      description: topic.blurb,
+      image: `https://${HOME}${topicImagePath(topic.id)}`,
+      imageAlt: `${topic.label} on PaperWing`,
+      imageSize: TOPIC_CARD_SIZE,
+      type: 'website',
+    }
   // A lookup that failed (a slow site, a bad escape in the path) is cached briefly, so the next
   // share gets the real card rather than a day of the generic one.
   let failed = false

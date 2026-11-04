@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { topicCards } from './scripts/topicCards'
 
 // Mirrors Vercel's file-based functions in dev: /api/<name> -> api/<name>.ts exporting GET/POST(request).
 function vercelApiDev(): Plugin {
@@ -70,5 +71,5 @@ const appVersion = (JSON.parse(readFileSync('package.json', 'utf8')) as { versio
 
 export default defineConfig({
   define: { __BUILD__: JSON.stringify({ version: appVersion, at: new Date().toISOString() }) },
-  plugins: [react(), tailwindcss(), vercelApiDev(), serviceWorker()],
+  plugins: [react(), tailwindcss(), vercelApiDev(), topicCards(), serviceWorker()],
 })
