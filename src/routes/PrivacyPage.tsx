@@ -34,8 +34,8 @@ export function PrivacyPage() {
           </p>
           <p>
             So Hot can show what’s new to you, this browser also keeps which stories have been on your screen, when, and how many comments they had then. Your taste profile learns from your votes,
-            saves and hides, and a little from stories you stay with for a while or pass over visit after visit. Older lessons fade over the months. None of this leaves your device, except your taste
-            profile in encrypted sync if you turn sync on.
+            saves and hides, and a little from stories you open, stay with for a while or pass over visit after visit. Older lessons fade over the months. None of this leaves your device, except your
+            taste profile in encrypted sync if you turn sync on.
           </p>
         </Part>
 

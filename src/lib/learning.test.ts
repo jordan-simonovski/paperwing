@@ -21,7 +21,7 @@ const story = (key: string, title: string): Story & { topics: string[] } => ({
 beforeEach(() => {
   vi.useRealTimers()
   usePrefs.setState({ affinity: {}, affinityAt: 0 })
-  useActivity.setState({ impressions: {}, glimpses: {}, read: {}, lingered: {} })
+  useActivity.setState({ impressions: {}, glimpses: {}, read: {}, lingered: {}, opened: {} })
   resetVisits(0)
 })
 
@@ -47,6 +47,28 @@ describe('what the ranking learns', () => {
     usePrefs.setState({ affinity: {} })
     usePrefs.getState().learn(s, LESSON.vote)
     expect(usePrefs.getState().affinity['k:zorblax']).toBeGreaterThan(after)
+  })
+
+  it('learns a little from a story you open, once, and less than from one you stay with', () => {
+    const s = story('o', 'zorblax')
+    useActivity.getState().noteOpen(s)
+    const opened = usePrefs.getState().affinity['k:zorblax']
+    expect(opened).toBeGreaterThan(0)
+    useActivity.getState().noteOpen(s)
+    expect(usePrefs.getState().affinity['k:zorblax']).toBe(opened)
+    usePrefs.setState({ affinity: {} })
+    useActivity.getState().linger(story('p', 'zorblax'))
+    expect(usePrefs.getState().affinity['k:zorblax']).toBeGreaterThan(opened)
+  })
+
+  it('learns the subject and the site of a story you open, not its every word', () => {
+    // Its topics worked out from the headline, as for a story from a feed.
+    const s = { ...story('q', 'Rewriting our Postgres replication layer in Rust with async traits'), topics: undefined }
+    useActivity.getState().noteOpen(s)
+    const learned = Object.keys(usePrefs.getState().affinity)
+    expect(learned.filter((k) => k.startsWith('t:')).length).toBeGreaterThan(0)
+    expect(learned.filter((k) => k.startsWith('d:')).length).toBe(1)
+    expect(learned.filter((k) => k.startsWith('k:'))).toEqual([])
   })
 
   it('learns a little against a story you passed on three visits without opening, and not before', () => {
@@ -81,6 +103,7 @@ describe('what scrolling past can’t do', () => {
   it('never makes this device’s settings look newer to sync: only what you choose does', () => {
     usePrefs.setState({ syncedPrefsAt: 123 })
     useActivity.getState().linger(story('g', 'zorblax'))
+    useActivity.getState().noteOpen(story('g2', 'zorblax'))
     for (const visit of [0, 1, 2]) {
       resetVisits(visit * day)
       useActivity.getState().noteImpression(story('h', 'quux'))

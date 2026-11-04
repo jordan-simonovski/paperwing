@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { watchLinger } from './linger'
+import { watchLinger, watchOpen } from './linger'
 
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
@@ -34,5 +34,25 @@ describe('staying with a story', () => {
     stop()
     vi.advanceTimersByTime(60_000)
     expect(stayed).not.toHaveBeenCalled()
+  })
+})
+
+describe('opening a story', () => {
+  it('counts once it has been open a moment', () => {
+    const opened = vi.fn()
+    watchOpen(opened)
+    vi.advanceTimersByTime(1_500)
+    expect(opened).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1_000)
+    expect(opened).toHaveBeenCalledTimes(1)
+  })
+
+  it('doesn’t count a story skimmed past on the way to another', () => {
+    const opened = vi.fn()
+    const stop = watchOpen(opened)
+    vi.advanceTimersByTime(300)
+    stop()
+    vi.advanceTimersByTime(10_000)
+    expect(opened).not.toHaveBeenCalled()
   })
 })

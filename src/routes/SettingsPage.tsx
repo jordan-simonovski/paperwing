@@ -899,7 +899,7 @@ function AppSettings() {
       <Section title="Data" hint="Saved articles are kept until you remove them. Cached feeds expire after three days.">
         <StorageStatus />
         <div className="flex flex-wrap gap-2">
-          <button className="btn" onClick={() => (useActivity.setState({ read: {}, visits: {} }), toast('Read history cleared'))}>
+          <button className="btn" onClick={() => (useActivity.setState({ read: {}, visits: {}, opened: {}, lingered: {} }), toast('Read history cleared'))}>
             Clear read history
           </button>
           <button className="btn" disabled={!Object.keys(hidden).length} onClick={() => (useActivity.setState({ hidden: {} }), toast('Hidden stories restored'))}>
