@@ -1,5 +1,21 @@
 # What's new
 
+## 0.14.0
+
+_Released 4 November 2026_
+
+### New
+
+- **Layoffs, and who's still hiring.** A new Layoffs topic gathers layoff reporting from the news and Bluesky with the WARN notices US employers must file before mass layoffs, from twelve states. Open a story about one company's layoffs and its Related tab shows what that company is still hiring for, straight from its own job board.
+
+### Improved
+
+- **Opening a story now counts towards your taste.** Hot learns a little from what you open, not only from votes and saves, so it follows what you actually read even if you never vote. It counts for less than staying to read, since a headline can earn a tap the story doesn't.
+
+### Fixes
+
+- **Open the feeds you add.** Bluesky feeds and lists now stay in Your feeds under Explore, with Open buttons and a shortcut in the menu. Adding a feed offers to open it straight away, and publishers, communities and mixes have clearer Open links too.
+
 ## 0.13.0
 
 _Released 3 November 2026_

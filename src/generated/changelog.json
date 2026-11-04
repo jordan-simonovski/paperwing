@@ -1,6 +1,42 @@
 {
-  "version": "0.13.0",
+  "version": "0.14.0",
   "releases": [
+    {
+      "version": "0.14.0",
+      "date": "4 November 2026",
+      "sections": [
+        {
+          "kind": "new",
+          "title": "New",
+          "changes": [
+            {
+              "title": "Layoffs, and who's still hiring.",
+              "detail": "A new Layoffs topic gathers layoff reporting from the news and Bluesky with the WARN notices US employers must file before mass layoffs, from twelve states. Open a story about one company's layoffs and its Related tab shows what that company is still hiring for, straight from its own job board."
+            }
+          ]
+        },
+        {
+          "kind": "improved",
+          "title": "Improved",
+          "changes": [
+            {
+              "title": "Opening a story now counts towards your taste.",
+              "detail": "Hot learns a little from what you open, not only from votes and saves, so it follows what you actually read even if you never vote. It counts for less than staying to read, since a headline can earn a tap the story doesn't."
+            }
+          ]
+        },
+        {
+          "kind": "fix",
+          "title": "Fixes",
+          "changes": [
+            {
+              "title": "Open the feeds you add.",
+              "detail": "Bluesky feeds and lists now stay in Your feeds under Explore, with Open buttons and a shortcut in the menu. Adding a feed offers to open it straight away, and publishers, communities and mixes have clearer Open links too."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.13.0",
       "date": "3 November 2026",
