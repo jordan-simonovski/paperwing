@@ -15,6 +15,14 @@ const post = (text: string, extra: Partial<PostView> = {}): PostView => ({
 const feed = (rkey: string) => BSKY_FEED_BY_RKEY.get(rkey)!
 
 describe('bluesky feed filters', () => {
+  it('takes only posts sharing an article for Layoffs: people’s own layoff posts stay theirs', () => {
+    expect(keep(post('Got laid off today. Rough week.'), feed('layoffs'))).toBe(false)
+    const shared = post('Squarespace lays off 19% of its employees', {
+      embed: { $type: 'app.bsky.embed.external#view', external: { uri: 'https://techcrunch.com/2026/11/02/squarespace-layoffs/', title: 'Squarespace lays off 19%', description: '' } },
+    } as Partial<PostView>)
+    expect(keep(shared, feed('layoffs'))).toBe(true)
+  })
+
   // Each of these got into a feed before the terms were tightened.
   it.each([
     ['distributed', 'Carly Rae Jepsen - Call Me Maybe'],

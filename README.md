@@ -412,6 +412,12 @@ The profile syncs between devices. Settings → Tuning shows what it has learned
 
 Sign-in is OAuth with PKCE, run entirely in the browser. PaperWing registers itself with your server, asks for `read` only, and keeps the token in `localStorage`. The token is never synced and only ever sent to your server. An installed iOS app can't be redirected back into, so there the server shows a code to paste instead.
 
+## Layoffs and hiring
+
+The Layoffs topic reads layoff reporting (a news search, TechCrunch's layoffs feed, Hacker News, and Bluesky posts that share an article) alongside WARN notices: under the US WARN Act, employers with 100 or more staff must give 60 days' notice of a mass layoff, and each state publishes the notices it gets. `api/_lib/warn.ts` reads twelve states (CA, WA, NY, TX, IL, NJ, GA, OR, VA, MD, CT, AZ), each in its own format: a spreadsheet (read by the small `.xlsx` reader in `api/_lib/xlsx.ts`), a CSV, or a paged web table. The ways in follow Big Local News's [warn-scraper](https://github.com/biglocalnews/warn-scraper). Only notices from employers in `src/lib/employers.ts` become stories, matched by name with care for everyday words ("Block", "Linear"). Each state's list is cached for six hours; a notice opens on its details, since there's nothing to discuss on a filing.
+
+Open a story about one employer's layoffs and its Related tab shows **Still hiring**: how many open roles that employer lists, by kind of work, with the newest few, read from its own job board (`api/_lib/hiring.ts`, through `/api/feed?src=hiring`). Greenhouse, Ashby and Lever publish open APIs; Workday doesn't, so this reads the JSON its own career pages use. Boards are named in `employers.ts` by slug or Workday tenant, so the server only ever reads those hosts. Boards that re-post every role in bulk get no "new in two weeks" count, since their dates mean nothing. Big Tech's own careers sites (Google, Meta, Apple, Amazon, Microsoft) aren't read, so their layoff stories show no panel.
+
 ## Status pages
 
 The Status channel reads incidents from 23 providers' Atlassian Statuspage pages (`api/_lib/statuspages.ts`), with two views: Ongoing, and Last 7 days. The providers are:

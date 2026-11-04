@@ -387,8 +387,15 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                 </div>
               ) : (
                 <div className="py-6">
-                  <p className="mb-3 text-[0.9375rem] text-ink-2">{SOURCE_NAMES[story.source]} has no comments of its own. Here is where this link is being talked about.</p>
-                  <Elsewhere story={story} onOpen={(k) => onOpen(k, 'discussion')} now={now} alsoOn={alsoOn} />
+                  {story.url ? (
+                    <>
+                      <p className="mb-3 text-[0.9375rem] text-ink-2">{SOURCE_NAMES[story.source]} has no comments of its own. Here is where this link is being talked about.</p>
+                      <Elsewhere story={story} onOpen={(k) => onOpen(k, 'discussion')} now={now} alsoOn={alsoOn} />
+                    </>
+                  ) : (
+                    // A filing, not a conversation: there's no link for anyone to be discussing.
+                    <p className="text-[0.9375rem] text-ink-2">This is a record, not a conversation: nobody discusses it where it’s published. Its details are under Post.</p>
+                  )}
                 </div>
               ))}
             {tab === 'article' && <ArticleView story={story} onDiscussion={threadable ? () => setTab('discussion') : undefined} />}

@@ -52,3 +52,32 @@ export const NobodyElse: Story = {
   render: (args) => <Elsewhere {...args} alsoOn={[]} />,
   parameters: { app: { queries: [[['discussions', s.url], []]] } },
 }
+
+/** A story about one employer's layoffs: what it's still hiring for comes first after the coverage. */
+export const LayoffStory: Story = {
+  args: { story: story({ key: 'hn-layoff', title: 'Dropbox is laying off roughly 9% of its workforce', url: 'https://www.businessinsider.com/dropbox-layoffs' }) },
+  parameters: {
+    app: {
+      queries: [
+        [['discussions', 'https://www.businessinsider.com/dropbox-layoffs'], []],
+        [
+          ['hiring', 'Dropbox'],
+          {
+            employer: 'Dropbox',
+            board: 'https://job-boards.greenhouse.io/dropbox',
+            open: 31,
+            fresh: 10,
+            functions: [
+              ['Engineering', 10],
+              ['Marketing', 6],
+            ],
+            latest: [],
+          },
+        ],
+      ],
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Still hiring' })).toBeVisible()
+  },
+}

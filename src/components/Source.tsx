@@ -14,6 +14,7 @@ export const SOURCE_NAMES: Record<SourceKind, string> = {
   mastodon: 'Mastodon',
   status: 'Status pages',
   frontpage: 'Frontpage',
+  warn: 'WARN notices',
 }
 
 /** The name a row shows: the blog or feed when there is one, otherwise the source. */

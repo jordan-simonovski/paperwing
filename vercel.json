@@ -113,6 +113,9 @@
   "functions": {
     "api/push.ts": {
       "maxDuration": 60
+    },
+    "api/feed.ts": {
+      "maxDuration": 60
     }
   }
 }

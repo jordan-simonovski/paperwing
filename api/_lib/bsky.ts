@@ -127,6 +127,7 @@ function presentable(p: PostView): boolean {
 
 export function keep(p: PostView, feed: BskyFeedDef): boolean {
   if (!presentable(p)) return false
+  if (feed.linksOnly && !sharedLink(p)) return false
   const text = postText(p)
   const hits = strongHits(feed, text)
   if (hits === 0) return false

@@ -149,7 +149,8 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
                   }
                   e.preventDefault()
                   e.stopPropagation()
-                  onOpen(s.key, s.url ? 'article' : 'discussion')
+                  // A post with neither a link nor a thread (a WARN filing) opens on its own words.
+                  onOpen(s.key, s.url || !s.hasThread ? 'article' : 'discussion')
                 }}
               >
                 {s.title}

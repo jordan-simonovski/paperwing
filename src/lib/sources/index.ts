@@ -33,6 +33,8 @@ export async function fetchThread(key: string): Promise<Thread | null> {
       return mastodonThread(key)
     case 'st':
       return (await api('thread', { src: 'status', id: key })) as Thread
+    case 'wn':
+      return (await api('thread', { src: 'warn', id: key })) as Thread
     case 'fp':
       return (await api('thread', { src: 'frontpage', id: key })) as Thread
     default:

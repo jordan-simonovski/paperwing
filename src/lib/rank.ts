@@ -82,6 +82,7 @@ const REFERENCE: Record<SourceKind, [score: number, comments: number]> = {
   // Frontpage is small: a dozen votes is a good day there.
   frontpage: [12, 3],
   status: [0, 0],
+  warn: [0, 0],
   devto: [30, 5],
   hf: [20, 5],
   github: [200, 0],

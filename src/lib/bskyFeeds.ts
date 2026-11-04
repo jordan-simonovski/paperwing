@@ -22,6 +22,8 @@ export interface BskyFeedDef {
   terms: string[]
   /** Topic ids the feed's posts are tagged with in PaperWing. */
   topics: string[]
+  /** Only posts that share a link: for subjects where Bluesky's own talk is mostly personal, and the news is what's shared. */
+  linksOnly?: boolean
 }
 
 const STRONG: Record<string, string[]> = {
@@ -147,6 +149,7 @@ const STRONG: Record<string, string[]> = {
     'AMD Ryzen',
     'Ryzen 9',
   ],
+  layoffs: ['tech layoffs', 'layoffs', 'laid off', 'lays off', 'laying off', 'job cuts', 'WARN notice', 'workforce reduction'],
   industry: ['tech industry', 'Big Tech', 'tech layoffs', 'tech companies', 'tech company', 'tech giant', 'tech giants', 'Silicon Valley', 'venture capital'],
   leadership: [
     'engineering manager',
@@ -188,15 +191,17 @@ export const OFF_TOPIC = [
   'fascis*',
 ]
 
+const SEPARATE = new Set(['industry', 'layoffs'])
+
 export const BSKY_FEEDS: BskyFeedDef[] = [
   {
     rkey: 'tech',
     displayName: 'PaperWing Tech',
     description: 'Tech on Bluesky without the noise: AI, observability, infrastructure, databases, languages and security, filtered by PaperWing and ranked by how fast posts are moving.',
     terms: [],
-    // Industry stays its own feed: on Bluesky it is mostly commentary rather than news.
-    topics: Object.keys(STRONG).filter((id) => id !== 'industry'),
-    merge: { from: Object.keys(STRONG).filter((id) => id !== 'industry'), minHits: 2 },
+    // Industry and Layoffs stay their own feeds: on Bluesky they are mostly commentary rather than news.
+    topics: Object.keys(STRONG).filter((id) => !SEPARATE.has(id)),
+    merge: { from: Object.keys(STRONG).filter((id) => !SEPARATE.has(id)), minHits: 2 },
   },
   ...Object.entries(STRONG).map(([id, terms]) => {
     const t = TOPIC_BY_ID.get(id)!
@@ -206,6 +211,8 @@ export const BSKY_FEEDS: BskyFeedDef[] = [
       description: `${t.blurb}. Bluesky posts filtered to this topic by PaperWing, ranked by how fast they are moving.`,
       terms,
       topics: [id],
+      // People posting about their own layoff deserve better than to be someone's feed: Layoffs takes shared reporting only.
+      ...(id === 'layoffs' ? { linksOnly: true } : {}),
     }
   }),
 ]
