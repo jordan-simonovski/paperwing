@@ -5,7 +5,7 @@ import { BSKY_FEED_BY_RKEY } from './bskyFeeds'
 import { boardParts } from './paperwing'
 import { isTechTopic, literalTerm, TOPIC_BY_ID, TOPICS, searchTopics, type FeedRef, type Topic } from './topics'
 import { mixFeedRefs } from './mixes'
-import { isPublicSource, sourceLabel, type MixSource } from './mixSources'
+import { cleanSource, isPublicSource, sourceLabel, type MixSource } from './mixSources'
 import type { BlueskyFeed, CustomFeed, FollowedMix, Interest, LemmyCommunity, Mix } from './store'
 
 export interface Channel {
@@ -81,7 +81,11 @@ export function allTopics(interests: Interest[]): Topic[] {
 }
 
 export function findTopic(id: string, interests: Interest[]): Topic | undefined {
-  return TOPIC_BY_ID.get(id) ?? interests.map(interestTopic).find((t) => t.id === id)
+  const known = TOPIC_BY_ID.get(id) ?? interests.map(interestTopic).find((t) => t.id === id)
+  if (known) return known
+  const address = parseChannelId(id)
+  const query = address?.kind === 'interest' ? address.id.slice(2).trim() : ''
+  return query && query.length <= 200 ? interestTopic({ id, label: query, query }) : undefined
 }
 
 export function topicFeeds(t: Topic, limit?: number, statusHosts: string[] = []): FeedRef[] {
@@ -124,6 +128,8 @@ function uniqueFeeds(feeds: FeedRef[]): FeedRef[] {
 }
 
 interface Ctx {
+  /** Format carried by a shared publisher link, before it is followed on this device. */
+  publisherFormat?: 'standard'
   followed: string[]
   interests: Interest[]
   customFeeds: CustomFeed[]
@@ -285,9 +291,9 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
   }
   if (a.kind === 'bskyFeed') {
     const uri = a.uri
-    const feed = ctx.bskyFeeds?.find((f) => f.uri === uri)
-    if (!feed) return undefined
     const list = uri.includes('/app.bsky.graph.list/')
+    const feed = ctx.bskyFeeds?.find((f) => f.uri === uri) ?? { uri, name: list ? 'Bluesky list' : 'Bluesky feed' }
+    if (!cleanSource({ kind: 'bskyFeed', ...feed })) return undefined
     return { id, label: feed.name, eyebrow: list ? 'Bluesky list' : 'Bluesky feed', feeds: [{ kind: 'bskyFeed', uri, name: feed.name }], native: !list }
   }
   if (a.kind === 'paperwing') {
@@ -539,7 +545,7 @@ export function resolveChannel(id: string, variant: string | undefined, ctx: Ctx
   if (a.kind === 'feed') {
     const url = a.url
     const custom = ctx.customFeeds.find((f) => f.url === url)
-    return { id, label: custom?.label ?? url, eyebrow: 'Feed', feeds: [publisherRef(custom ?? { url, label: new URL(url).hostname })], native: true }
+    return { id, label: custom?.label ?? new URL(url).hostname, eyebrow: 'Feed', feeds: [publisherRef(custom ?? { url, label: new URL(url).hostname, format: ctx.publisherFormat })], native: true }
   }
   const topic = findTopic(id, ctx.interests)
   if (topic) {

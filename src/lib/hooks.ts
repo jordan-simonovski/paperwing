@@ -45,12 +45,12 @@ export const inMemoryFeeds =
  * A channel's stories for the reader, fetched through the query cache and ranked by the channel
  * feed module (channelFeed.ts). Undefined channel when there's no such channel.
  */
-export function useChannelFeed(channelId: string, opts: { variant?: string; sort: SortMode }) {
+export function useChannelFeed(channelId: string, opts: { variant?: string; sort: SortMode; publisherFormat?: 'standard' }) {
   const reader = useReader()
   const fetcher = useContext(FeedFetcherContext)
   const blueskyEnabled = useBlueskyEnabled() === true
-  const { variant, sort } = opts
-  const plan = useMemo(() => planChannel(reader, channelId, { variant, sort, blueskyEnabled }), [reader, channelId, variant, sort, blueskyEnabled])
+  const { variant, sort, publisherFormat } = opts
+  const plan = useMemo(() => planChannel(reader, channelId, { variant, sort, blueskyEnabled, publisherFormat }), [reader, channelId, variant, sort, blueskyEnabled, publisherFormat])
   const feeds = plan?.feeds ?? NO_FEEDS
   const queries = useQueries({ queries: feeds.map((f) => ({ queryKey: keys.feed(f.id), queryFn: () => fetcher(f.ref) })) })
   // Header, keyboard and pull gestures share the whole refresh, including sources that finish early.

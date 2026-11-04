@@ -75,6 +75,7 @@ export interface ChannelPlan {
 }
 
 export interface PlanOptions {
+  publisherFormat?: 'standard'
   variant?: string
   sort: SortMode
   /** Whether this deployment can serve Bluesky's feeds (it says so at /api/atproto?route=status). */
@@ -84,6 +85,7 @@ export interface PlanOptions {
 /** What a channel shows for this reader, and the feeds to fetch for it. Undefined for a channel that doesn't exist. */
 export function planChannel(reader: Reader, channelId: string, opts: PlanOptions): ChannelPlan | undefined {
   const channel = resolveChannel(channelId, opts.variant, {
+    publisherFormat: opts.publisherFormat,
     followed: reader.followed,
     interests: reader.interests,
     customFeeds: reader.customFeeds,

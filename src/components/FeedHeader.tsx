@@ -23,6 +23,7 @@ import { SOURCE_NAMES } from './Source'
 import { Sheet } from './Sheet'
 import { FeedIcon, SourceIcon } from './SourceIcon'
 import { TopicChip } from './TopicTag'
+import { ChannelShare } from './ChannelShare'
 
 interface Props {
   channel: Channel
@@ -95,6 +96,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
   const loading = statuses.filter((s) => s.status === 'pending').length
   // Where links can be posted: PaperWing and its topic boards.
   const address = parseChannelId(channel.id)
+  const shareControl = <ChannelShare channel={channel} sort={sort} variant={variant} sourceFilter={sourceFilter} kindFilter={kindFilter} />
   const postsHere = address?.kind === 'paperwing'
   // A Lemmy community's own channel can be joined from here.
   const community = address?.kind === 'community' ? address.name : undefined
@@ -132,8 +134,8 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
             {glyphs.map((G, i) => (
               <G key={i} className={`field-glyph g${i}`} aria-hidden strokeWidth={1.5} />
             ))}
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1 basis-full sm:basis-0">
                 <h1 className="feed-title text-[1.5rem] font-bold leading-[1.15] tracking-[-0.02em] [overflow-wrap:break-word]">{channel.label}</h1>
                 {forYou && blend.length > 0 ? (
                   // What it's ranking, on phones too: the topics' marks and names.
@@ -165,6 +167,10 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                 <button
                   className={`btn h-8 flex-none px-3.5 text-[0.8125rem] ${following ? 'following' : ''}`}
                   onClick={() => {
+                    if (!following && address?.kind === 'interest' && !interests.some((i) => i.id === channel.id)) {
+                      usePrefs.getState().addInterest(channel.topic!.label)
+                      return
+                    }
                     toggleFollow(channel.id)
                     // Unfollowing takes a topic out of For you and the sidebar: easy to take back.
                     if (following) toast(`Unfollowed ${channel.label}`, { action: { label: 'Undo', run: () => toggleFollow(channel.id) } })
@@ -186,6 +192,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
                 </button>
               )}
               {mixable && <AddToMix source={mixable.source} label={mixable.label} className="btn h-8 flex-none px-3 text-[0.8125rem] max-sm:px-2.5" textClassName="max-sm:hidden" />}
+              {shareControl}
               {postsHere && (
                 <>
                   <button className="btn h-8 flex-none px-3.5 text-[0.8125rem]" onClick={() => postLink({ board: address?.kind === 'paperwing' ? address.board : undefined })}>
@@ -228,6 +235,7 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
           </div>
         </header>
       )}
+      {(channel.board || channel.person) && <div className="px-4 pt-2 md:px-5">{shareControl}</div>}
 
       {/* Sort and source filters share one sticky row. Outside <header> so it sticks for the whole list. */}
       <div className="sticky-head flex items-center gap-2 py-2.5 pl-4 pr-2 md:pl-5 md:pr-3">

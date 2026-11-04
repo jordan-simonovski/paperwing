@@ -61,6 +61,10 @@ export function PrivacyPage() {
             cookie is kept on your device and sent through the server with each vote or comment. Signing out ends that session on HN too.
           </p>
           <p>
+            Sharing a topic, interest or feed link includes its address, any interest search words, and the sort and filters you chose. Copying puts it on your clipboard; sharing sends it to the app
+            you choose. These links do not include your reading history or sign-in details, and opening one does not subscribe the recipient automatically.
+          </p>
+          <p>
             Posting, voting and sharing happen only when you ask. Stories you list on PaperWing are ordinary public Bluesky posts with a small public record in your own Bluesky account (the link, its
             title, the board you chose and whether it goes on the front page too); you can delete them on Bluesky like any post.
           </p>

@@ -3,8 +3,31 @@ import { interestTopic, resolveChannel, SOURCE_CHANNELS, sourceChannels } from '
 import type { Interest } from './store'
 import { matchesTopic, topicsForStory } from './topics'
 import { story } from '../test/fixtures'
+import { channelId } from './channelId'
 
 const base = { followed: [] as string[], interests: [], customFeeds: [] }
+
+describe('shared channel links', () => {
+  it('opens a Bluesky feed or list without subscribing first', () => {
+    for (const collection of ['app.bsky.feed.generator', 'app.bsky.graph.list']) {
+      const uri = `at://did:plc:reader/${collection}/science`
+      expect(resolveChannel(channelId({ kind: 'bskyFeed', uri }), undefined, base)?.feeds).toEqual([{ kind: 'bskyFeed', uri, name: collection.includes('graph') ? 'Bluesky list' : 'Bluesky feed' }])
+    }
+  })
+  it('does not fetch a malformed shared Bluesky address', () => {
+    expect(resolveChannel(channelId({ kind: 'bskyFeed', uri: 'at://example/other.record/abc' }), undefined, base)).toBeUndefined()
+  })
+  it('keeps a shared Standard.site publication in its native format', () => {
+    const url = 'https://writing.example'
+    expect(resolveChannel(`feed:${url}`, undefined, { ...base, publisherFormat: 'standard' })?.feeds).toEqual([{ kind: 'standard', url, label: 'writing.example' }])
+  })
+  it('reconstructs a shared interest without writing subscriptions', () => {
+    const found = resolveChannel('q:c++ / rust', undefined, base)
+    expect(found?.topic?.label).toBe('c++ / rust')
+    expect(found?.feeds).toContainEqual({ kind: 'news', q: 'c++ / rust' })
+    expect(base.interests).toEqual([])
+  })
+})
 
 describe('source channels', () => {
   it('shows tech’s own sources to people who follow tech, and Blogs as Publishers to everyone else', () => {

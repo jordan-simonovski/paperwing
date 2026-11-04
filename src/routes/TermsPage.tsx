@@ -64,6 +64,10 @@ export function TermsPage() {
 
         <Part title="What you post">
           <p>
+            Copying or sending a topic or feed link does not publish a post. Anyone receiving the link can open it; personal feeds show each recipient’s own version, and a mix needs to be published
+            before its public page can be shared.
+          </p>
+          <p>
             Anything you post, reply, vote on or share from PaperWing goes to the network you chose (Bluesky, Mastodon, Hacker News, Lemmy) under your own account, and that network’s terms and rules
             apply to it. It’s yours, and you’re responsible for it.
           </p>
