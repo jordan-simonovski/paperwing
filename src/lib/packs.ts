@@ -1,4 +1,5 @@
 import type { FeedRef, Topic } from './topics.js'
+import { SPORT_TOPICS } from './sports.js'
 
 // Everything beyond tech: news, science, culture, sport, making and life. Each topic is a bundle of the
 // open web's own sources: publishers' RSS feeds, the busiest Lemmy communities (read through
@@ -583,7 +584,7 @@ export const GENERAL_TOPICS: Topic[] = [
     cluster: 'sport',
     blurb: 'Results and stories from every code',
     terms: ['championship', 'olympic*', 'world cup', 'grand slam', '=NBA', '=NFL', '=MLB', '=NHL', 'cricket', 'rugby', 'tennis', 'golf', 'marathon', 'semi-?final', 'playoff*'],
-    related: ['football', 'motorsport'],
+    related: ['climbing', 'cricket', 'nrl', 'afl', 'american-football', 'basketball'],
     mastodon: ['sport', 'sports'],
     bsky: [{ uri: 'at://did:plc:lcn5zsz2e7kjwoe4ldf3chr5/app.bsky.feed.generator/aaanstr6k5dvo', name: 'Sports' }],
     feeds: [rss('https://feeds.bbci.co.uk/sport/rss.xml', 'BBC Sport'), rss('https://www.theguardian.com/sport/rss', 'Guardian Sport'), rss('https://www.espn.com/espn/rss/news', 'ESPN')],
@@ -591,6 +592,7 @@ export const GENERAL_TOPICS: Topic[] = [
   {
     id: 'football',
     label: 'Football',
+    aliases: ['soccer', 'association football'],
     hue: 135,
     cluster: 'sport',
     blurb: 'The world game: leagues, transfers and match days',
@@ -621,11 +623,12 @@ export const GENERAL_TOPICS: Topic[] = [
   },
   {
     id: 'motorsport',
-    label: 'Formula 1',
+    label: 'Motorsport',
+    aliases: ['Formula 1', 'F1', 'MotoGP', 'IndyCar', 'NASCAR'],
     hue: 5,
     cluster: 'sport',
-    blurb: 'Formula 1 and the rest of the paddock',
-    terms: ['formula 1', 'formula one', '=F1', 'grand prix', 'verstappen', 'lewis hamilton', 'ferrari', 'mclaren', 'red bull racing', 'pole position', 'motogp', 'indycar'],
+    blurb: 'Formula 1, MotoGP, IndyCar and the rest of the paddock',
+    terms: ['formula 1', 'formula one', '=F1', 'grand prix', 'verstappen', 'lewis hamilton', 'ferrari', 'mclaren', 'red bull racing', 'pole position', 'motogp', 'indycar', 'nascar'],
     related: ['sport'],
     lemmy: [{ community: 'formula1@lemmy.world', via: LW }],
     mastodon: ['f1', 'formula1'],
@@ -634,9 +637,11 @@ export const GENERAL_TOPICS: Topic[] = [
       rss('https://www.the-race.com/feed/', 'The Race'),
       rss('https://feeds.bbci.co.uk/sport/formula1/rss.xml', 'BBC F1'),
       rss('https://www.autosport.com/rss/f1/news/', 'Autosport'),
-      rss('https://www.motorsport.com/rss/f1/news/', 'Motorsport.com'),
+      rss('https://www.motorsport.com/rss/all/news/', 'Motorsport.com'),
     ],
   },
+
+  ...SPORT_TOPICS,
 
   /* ---------------------------------------------------------------- making */
   {

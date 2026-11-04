@@ -30,6 +30,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Topic: Story = {}
+export const BeginnerClimbing: Story = {
+  args: { channel: channelFor('climbing'), stories: [], statuses: [] },
+  play: async ({ canvas }) => {
+    const guides = within(canvas.getByRole('navigation', { name: 'Getting started' }))
+    await expect(guides.getByRole('link', { name: 'First climbing session (REI)' })).toHaveAttribute('href', 'https://www.rei.com/learn/expert-advice/getting-started-rock-climbing.html')
+    await expect(guides.getByRole('link', { name: 'Bouldering basics (REI)' })).toHaveAttribute('rel', 'noopener noreferrer')
+  },
+}
 export const NotYetFollowed: Story = { parameters: { app: { prefs: { followed: ['tech'] } } } }
 export const ForYou: Story = { args: { channel: forYou, statuses: statusesFor(forYou) } }
 export const LatestFirst: Story = { args: { sort: 'new' } }

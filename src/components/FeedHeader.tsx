@@ -233,6 +233,16 @@ export function FeedHeader({ channel, stories, statuses, sort, onSort, variant, 
               </div>
             )}
           </div>
+          {!!channel.topic?.guides?.length && (
+            <nav aria-label="Getting started" className="flex flex-wrap items-baseline gap-x-4 gap-y-2 px-1 pt-3 text-sm">
+              <span className="font-semibold">Getting started</span>
+              {channel.topic.guides.map((guide) => (
+                <a key={guide.url} href={guide.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                  {guide.label}
+                </a>
+              ))}
+            </nav>
+          )}
         </header>
       )}
       {(channel.board || channel.person) && <div className="px-4 pt-2 md:px-5">{shareControl}</div>}
