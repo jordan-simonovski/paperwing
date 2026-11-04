@@ -31,7 +31,7 @@ import { SelfPostBody } from './SelfPostBody'
 import { FollowSite } from './FollowBlogs'
 import { StoryActions, useCommentActions } from './Social'
 import { SummaryCard } from './SummaryCard'
-import { watchLinger } from '../lib/linger'
+import { watchLinger, watchOpen } from '../lib/linger'
 import { MediaGallery } from './Media'
 import { thumbFor } from './Thumb'
 import { VideoEmbed } from './VideoEmbed'
@@ -132,19 +132,21 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
     if (useLibrary.getState().items[itemKey]) void useLibrary.getState().markSeen(itemKey)
     scrollRef.current?.scrollTo({ top: 0 })
   }, [itemKey])
-  // Opening a story teaches the taste profile a little, once it's here (a shared link can arrive before its story).
+  // Opening a story, and staying with it, teach the taste profile a little (store.ts). Each counts the
+  // story as it is by then: a shared link can open on a stand-in before the story itself arrives.
+  const latest = useRef(story)
   useEffect(() => {
-    if (story) useActivity.getState().noteOpen(story)
+    latest.current = story
+  })
+  useEffect(() => {
+    if (!story) return
+    const teach = (lesson: 'noteOpen' | 'linger') => () => latest.current && useActivity.getState()[lesson](latest.current)
+    const stopOpen = watchOpen(teach('noteOpen'))
+    const stopLinger = watchLinger(teach('linger'))
+    return () => (stopOpen(), stopLinger())
+    // Once a story: a refetch of the same story doesn't restart either.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.key])
-  // Staying with a story for 45 seconds in sight teaches the taste profile a little (store.ts, linger).
-  const lingering = story
-  useEffect(() => {
-    if (!lingering) return
-    return watchLinger(() => useActivity.getState().linger(lingering))
-    // One count a story: a refetch of the same story doesn't restart it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lingering?.key])
   // Count the story towards its site, for "blogs you keep reading".
   useEffect(() => {
     if (story?.url) useActivity.getState().noteSite(itemKey, story.url)

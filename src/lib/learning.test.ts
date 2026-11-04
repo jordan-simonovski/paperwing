@@ -61,6 +61,16 @@ describe('what the ranking learns', () => {
     expect(usePrefs.getState().affinity['k:zorblax']).toBeGreaterThan(opened)
   })
 
+  it('learns the subject and the site of a story you open, not its every word', () => {
+    // Its topics worked out from the headline, as for a story from a feed.
+    const s = { ...story('q', 'Rewriting our Postgres replication layer in Rust with async traits'), topics: undefined }
+    useActivity.getState().noteOpen(s)
+    const learned = Object.keys(usePrefs.getState().affinity)
+    expect(learned.filter((k) => k.startsWith('t:')).length).toBeGreaterThan(0)
+    expect(learned.filter((k) => k.startsWith('d:')).length).toBe(1)
+    expect(learned.filter((k) => k.startsWith('k:'))).toEqual([])
+  })
+
   it('learns a little against a story you passed on three visits without opening, and not before', () => {
     const s = story('d', 'zorblax')
     for (const visit of [0, 1, 2]) {
