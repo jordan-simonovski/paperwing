@@ -1,5 +1,18 @@
 # What's new
 
+## 0.16.0
+
+_Released 4 November 2026_
+
+### New
+
+- **Take a closer look at images.** Pinch to zoom and drag around pictures on your phone, or use the zoom controls on desktop. Download the original image from the viewer, with a link to save it directly if its host blocks downloads.
+- **Find your sport.** Follow climbing and bouldering, cricket, NRL, AFL, netball, baseball and more in Explore. Climbing includes beginner guides alongside the latest stories, and searches like “Aussie sports” show the matching topics together.
+
+### Improved
+
+- **Clearer controls at the top of the screen.** The installed iPhone app now requests an opaque status bar instead of a translucent overlay, while keeping buttons clear of the screen’s safe area.
+
 ## 0.15.0
 
 _Released 4 November 2026_

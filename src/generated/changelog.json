@@ -1,6 +1,36 @@
 {
-  "version": "0.15.0",
+  "version": "0.16.0",
   "releases": [
+    {
+      "version": "0.16.0",
+      "date": "4 November 2026",
+      "sections": [
+        {
+          "kind": "new",
+          "title": "New",
+          "changes": [
+            {
+              "title": "Take a closer look at images.",
+              "detail": "Pinch to zoom and drag around pictures on your phone, or use the zoom controls on desktop. Download the original image from the viewer, with a link to save it directly if its host blocks downloads."
+            },
+            {
+              "title": "Find your sport.",
+              "detail": "Follow climbing and bouldering, cricket, NRL, AFL, netball, baseball and more in Explore. Climbing includes beginner guides alongside the latest stories, and searches like “Aussie sports” show the matching topics together."
+            }
+          ]
+        },
+        {
+          "kind": "improved",
+          "title": "Improved",
+          "changes": [
+            {
+              "title": "Clearer controls at the top of the screen.",
+              "detail": "The installed iPhone app now requests an opaque status bar instead of a translucent overlay, while keeping buttons clear of the screen’s safe area."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.15.0",
       "date": "4 November 2026",
