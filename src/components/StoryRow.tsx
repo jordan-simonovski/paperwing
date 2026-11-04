@@ -279,13 +279,13 @@ export function Votes({ story: s, vote }: { story: Ranked | Story; vote?: 1 | -1
   )
 }
 
-/** What a story says about your taste: its topics and its site. */
 /**
  * Where a story opens from a list: its article when it links somewhere, else its discussion. A post
  * with neither a link nor a thread (a WARN filing) opens on its own words.
  */
 export const openingTab = (s: Pick<Story, 'url' | 'hasThread'>): 'article' | 'discussion' => (s.url || !s.hasThread ? 'article' : 'discussion')
 
+/** What a story says about your taste: its topics and its site. */
 export const tasteKeys = (s: Story) => [...(('topics' in s ? (s as Ranked).topics : null) ?? topicsForStory(s)).slice(0, 2).map((t) => `t:${t}`), domainKey(s.url)].filter((k): k is string => !!k)
 
 /** Join a board from a post of its: it shows up in your menu, and its posts in For you. Shown only until you have. */

@@ -68,7 +68,7 @@ export const EMPLOYERS: Employer[] = [
   { name: 'Datadog', board: { ats: 'greenhouse', slug: 'datadog' } },
   { name: 'dbt Labs' },
   { name: 'Deel' },
-  { name: 'Dell', aliases: ['Dell Technologies'], generic: true },
+  { name: 'Dell', aliases: ['Dell Technologies', 'Dell Marketing', 'Dell Products'], generic: true },
   { name: 'DigitalOcean' },
   { name: 'Discord', generic: true, board: { ats: 'greenhouse', slug: 'discord' } },
   { name: 'Docker', generic: true, board: { ats: 'ashby', slug: 'docker' } },
@@ -254,9 +254,10 @@ export function employerFiling(filer: string): Employer | undefined {
   const prefixed = prefixes.find(([p]) => key.startsWith(p + ' '))?.[1]
   if (prefixed) return prefixed
   // "IBM - Research Triangle Park": a site set off by a spaced dash leaves the employer's own name
-  // before it, which even a short or everyday-word name can be matched on exactly.
+  // before it, matched exactly. Not for everyday words: "Mercury - Lansing" could be anyone.
   const site = /^(.+?)\s+[-–—]\s+\S/.exec(filer)
-  return site ? exact.get(legalName(site[1])) : undefined
+  const named = site ? exact.get(legalName(site[1])) : undefined
+  return named && !named.generic ? named : undefined
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

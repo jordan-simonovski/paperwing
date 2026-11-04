@@ -144,6 +144,18 @@ describe('the hiring source', () => {
     }
   })
 
+  it('remembers a board it couldn’t read for a while, rather than asking it again for every reader', async () => {
+    process.env.SYNC_MEMORY = '1'
+    try {
+      net.get('https://boards-api.greenhouse.io').intercept({ path: '/v1/boards/figma/departments' }).reply(503, 'busy')
+      expect((await hiringOf('Figma')).status).toBe(502)
+      // Nothing else is faked: a second read of the board would fail the test.
+      expect((await call(GET, '/api/feed?src=hiring&employer=Figma&again=1')).status).toBe(502)
+    } finally {
+      delete process.env.SYNC_MEMORY
+    }
+  })
+
   it('refuses a name that is not an employer PaperWing follows, without fetching anything', async () => {
     const res = await hiringOf('Evil Corp')
     expect(res.status).toBe(400)

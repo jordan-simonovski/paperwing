@@ -129,7 +129,16 @@ describe('employerFiling with a site after a dash', () => {
   it('matches a short name that a filing follows with " - <site>"', () => {
     expect(employerFiling('IBM - Research Triangle Park')?.name).toBe('IBM')
     expect(employerFiling('AMD – Austin')?.name).toBe('AMD')
-    expect(employerFiling('Dell - Round Rock')?.name).toBe('Dell')
+  })
+
+  it('leaves everyday-word names out of it: "Mercury - Lansing" could be anyone', () => {
+    expect(employerFiling('Mercury - Lansing')).toBeUndefined()
+    expect(employerFiling('Compass - Dallas Distribution Center')).toBeUndefined()
+  })
+
+  it('matches Dell by the names it files under', () => {
+    expect(employerFiling('Dell Marketing L.P.')?.name).toBe('Dell')
+    expect(employerFiling('Dell Products L.P. - Round Rock')?.name).toBe('Dell')
   })
 
   it('still keeps out other companies whose names start the same way', () => {

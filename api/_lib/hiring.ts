@@ -1,7 +1,7 @@
 import { employerByName, type Employer, type JobBoard } from '../../src/lib/employers.js'
 import type { Hiring, Opening } from '../../src/lib/hiringTypes.js'
 import { fetchJson, UA } from './http.js'
-import { cachedInKv } from './kv.js'
+import { cachedOrFailed } from './kv.js'
 
 export type { Hiring, Opening }
 
@@ -191,14 +191,15 @@ const LATEST = 6
 
 /**
  * Openings for one of EMPLOYERS, by name. Undefined for a name that isn't one, or has no board.
- * Each board is read once for everyone every six hours: some are tens of megabytes, and one fetch
- * never counts against a reader's fan-out allowance, so the cache is what keeps it to one.
+ * Each board is read once for everyone every six hours, and a board that can't be read is left alone
+ * for ten minutes: some are tens of megabytes, and one fetch never counts against a reader's fan-out
+ * allowance, so the cache is what keeps it to one.
  */
 export async function hiring(name: string, now = Date.now()): Promise<Hiring | undefined> {
   const employer: Employer | undefined = employerByName(name)
   if (!employer?.board) return undefined
   const board = employer.board
-  return cachedInKv(`hiring:${employer.name}`, 6 * 3600, () => summarise(employer, board, now))
+  return cachedOrFailed(`hiring:${employer.name}`, 6 * 3600, 600, () => summarise(employer, board, now))
 }
 
 async function summarise(employer: Employer, board: JobBoard, now: number): Promise<Hiring> {

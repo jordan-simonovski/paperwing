@@ -3,7 +3,7 @@ import { employerFiling } from '../../src/lib/employers.js'
 import { WARN_STATES } from '../../src/lib/topics.js'
 import type { Story, Thread } from '../../src/lib/types.js'
 import { decodeEntities, readLimited, safeFetch, UA } from './http.js'
-import { cachedInKv, kv, kvConfigured } from './kv.js'
+import { cachedOrFailed } from './kv.js'
 import { escapeHtml } from './text.js'
 import { excelDate, readXlsx, type Cell, type Row } from './xlsx.js'
 
@@ -528,26 +528,10 @@ export const WARN_COST: Partial<Record<StateCode, number>> = { wa: 2, az: 1, or:
  */
 export async function stateNotices(state: StateCode, now = Date.now()): Promise<Notice[]> {
   const since = new Date(now - WINDOW_DAYS * 86_400_000).toISOString().slice(0, 10)
-  const failed = `warn:${state}:failed`
-  if (kvConfigured()) {
-    const reason = await kv()
-      .get(failed)
-      .catch(() => null)
-    if (reason) throw new Error(reason)
-  }
-  try {
-    // Keyed by state alone, and the window applied again on the way out, so the cache doesn't
-    // empty for everyone at once when the window moves on at midnight.
-    const notices = await cachedInKv(`warn:${state}`, 6 * 3600, async () => (await STATES[state].read(since)).filter((n) => n.noticed >= since))
-    return notices.filter((n) => n.noticed >= since)
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : 'The state’s WARN list could not be read'
-    if (kvConfigured())
-      await kv()
-        .set(failed, reason, 600)
-        .catch(() => {})
-    throw err
-  }
+  // Keyed by state alone, and the window applied again on the way out, so the cache doesn't empty
+  // for everyone at once when the window moves on at midnight.
+  const notices = await cachedOrFailed(`warn:${state}`, 6 * 3600, 600, async () => (await STATES[state].read(since)).filter((n) => n.noticed >= since))
+  return notices.filter((n) => n.noticed >= since)
 }
 
 /** A state's notices from employers PaperWing follows, newest first, as stories. */
