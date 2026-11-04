@@ -1,5 +1,13 @@
 # What's new
 
+## 0.17.0
+
+_Released 4 November 2026_
+
+### New
+
+- **Topic links have their own preview cards.** Share a topic and its name, description, colour and icon appear alongside Pip, so friends can see what they’re opening.
+
 ## 0.16.0
 
 _Released 4 November 2026_

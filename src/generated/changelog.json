@@ -1,6 +1,22 @@
 {
-  "version": "0.16.0",
+  "version": "0.17.0",
   "releases": [
+    {
+      "version": "0.17.0",
+      "date": "4 November 2026",
+      "sections": [
+        {
+          "kind": "new",
+          "title": "New",
+          "changes": [
+            {
+              "title": "Topic links have their own preview cards.",
+              "detail": "Share a topic and its name, description, colour and icon appear alongside Pip, so friends can see what they’re opening."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.16.0",
       "date": "4 November 2026",
