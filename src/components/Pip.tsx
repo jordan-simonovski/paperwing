@@ -15,7 +15,13 @@ export function Pip({ variant = 'full', className, title }: { variant?: 'full' |
   return (
     // Seasonal hats rise above the head's box; let them show.
     <svg className={className} overflow="visible" viewBox={PIP_VIEWBOX[variant].join(' ')} role={title ? 'img' : undefined} aria-hidden={title ? undefined : true} aria-label={title}>
-      {shapes.map((s, i) => (s.ellipse ? <ellipse key={i} cx={s.ellipse[0]} cy={s.ellipse[1]} rx={s.ellipse[2]} ry={s.ellipse[3]} style={style(s)} /> : <path key={i} d={s.d} style={style(s)} />))}
+      {shapes.map((s, i) =>
+        s.ellipse ? (
+          <ellipse data-part={s.part} key={i} cx={s.ellipse[0]} cy={s.ellipse[1]} rx={s.ellipse[2]} ry={s.ellipse[3]} style={style(s)} />
+        ) : (
+          <path data-part={s.part} key={i} d={s.d} style={style(s)} />
+        ),
+      )}
     </svg>
   )
 }

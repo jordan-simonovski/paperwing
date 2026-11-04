@@ -53,6 +53,20 @@ export function useChannelFeed(channelId: string, opts: { variant?: string; sort
   const plan = useMemo(() => planChannel(reader, channelId, { variant, sort, blueskyEnabled }), [reader, channelId, variant, sort, blueskyEnabled])
   const feeds = plan?.feeds ?? NO_FEEDS
   const queries = useQueries({ queries: feeds.map((f) => ({ queryKey: keys.feed(f.id), queryFn: () => fetcher(f.ref) })) })
+  // Header, keyboard and pull gestures share the whole refresh, including sources that finish early.
+  const refreshing = useRef<{ key: string; promise: Promise<unknown> } | null>(null)
+  const refetch = () => {
+    const key = JSON.stringify(feeds.map((f) => f.id))
+    if (refreshing.current?.key === key) return refreshing.current.promise
+    const promise = Promise.all(queries.map((q) => q.refetch({ cancelRefetch: false })))
+    const pending = { key, promise }
+    refreshing.current = pending
+    const clear = () => {
+      if (refreshing.current === pending) refreshing.current = null
+    }
+    void promise.then(clear, clear)
+    return promise
+  }
 
   const dataStamp = queries.map((q) => q.dataUpdatedAt).join(',')
   // Rows are memoised, but ranking builds every story afresh: hand back the previous object when
@@ -110,7 +124,7 @@ export function useChannelFeed(channelId: string, opts: { variant?: string; sort
     statuses,
     loading: queries.length > 0 && queries.every((q) => q.isPending),
     fetching: queries.some((q) => q.isFetching),
-    refetch: () => queries.forEach((q) => q.refetch()),
+    refetch,
     updatedAt: Math.max(0, ...queries.map((q) => q.dataUpdatedAt)),
   }
 }
