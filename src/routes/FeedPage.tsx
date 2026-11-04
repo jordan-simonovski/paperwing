@@ -36,14 +36,15 @@ export function FeedPage() {
   const sort = (params.get('sort') as SortMode | null) ?? defaultSort
   const sourceFilter = (params.get('src') as SourceKind | null) ?? undefined
   const kindFilter = (['shared', 'discussions'] as const).find((k) => k === params.get('kind'))
-  const feed = useChannelFeed(channelId, { variant, sort })
+  const publisherFormat = params.get('format') === 'standard' ? 'standard' : undefined
+  const feed = useChannelFeed(channelId, { variant, sort, publisherFormat })
   const channel = feed.channel
   // Only Hot, in a feed it ranks, is ordered by your taste: there a row can say why it moved.
   const tasteOrders = sort === 'hot' && !channel?.native
   const read = useActivity((s) => s.read)
   const now = useNow()
   const [limit, setLimit] = useState(PAGE)
-  const base = actor ? `/u/${actor}` : boardDid && boardRkey ? `/c/${boardDid}/${boardRkey}` : `/t/${channelId.startsWith('feed:') ? encodeURIComponent(channelId) : channelId}`
+  const base = actor ? `/u/${actor}` : boardDid && boardRkey ? `/c/${boardDid}/${boardRkey}` : `/t/${/^(feed:|q:)/.test(channelId) ? encodeURIComponent(channelId) : channelId}`
   // On a board, the reading pane offers its moderators their actions.
   const { data: boardView } = useBoard(channel?.board?.did, channel?.board?.rkey)
 
