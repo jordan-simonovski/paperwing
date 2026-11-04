@@ -9,6 +9,14 @@ Nothing leaves this checkout without passing this gate: not a pull request, and 
 `main`. Pushing to `main` is not a shortcut around review. Every commit on `main` goes out in the next
 release, and merging the Release pull request is the production deploy.
 
+## Branches and contribution text
+
+Use `feat/`, `bug/`, `chore/`, `docs/`, `refactor/` or `test/` followed by a short
+kebab-case description for working branches. Never use agent, assistant, vendor or model names.
+No agent attribution belongs in commits, trailers, PR titles or descriptions, comments,
+release notes, documentation or code. Omit generated-by notices and session links too.
+Describe changes and validation without attributing them to a tool or agent.
+
 ## The gate, in order
 
 1. **Checks.** Each of these must pass:
@@ -37,7 +45,7 @@ release, and merging the Release pull request is the production deploy.
 5. **Push, or open the pull request.**
    - Work that builds on another open pull request goes up as a GitHub stack, never as a PR whose base
      you set by hand (`stacked-prs` skill). Each layer passes this gate on its own diff.
-   - Commits are authored as the repository owner and carry no AI attribution (`AGENTS.md`).
+   - Commits are authored as the repository owner and carry no agent attribution. Apply the same rule to all PR and review text (`AGENTS.md`).
    - A pull request description cites the reviewed commit, summarises what the review found, and links
      screenshots for anything visible.
 

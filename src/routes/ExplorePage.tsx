@@ -1,3 +1,4 @@
+import { domainOf } from '../lib/format'
 import { keys } from '../lib/query'
 import { CouldntReach } from '../components/FeedState'
 import { useQuery } from '@tanstack/react-query'
@@ -6,6 +7,7 @@ import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { mixChannel, unfollowMix } from '../lib/mixes'
 import { BoardDirectory } from '../components/BoardDirectory'
+import { BlueskyFeeds } from '../components/BlueskyFeeds'
 import { toast } from '../lib/ui'
 import { FeedFinder, FeedRow } from '../components/FollowBlogs'
 import { bskyFeedChannel } from '../lib/channels'
@@ -89,9 +91,14 @@ function Communities() {
                 </p>
                 {c.description && <p className="mt-1 line-clamp-2 text-[0.8125rem] text-ink-2">{c.description}</p>}
               </Link>
-              <button className={`btn h-8 flex-none px-3 ${on ? 'following' : 'btn-primary'}`} aria-pressed={on} onClick={() => toggleCommunity(c)}>
-                {on ? <Check size={14} /> : <Plus size={14} />} {on ? 'Joined' : 'Join'}
-              </button>
+              <div className="flex flex-none flex-col items-end gap-2">
+                <Link className="btn h-9 px-3" to={`/t/c:${c.name}`} aria-label={`Open ${c.title}`}>
+                  Open
+                </Link>
+                <button className={`btn h-8 flex-none px-3 ${on ? 'following' : 'btn-primary'}`} aria-pressed={on} onClick={() => toggleCommunity(c)}>
+                  {on ? <Check size={14} /> : <Plus size={14} />} {on ? 'Joined' : 'Join'}
+                </button>
+              </div>
             </div>
           )
         })}
@@ -101,6 +108,7 @@ function Communities() {
 }
 
 function BlueskyFeedsTab() {
+  const navigate = useNavigate()
   const [q, setQ] = useState('')
   const query = useDeferredValue(q.trim())
   const mine = usePrefs((s) => s.bskyFeeds)
@@ -108,8 +116,14 @@ function BlueskyFeedsTab() {
   return (
     <>
       <p className="mt-2 max-w-xl text-[0.9375rem] text-ink-2">
-        Feeds built by Bluesky’s communities, for every subject. Added ones become channels, and need no Bluesky account. You can also paste a feed or list link under Settings, Sources.
+        Read feeds built by Bluesky’s communities right here in PaperWing, without a Bluesky account. Add a feed to keep it in Your feeds, then choose Open to read it.
       </p>
+      <section className="mt-6" aria-labelledby="your-bluesky-feeds">
+        <h2 id="your-bluesky-feeds" className="mb-3 text-[1.125rem] font-bold">
+          Your feeds
+        </h2>
+        <BlueskyFeeds />
+      </section>
       <SearchBox value={q} onChange={setQ} placeholder="Search feeds: “astronomy”, “books”, “auspol”" />
       <h2 className="mt-8 text-[1.125rem] font-bold">{query ? `Matching “${query}”` : 'Most liked'}</h2>
       {found.isPending && <Loader2 size={18} className="spin mt-4 text-ink-3" />}
@@ -137,9 +151,15 @@ function BlueskyFeedsTab() {
                 </p>
                 {f.description && <p className="mt-1 line-clamp-2 text-[0.8125rem] text-ink-2">{f.description}</p>}
               </div>
-              <button className={`btn h-8 flex-none px-3 ${on ? 'following' : 'btn-primary'}`} aria-pressed={on} onClick={() => toggleBlueskyFeed(f)}>
-                {on ? <Check size={14} /> : <Plus size={14} />} {on ? 'Added' : 'Add'}
-              </button>
+              {on ? (
+                <Link className="btn h-9 flex-none px-3" to={`/t/${bskyFeedChannel(f.uri)}`} aria-label={`Open ${f.name}`}>
+                  Open
+                </Link>
+              ) : (
+                <button className="btn btn-primary h-9 flex-none px-3" aria-label={`Add ${f.name}`} onClick={() => toggleBlueskyFeed(f, () => navigate(`/t/${bskyFeedChannel(f.uri)}`))}>
+                  <Plus size={14} /> Add
+                </button>
+              )}
             </div>
           )
         })}
@@ -150,6 +170,7 @@ function BlueskyFeedsTab() {
 
 function Publishers() {
   const followed = usePrefs((s) => s.followed)
+  const customFeeds = usePrefs((s) => s.customFeeds)
   // A site sent here to follow (the palette's "Follow this site").
   const [params] = useSearchParams()
   const follow = params.get('follow') ?? ''
@@ -163,6 +184,18 @@ function Publishers() {
       <div className="mt-6">
         <FeedFinder key={follow} initial={follow} />
       </div>
+      {customFeeds.length > 0 && (
+        <section className="mt-8" aria-labelledby="your-publishers">
+          <h2 id="your-publishers" className="text-[1.125rem] font-bold">
+            Your publishers
+          </h2>
+          <div className="mt-2 grid grid-cols-1 gap-x-8 lg:grid-cols-2">
+            {customFeeds.map((f) => (
+              <FeedRow key={f.url} feed={{ ...f, title: f.label, site: f.site ?? domainOf(f.url) ?? f.url, posts: 0 }} />
+            ))}
+          </div>
+        </section>
+      )}
       {sections.map((c) => (
         <section key={c} className="mt-10">
           <h2 className="text-[1.125rem] font-bold">{CLUSTERS[c].label}</h2>
@@ -223,6 +256,9 @@ function Mixes() {
                   <span>{m.feed ? 'published, and a Bluesky feed' : m.published ? 'published' : 'private'}</span>
                 </p>
               </Link>
+              <Link className="btn h-9 flex-none px-3" to={`/t/${mixChannel(m)}`} aria-label={`Open ${m.name || 'Untitled mix'}`}>
+                Open
+              </Link>
               <Link className="btn h-8 flex-none px-3" to={`/mixes/${m.id}`}>
                 Edit
               </Link>
@@ -245,6 +281,9 @@ function Mixes() {
                   <span>by @{m.by}</span>
                   <span>{m.sources.length} sources</span>
                 </p>
+              </Link>
+              <Link className="btn h-9 flex-none px-3" to={`/t/${mixChannel(m)}`} aria-label={`Open ${m.name}`}>
+                Open
               </Link>
               <button className="btn h-8 flex-none px-3" onClick={() => unfollowMix(m.uri)}>
                 Unfollow

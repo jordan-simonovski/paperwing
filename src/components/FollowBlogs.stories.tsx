@@ -24,7 +24,7 @@ export const FollowFromARow: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
     await expect(usePrefs.getState().customFeeds.map((f) => f.url)).toContain(anil.url)
-    await expect(canvas.getByRole('button', { name: 'Following' })).toBeDisabled()
+    await expect(canvas.getByRole('link', { name: 'Open Anil Dash' })).toHaveAttribute('href', `/t/${encodeURIComponent(`feed:${anil.url}`)}`)
   },
 }
 
@@ -63,6 +63,7 @@ export const StandardPublication: Story = {
     await expect(await canvas.findByText('Standard.site publication')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Follow' }))
     await expect(usePrefs.getState().customFeeds).toContainEqual({ url: 'https://lab.leaflet.pub', label: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', format: 'standard' })
+    await expect(canvas.getByRole('link', { name: 'Open Leaflet Lab Notes' })).toHaveAttribute('href', `/t/${encodeURIComponent('feed:https://lab.leaflet.pub')}`)
   },
 }
 

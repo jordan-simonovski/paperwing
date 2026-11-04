@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, waitFor } from 'storybook/test'
+import { bskyFeedChannel } from '../lib/channels'
 import { usePrefs } from '../lib/store'
 import { BlueskyFeeds } from './BlueskyFeeds'
 
@@ -32,6 +33,7 @@ export const AddAFeed: Story = {
     await userEvent.type(canvas.getByRole('textbox'), `https://bsky.app/profile/${DID}/feed/quiet`)
     await userEvent.click(canvas.getByRole('button', { name: 'Add' }))
     await waitFor(() => expect(usePrefs.getState().bskyFeeds).toEqual([{ uri: `at://${DID}/app.bsky.feed.generator/quiet`, name: 'Quiet Posters' }]))
+    await expect(canvas.getByRole('link', { name: 'Open Quiet Posters' })).toHaveAttribute('href', `/t/${bskyFeedChannel(`at://${DID}/app.bsky.feed.generator/quiet`)}`)
   },
 }
 

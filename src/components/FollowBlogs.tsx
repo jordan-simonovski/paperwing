@@ -1,5 +1,7 @@
+import { Link } from 'react-router'
+import { channelId } from '../lib/channelId'
 import { AddToMix } from './AddToMix'
-import { Check, Loader2, Plus, Search } from 'lucide-react'
+import { Loader2, Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { findFeeds, follow, isFollowed, useFollowedHosts, useSiteFeeds, useSuggestedBlogs, type FoundFeed } from '../lib/follow'
 import { ago } from '../lib/format'
@@ -40,17 +42,15 @@ export function FeedRow({ feed, note, detail }: { feed: FoundFeed; note?: string
         </p>
       </div>
       <AddToMix source={publisherRef({ ...feed, label: feed.title })} label={feed.title} iconOnly className="icon-btn size-8 flex-none" />
-      <button className={`btn h-8 flex-none px-3 ${following ? '' : 'btn-primary'}`} disabled={following} onClick={() => follow(feed)}>
-        {following ? (
-          <>
-            <Check size={14} /> Following
-          </>
-        ) : (
-          <>
-            <Plus size={14} /> Follow
-          </>
-        )}
-      </button>
+      {following ? (
+        <Link className="btn h-9 flex-none px-3" to={`/t/${encodeURIComponent(channelId({ kind: 'feed', url: feed.url }))}`} aria-label={`Open ${feed.title}`}>
+          Open
+        </Link>
+      ) : (
+        <button className="btn btn-primary h-9 flex-none px-3" onClick={() => follow(feed)}>
+          <Plus size={14} /> Follow
+        </button>
+      )}
     </div>
   )
 }
