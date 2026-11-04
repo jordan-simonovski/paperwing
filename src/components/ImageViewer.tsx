@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react'
 import type { Media } from '../lib/types'
 import { webUrl } from '../lib/webUrl'
+import { imageFile, saveImage } from '../lib/imageDownload'
+import { ImageStage } from './ImageStage'
 
 /** Mounted only while open. The native modal keeps focus and page gestures behind the viewer. */
 export default function ImageViewer({ images, start, onClose }: { images: Media[]; start: number; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
-  const touch = useRef<{ x: number; y: number } | null>(null)
   const [index, setIndex] = useState(start)
   const move = (step: number) => {
     // Changing images replaces the retry button too. Keep its focus inside the modal.
@@ -52,7 +53,8 @@ export default function ImageViewer({ images, start, onClose }: { images: Media[
         <p role="status" aria-live="polite" aria-atomic="true" className="text-sm tabular-nums">
           {index + 1} of {images.length}
         </p>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ImageDownload src={image.full ?? image.thumb} number={index + 1} hasOriginal={!!original} />
           {original && (
             <a href={original} target="_blank" rel="noopener noreferrer" className="text-sm underline underline-offset-4">
               Open original
@@ -63,37 +65,13 @@ export default function ImageViewer({ images, start, onClose }: { images: Media[
           </button>
         </div>
       </div>
-      <figure className="image-viewer-figure">
-        <div
-          className="image-viewer-stage"
-          onTouchStart={(e) => {
-            touch.current = !(e.target as Element).closest('button') && e.touches.length === 1 && (window.visualViewport?.scale ?? 1) <= 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null
-          }}
-          onTouchMove={(e) => {
-            if (e.touches.length !== 1) touch.current = null
-          }}
-          onTouchCancel={() => {
-            touch.current = null
-          }}
-          onTouchEnd={(e) => {
-            const from = touch.current
-            touch.current = null
-            if (!from || e.touches.length || (window.visualViewport?.scale ?? 1) > 1) return
-            const dx = e.changedTouches[0].clientX - from.x
-            const dy = e.changedTouches[0].clientY - from.y
-            if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.4) move(dx < 0 ? 1 : -1)
-          }}
-        >
-          <ViewerImage key={index} image={image} />
-        </div>
-        {image.alt && <figcaption className="image-viewer-caption">{image.alt}</figcaption>}
-      </figure>
+      <ImageStage key={index} image={image} onSlide={move} />
       {images.length > 1 && (
         <nav aria-label="Images" className="flex items-center justify-center gap-6">
           <button type="button" className="image-viewer-button" aria-label="Previous image" aria-disabled={index === 0} onClick={() => move(-1)}>
             <ChevronLeft size={24} aria-hidden />
           </button>
-          <span className="text-sm">Swipe or use the arrows</span>
+          <span className="text-center text-sm">Swipe to browse · Pinch to zoom</span>
           <button type="button" className="image-viewer-button" aria-label="Next image" aria-disabled={index === images.length - 1} onClick={() => move(1)}>
             <ChevronRight size={24} aria-hidden />
           </button>
@@ -104,35 +82,51 @@ export default function ImageViewer({ images, start, onClose }: { images: Media[
   )
 }
 
-function ViewerImage({ image }: { image: Media }) {
-  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading')
+function ImageDownload({ src, number, hasOriginal }: { src: string; number: number; hasOriginal: boolean }) {
+  const pending = useRef<AbortController | null>(null)
+  const [state, setState] = useState<'idle' | 'loading' | 'failed'>('idle')
+  useEffect(() => {
+    setState('idle')
+    return () => {
+      pending.current?.abort()
+      pending.current = null
+    }
+  }, [src])
+  const download = async () => {
+    if (pending.current) return
+    const controller = new AbortController()
+    pending.current = controller
+    setState('loading')
+    try {
+      const file = await imageFile(src, number, AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)]))
+      if (!controller.signal.aborted) {
+        saveImage(file)
+        setState('idle')
+      }
+    } catch {
+      if (!controller.signal.aborted) setState('failed')
+    } finally {
+      if (pending.current === controller) pending.current = null
+    }
+  }
   return (
-    <>
-      {state === 'loading' && <p className="image-viewer-message">Loading image…</p>}
-      {state === 'failed' ? (
-        <div className="image-viewer-message text-center">
-          <p>This image couldn’t load.</p>
-          <button
-            type="button"
-            className="mt-4 rounded-lg border px-4 py-3"
-            onClick={(e) => {
-              e.currentTarget.closest('dialog')?.focus()
-              setState('loading')
-            }}
-          >
-            Try again
-          </button>
-        </div>
-      ) : (
-        <img
-          src={image.full ?? image.thumb}
-          alt={image.alt || 'Image'}
-          draggable={false}
-          onLoad={() => setState('ready')}
-          onError={() => setState('failed')}
-          style={{ visibility: state === 'loading' ? 'hidden' : undefined }}
-        />
+    <div className="image-download">
+      <button
+        type="button"
+        className="image-viewer-button"
+        aria-label="Download image"
+        title="Download image"
+        aria-disabled={state === 'loading'}
+        aria-busy={state === 'loading'}
+        onClick={() => void download()}
+      >
+        <Download size={22} aria-hidden />
+      </button>
+      {state === 'failed' && (
+        <p className="image-download-error" role="alert">
+          Couldn’t download here. {hasOriginal ? 'Open the original image to save it.' : 'Please try again.'}
+        </p>
       )}
-    </>
+    </div>
   )
 }

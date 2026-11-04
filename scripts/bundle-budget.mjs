@@ -8,7 +8,7 @@ const BUDGET_KB = {
   // The 18-sport catalog adds ~3 KB gzip; its matching terms also tag the first screen's stories.
   entry: 304, // index.html's script and everything it statically imports
   css: 22,
-  totalJs: 565, // every chunk, lazy ones included (the service worker precaches them all)
+  totalJs: 566, // sports catalog plus lazy image tools total 565.4 KB; every chunk is precached
 }
 
 const dist = process.argv[2] ?? 'dist'

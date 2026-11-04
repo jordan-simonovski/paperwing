@@ -43,6 +43,10 @@ export function TermsPage() {
 
         <Part title="Other people’s content">
           <p>
+            The image viewer can save pictures to your device where the image host allows it. Downloading a picture does not transfer its copyright or permission to reuse it. If a host blocks the
+            download, you can open the original instead.
+          </p>
+          <p>
             Discourse forums and Standard.site publications are read from their public feeds or records. Following them here does not sign you in to those services or publish a subscription there.
           </p>
           <p>

@@ -49,6 +49,29 @@ export const SingleImageViewer: Story = {
   },
 }
 
+export const ZoomImage: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('link', { name: /Open image 1 of 1/ }))
+    const viewer = within(await within(canvasElement.ownerDocument.body).findByRole('dialog'))
+    await viewer.findByRole('img', { name: 'Pip the paper owl' })
+    await userEvent.click(viewer.getByRole('button', { name: 'Zoom in' }))
+    await expect(viewer.getByText('150%')).toBeVisible()
+    await userEvent.click(viewer.getByRole('button', { name: 'Reset zoom' }))
+    await expect(viewer.getByText('100%')).toBeVisible()
+    await expect(viewer.getByRole('button', { name: 'Zoom out' })).toHaveAttribute('aria-disabled', 'true')
+  },
+}
+
+export const DownloadUnavailable: Story = {
+  args: { media: [{ ...img('Unavailable photo'), full: '/missing-image.png' }] },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('link', { name: /Open image/ }))
+    const viewer = within(await within(canvasElement.ownerDocument.body).findByRole('dialog'))
+    await userEvent.click(viewer.getByRole('button', { name: 'Download image' }))
+    await expect(await viewer.findByRole('alert')).toHaveTextContent('Couldn’t download here')
+  },
+}
+
 export const MoreThanFourImages: Story = {
   args: { media: ['First', 'Second', 'Third', 'Fourth', 'Fifth'].map(img) },
   play: async ({ canvasElement }) => {
