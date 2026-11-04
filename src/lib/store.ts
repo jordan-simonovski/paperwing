@@ -269,7 +269,8 @@ function capped(map: Record<string, number>): Record<string, number> {
  * How much each signal teaches the taste profile: a vote the most, a save half that, a hide less;
  * staying with a story a little, and opening one, or passing one on three visits without opening
  * it, less still. A tap is interest, but a headline can earn one the story doesn't. Lessons this
- * faint move a story's topics and site; its keywords are left to the stronger signals.
+ * faint mostly move a story's topics and site: a new keyword's share falls under the profile's
+ * floor (features.ts learn), so keywords are left to the stronger signals.
  */
 export const LESSON = { vote: 1.5, save: 0.75, hide: 0.6, linger: 0.3, open: 0.15, pass: 0.15 }
 /** Visits a story is passed on, unopened, before that teaches the profile anything. */
