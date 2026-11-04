@@ -28,6 +28,17 @@
       "destination": "/api/rss?path=:path*"
     },
     {
+      "source": "/t/:channel",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb][Oo][Tt]|[Cc][Rr][Aa][Ww][Ll][Ee][Rr]|[Ss][Pp][Ii][Dd][Ee][Rr]|facebookexternalhit|Facebot|WhatsApp|Bluesky|Cardyb|Mastodon|Pleroma|Akkoma|Misskey|Iframely|Embedly|Applebot|SkypeUriPreview|Snapchat|Pinterest|vkShare|Viber).*"
+        }
+      ],
+      "destination": "/api/preview?path=/t/:channel"
+    },
+    {
       "source": "/t/:channel/:item",
       "has": [
         {
@@ -61,7 +72,7 @@
       "destination": "/api/preview?path=/u/:actor"
     },
     {
-      "source": "/((?!api/|assets/).*)",
+      "source": "/((?!api/|assets/|og/topics/).*)",
       "destination": "/index.html"
     }
   ],
