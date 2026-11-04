@@ -13,10 +13,13 @@ export function TopicsBody() {
   const [filter, setFilter] = useState('')
   const [draft, setDraft] = useState('')
   const navigate = useNavigate()
-  const matches = useMemo(() => (filter ? new Set(searchTopics(filter).map((h) => h.topic.id)) : null), [filter])
+  const matches = useMemo(() => (filter.trim() ? new Set(searchTopics(filter).map((h) => h.topic.id)) : null), [filter])
   // Whichever pack you read most comes first.
   const tech = followsTech(followed)
-  const clusters = (Object.keys(CLUSTERS) as ClusterId[]).sort((a, b) => Number(CLUSTERS[a].pack !== (tech ? 'tech' : 'general')) - Number(CLUSTERS[b].pack !== (tech ? 'tech' : 'general')))
+  const visible = matches ? TOPICS.filter((t) => matches.has(t.id)) : TOPICS
+  const clusters = (Object.keys(CLUSTERS) as ClusterId[])
+    .filter((c) => visible.some((t) => t.cluster === c))
+    .sort((a, b) => Number(CLUSTERS[a].pack !== (tech ? 'tech' : 'general')) - Number(CLUSTERS[b].pack !== (tech ? 'tech' : 'general')))
 
   return (
     <>
@@ -30,7 +33,7 @@ export function TopicsBody() {
         <input
           className="input pl-10"
           type="search"
-          placeholder={tech ? 'Find a topic: “tracing”, “gpu”' : 'Find a topic: “election”, “telescope”'}
+          placeholder={tech ? 'Find a topic: “tracing”, “gpu”' : 'Find a topic: “bouldering”, “Aussie sports”'}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           aria-label="Find a topic"
@@ -49,6 +52,12 @@ export function TopicsBody() {
         </div>
       </section>
 
+      {matches && (
+        <p className="mt-5 text-sm text-ink-2" role="status">
+          {visible.length ? `${visible.length} ${visible.length === 1 ? 'topic' : 'topics'} found` : 'No matching topics. Try another search, or add your own interest below.'}
+        </p>
+      )}
+
       {clusters.map((c) => (
         <section key={c} className="mt-9">
           <div className="flex flex-wrap items-baseline gap-x-3">
@@ -56,11 +65,10 @@ export function TopicsBody() {
             <span className="text-[0.875rem] text-ink-3">{CLUSTERS[c].blurb}</span>
           </div>
           <div className="tcard-rail mt-3">
-            {/* While filtering, matches come first so a phone's swipe row starts with them. */}
-            {TOPICS.filter((t) => t.cluster === c)
-              .sort((a, b) => (matches ? Number(matches.has(b.id)) - Number(matches.has(a.id)) : 0))
+            {visible
+              .filter((t) => t.cluster === c)
               .map((t) => (
-                <TopicCard key={t.id} t={t} dim={!!matches && !matches.has(t.id)} />
+                <TopicCard key={t.id} t={t} />
               ))}
           </div>
         </section>

@@ -15,6 +15,37 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+export const FindSports: Story = {
+  parameters: { app: { route: { path: '/explore/:tab', url: '/explore/topics' }, prefs: { followed: ['sport'] } } },
+  play: async ({ canvas }) => {
+    const search = canvas.getByRole('searchbox', { name: 'Find a topic' })
+    await userEvent.type(search, 'Aussie sports')
+    await expect(canvas.getByRole('heading', { name: 'NRL & rugby league' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'AFL & Aussie rules' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Intelligence' })).not.toBeInTheDocument()
+    await userEvent.clear(search)
+    await userEvent.type(search, 'bouldering')
+    await expect(canvas.getByRole('status')).toHaveTextContent('1 topic found')
+    await expect(canvas.getByRole('heading', { name: 'Climbing & bouldering' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Follow Climbing & bouldering' }))
+    await expect(usePrefs.getState().followed).toContain('climbing')
+    await expect(canvas.getByRole('link', { name: 'Climbing & bouldering' })).toHaveAttribute('href', '/t/climbing')
+  },
+}
+
+export const NoMatchingTopics: Story = {
+  parameters: FindSports.parameters,
+  play: async ({ canvas }) => {
+    const search = canvas.getByRole('searchbox', { name: 'Find a topic' })
+    await userEvent.type(search, 'zzzz-not-a-topic')
+    await expect(canvas.getByRole('status')).toHaveTextContent('No matching topics')
+    await expect(canvas.getByRole('heading', { name: 'Your interests' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Sport', level: 2 })).not.toBeInTheDocument()
+    await userEvent.clear(search)
+    await expect(canvas.getByRole('heading', { name: 'Sport', level: 2 })).toBeVisible()
+  },
+}
+
 export const AddAndOpenFeed: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Add Science' }))

@@ -111,7 +111,7 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
         )}
         {(near.length > 0 || onRemove) && (
           <div className="tcard-near mt-2.5 flex items-center gap-1 text-[0.8125rem]">
-            {near.length > 0 && <span className="opacity-60">Near</span>}
+            {near.length > 0 && <span className="opacity-80">Near</span>}
             <span className="min-w-0 flex-1 truncate">
               {near.slice(0, 3).map((r, i) => (
                 <span key={r.id}>

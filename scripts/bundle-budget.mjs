@@ -5,9 +5,10 @@ import { gzipSync } from 'node:zlib'
 // The entry is the script index.html loads; its static imports (modulepreloads) load with it.
 // Raise a budget only on purpose, in the same change that needs it, and say why in the PR.
 const BUDGET_KB = {
-  entry: 300, // index.html's script and everything it statically imports
+  // The 18-sport catalog adds ~3 KB gzip; its matching terms also tag the first screen's stories.
+  entry: 304, // index.html's script and everything it statically imports
   css: 22,
-  totalJs: 565, // every chunk, including the lazy image zoom/download tools (precached by the service worker)
+  totalJs: 566, // sports catalog plus lazy image tools total 565.4 KB; every chunk is precached
 }
 
 const dist = process.argv[2] ?? 'dist'

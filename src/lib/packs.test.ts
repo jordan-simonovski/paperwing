@@ -1,11 +1,58 @@
 import { describe, expect, it } from 'vitest'
 import { resolveChannel } from './channels'
 import { parseLemmyKey, lemmyKey } from './lemmyKey'
-import { CLUSTERS, isTechTopic, matchesTopic, TOPIC_BY_ID, TOPICS, topicsForStory } from './topics'
+import { CLUSTERS, isTechTopic, matchesTopic, searchTopics, TOPIC_BY_ID, TOPICS, topicsForStory } from './topics'
 import type { Story } from './types'
 
 const base = { followed: [] as string[], interests: [], customFeeds: [] }
 const story = (title: string): Story => ({ key: 'x', source: 'rss', sourceLabel: 'Somewhere', title, url: null, discussionUrl: null, createdAt: 0, hasThread: false })
+
+describe('sports readers', () => {
+  it.each([
+    ['climbing', 'Bouldering footwork for your first climbing gym session'],
+    ['cricket', 'Australia win the Ashes as the final wicket falls'],
+    ['nrl', 'NRLW teams prepare for State of Origin'],
+    ['afl', 'AFLW finals head to the MCG'],
+    ['rugby-union', 'Wallabies announce squad for the Six Nations warm-up'],
+    ['netball', 'Super Netball season opens with a Diamonds reunion'],
+    ['american-football', 'NFL draft: a rookie quarterback joins the roster'],
+    ['basketball', 'WNBA finals go to a deciding game'],
+    ['baseball', 'MLB pitchers prepare for the World Series'],
+    ['ice-hockey', 'NHL teams compete for the Stanley Cup'],
+    ['tennis', 'Australian Open draw announced by the WTA'],
+    ['golf', 'LPGA golfers prepare for the next major'],
+    ['cycling', 'Tour de France Femmes heads into the mountains'],
+    ['running', 'Your first half marathon: an easy training plan'],
+    ['swimming', 'Freestyle swimming drills for beginners'],
+    ['surfing', 'World Surf League announces its next tour stop'],
+    ['boxing', 'Heavyweight boxing title decided in the final round'],
+    ['mma', 'UFC announces a new mixed martial arts champion'],
+  ])('opens %s with dedicated sources and tags its stories', (id, headline) => {
+    const topic = TOPIC_BY_ID.get(id)!
+    expect(topic).toBeDefined()
+    expect(topic.cluster).toBe('sport')
+    expect(topic.feeds.some((f) => f.kind === 'rss')).toBe(true)
+    expect(resolveChannel(id, undefined, base)?.feeds).toEqual(expect.arrayContaining(topic.feeds))
+    expect(topicsForStory(story(headline))).toContain(id)
+  })
+  it('finds regional sports and beginner interests without using aliases as story tags', () => {
+    expect(searchTopics('bouldering')[0].topic.id).toBe('climbing')
+    expect(searchTopics('climbing for beginners')[0].topic.id).toBe('climbing')
+    for (const q of ['Australian sports', 'Aussie sports']) expect(searchTopics(q).map((h) => h.topic.id)).toEqual(expect.arrayContaining(['cricket', 'nrl', 'afl', 'netball']))
+    expect(searchTopics('American sports').map((h) => h.topic.id)).toEqual(expect.arrayContaining(['american-football', 'basketball', 'baseball', 'ice-hockey']))
+    expect(searchTopics('sports').map((h) => h.topic.id)).toContain('climbing')
+    expect(matchesTopic(TOPIC_BY_ID.get('climbing')!, 'Climbing prices push inflation higher')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('running')!, 'Running a database migration in production')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('cycling')!, 'CPU cycling and thread scheduling')).toBeUndefined()
+    expect(matchesTopic(TOPIC_BY_ID.get('american-football')!, 'American sports broadcasting rights')).toBeUndefined()
+  })
+  it('includes practical climbing sources and carries sport into For you', () => {
+    expect(TOPIC_BY_ID.get('climbing')!.feeds).toContainEqual(expect.objectContaining({ kind: 'rss', label: 'Climbing Skills' }))
+    const feeds = resolveChannel('for-you', undefined, { ...base, followed: ['climbing', 'cricket'] })!.feeds
+    expect(feeds).toContainEqual(expect.objectContaining({ kind: 'rss', label: 'Climbing Skills' }))
+    expect(feeds.some((f) => f.kind === 'hn')).toBe(false)
+  })
+})
 
 describe('topic packs', () => {
   it('have unique ids, real neighbours and a pack for every cluster', () => {
