@@ -112,6 +112,10 @@ export function PrivacyPage() {
 
         <Part title="What the server sees in passing">
           <p>
+            Downloading a picture asks its image host directly from your browser, without sign-in cookies, and saves a file on your device. The host sees that request; PaperWing’s server does not
+            receive the picture or keep a download history. Files you download remain on your device when you clear PaperWing’s data.
+          </p>
+          <p>
             To get around browser restrictions, the server fetches some things for you: feeds, articles for the reader view, link previews and site icons. It sees the address it fetches, and caches
             public results so other readers get them faster. Our host, Vercel, keeps short-lived request logs, as any website’s host does.
           </p>
