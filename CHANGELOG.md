@@ -1,5 +1,18 @@
 # What's new
 
+## 0.15.0
+
+_Released 4 November 2026_
+
+### New
+
+- **Share what you’re reading from.** Topics, feeds and communities now have a Share button with a link to copy or send from your device. Shared Bluesky feeds and interests open even before the recipient follows them, and published mixes share their public page.
+- **Browse images without leaving your place.** Tap an image in a post, reply or quote to open the full-screen viewer. Swipe between pictures on your phone, or use the arrows on your keyboard, then close it to return to reading.
+
+### Improved
+
+- **Pip puts a spring in your refresh.** Pull down on a mobile feed to wake the paper owl, then let go to watch Pip run while fresh stories arrive. The animation follows your motion preferences.
+
 ## 0.14.0
 
 _Released 4 November 2026_
