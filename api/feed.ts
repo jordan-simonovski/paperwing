@@ -15,6 +15,8 @@ import { boardPicks } from './_lib/boardPicks.js'
 import { arxiv, github, hfPapers, lobsters, newsSearch, releases, rss } from './_lib/sources.js'
 import { checkStatusPage, statusIncidents } from './_lib/statuspages.js'
 import { standardFeed, StandardRateLimit } from './_lib/standard.js'
+import { hiring } from './_lib/hiring.js'
+import { isState, WARN_COST, warnStories } from './_lib/warn.js'
 
 // One function for every server-fetched source keeps us well under Vercel Hobby's function limit.
 // Each source is one entry in SOURCES: what it needs from the query string, and how long its answer
@@ -142,6 +144,34 @@ export const SOURCES: Record<FeedSource, Source> = {
   status: { ttl: 120, cost: (p) => 1 + Math.ceil(Math.min(list(p.get('hosts')).length, 25) / 5), run: (p) => statusIncidents(list(p.get('providers')), p.get('active') === '1', list(p.get('hosts'))) },
   // Settings asks before following a page; the answer changes rarely.
   statuscheck: { ttl: 3600, run: (p) => checkStatusPage(p.get('host') ?? '') },
+  // One state's WARN notices from employers PaperWing follows. States post new notices a few times a
+  // week; their lists are cached in KV for six hours, and here for three. Most states are one or two
+  // fetches shared by everyone; the paged ones cost more (WARN_COST).
+  warn: {
+    ttl: 10_800,
+    stale: 86_400,
+    cost: (p) => {
+      const state = (p.get('state') ?? '').toLowerCase()
+      return Object.hasOwn(WARN_COST, state) ? (WARN_COST[state as keyof typeof WARN_COST] ?? 0) : 0
+    },
+    run: (p) => {
+      const state = (p.get('state') ?? '').toLowerCase()
+      if (!isState(state)) throw new BadRequest('state (a two-letter code PaperWing reads) required')
+      return warnStories(state)
+    },
+  },
+  // What an employer in the news for layoffs is hiring for, from its own job board. Boards change
+  // through the day, not by the minute: six hours at the edge, and a stale answer for a day after.
+  // One fetch of one job board, so it never counts against the fan-out allowance.
+  hiring: {
+    ttl: 21_600,
+    stale: 86_400,
+    run: async (p) => {
+      const found = await hiring(need(p, 'employer'))
+      if (!found) throw new BadRequest('Not an employer whose job board PaperWing reads')
+      return found
+    },
+  },
 }
 
 export async function GET(request: Request): Promise<Response> {

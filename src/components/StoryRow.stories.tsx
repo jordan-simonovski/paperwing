@@ -173,3 +173,27 @@ export const OutsideYourUsual: Story = {
     await expect(canvas.getByText(/Outside your usual/)).toBeVisible()
   },
 }
+
+/** A WARN filing has no link and no thread: its headline opens it on its own details. */
+export const WarnNotice: Story = {
+  args: {
+    story: ranked({
+      key: 'wn-wa-1grz4f9',
+      source: 'warn',
+      sourceLabel: 'Washington WARN notices',
+      site: 'esd.wa.gov',
+      title: 'Microsoft gives notice of 277 layoffs in Redmond, Washington',
+      url: null,
+      discussionUrl: 'https://esd.wa.gov/about-employees/WARN',
+      hasThread: false,
+      score: undefined,
+      comments: undefined,
+      author: undefined,
+      topics: ['layoffs'],
+    }),
+  },
+  play: async ({ canvas, args }) => {
+    await userEvent.click(canvas.getByRole('link', { name: /Microsoft gives notice/ }))
+    await expect(args.onOpen).toHaveBeenCalledWith('wn-wa-1grz4f9', 'article')
+  },
+}

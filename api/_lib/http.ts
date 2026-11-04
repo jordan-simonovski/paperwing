@@ -179,7 +179,7 @@ export async function fetchText(url: string, init: SafeFetchInit & { maxBytes?: 
   return { text, finalUrl, contentType: res.headers.get('content-type') ?? '' }
 }
 
-export async function fetchJson<T>(url: string, init: SafeFetchInit = {}): Promise<T> {
+export async function fetchJson<T>(url: string, init: SafeFetchInit & { maxBytes?: number } = {}): Promise<T> {
   const { text } = await fetchText(url, { ...init, headers: { accept: 'application/json', ...init.headers } })
   return JSON.parse(text) as T
 }

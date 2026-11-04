@@ -49,6 +49,7 @@ export const keys = {
   search: (source: string, q: string, range: string, sort: string) => ['search', source, q, range, sort] as const,
   blueskyStatus: ['bluesky-status'] as const,
   outages: ['outages'] as const,
+  hiring: (employer: string) => ['hiring', employer] as const,
   webmentions: (url: string | null | undefined) => ['webmentions', url] as const,
   mix: (uri: string) => ['mix', uri] as const,
   explore: (what: string, q: string) => ['explore', what, q] as const,

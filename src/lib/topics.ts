@@ -33,6 +33,8 @@ export type FeedRef =
   | { kind: 'boardpicks' }
   /** Incidents from providers' status pages (api/_lib/statuspages.ts); every provider when `providers` is unset. */
   | { kind: 'status'; providers?: string[]; active?: boolean; hosts?: string[] }
+  /** One state's WARN notices (layoff filings) from employers PaperWing follows, by its two-letter code. */
+  | { kind: 'warn'; state: string }
 
 export type ClusterId = 'intelligence' | 'systems' | 'code' | 'world' | 'news' | 'science' | 'culture' | 'sport' | 'making' | 'life'
 
@@ -86,6 +88,9 @@ export interface Topic {
 }
 
 const rss = (url: string, label: string): FeedRef => ({ kind: 'rss', url, label })
+
+/** The states whose WARN notices PaperWing reads (api/_lib/warn.ts has an adapter for each). */
+export const WARN_STATES = ['ca', 'wa', 'ny', 'tx', 'il', 'nj', 'ga', 'or', 'va', 'md', 'ct', 'az'] as const
 
 const TECH_TOPICS: Topic[] = [
   {
@@ -773,6 +778,26 @@ const TECH_TOPICS: Topic[] = [
       rss('https://newsletter.pragmaticengineer.com/feed', 'The Pragmatic Engineer'),
       // Gergely's blog, separate from the newsletter: free long-form posts.
       rss('https://blog.pragmaticengineer.com/feed/', 'The Pragmatic Engineer Blog'),
+    ],
+  },
+  {
+    id: 'layoffs',
+    // No Mastodon hashtags and no Bluesky talk without a link (bskyFeeds.ts): #layoffs is mostly people
+    // posting about their own, and they deserve better than to be someone's feed.
+    label: 'Layoffs',
+    hue: 340,
+    cluster: 'world',
+    blurb: 'Who is cutting jobs in tech, from state filings and the news, and who is still hiring',
+    terms: ['layoff*', 'laid off', 'lays off', 'laying off', 'job cuts', 'cuts? jobs', 'cutting jobs', 'workforce reduction', 'reductions? in force', '=RIF', '=RIFs', '=WARN notices?', 'redundanc*'],
+    related: ['industry', 'leadership', 'business'],
+    hnQuery: 'layoffs "laid off" "lays off" "job cuts"',
+    feeds: [
+      { kind: 'news', q: 'tech layoffs' },
+      rss('https://techcrunch.com/tag/layoffs/feed/', 'TechCrunch Layoffs'),
+      // US employers with 100 or more staff must file a notice 60 days before a mass layoff. These
+      // are the states where tech employers file most; only notices from employers PaperWing
+      // follows (src/lib/employers.ts) come through.
+      ...WARN_STATES.map((state): FeedRef => ({ kind: 'warn', state })),
     ],
   },
 ]

@@ -4,7 +4,7 @@ import { Pip } from '../components/Pip'
 // What PaperWing keeps, where, and who sees it. Written to match the code: if something here
 // changes in the app (a new server store, a new service), this page changes with it.
 
-const UPDATED = '3 November 2026'
+const UPDATED = '4 November 2026'
 
 function Part({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -116,6 +116,11 @@ export function PrivacyPage() {
             everyone. Nothing about you is sent to pick them: the boards you’ve joined are left out on your device. You can turn suggestions, and PaperWing’s announcements, off under Settings, Tuning.
           </p>
           <p>
+            The Layoffs topic reads US states’ public lists of WARN notices (layoff filings) on the server, the same for everyone. Opening the Related tab on a story about one employer’s layoffs asks
+            the server for that employer’s open roles, which it reads from the employer’s own public job board (Greenhouse, Ashby, Lever or Workday). The request names the employer, not the story, and
+            the answer is cached and shared between readers.
+          </p>
+          <p>
             Following a Discourse forum fetches its public RSS feed. Following a Standard.site publication reads its public records from the author’s server and checks its website and article links.
             The publication address and format stay with your other feed settings, including encrypted sync and your public blogroll if you turn it on.
           </p>
@@ -140,7 +145,8 @@ export function PrivacyPage() {
         <Part title="Services involved">
           <p>
             Vercel (hosting), Upstash (the sync and cache database), Anthropic (summaries, with your key), and the networks you read and sign in to: Hacker News, Lobsters, Lemmy, Bluesky, Mastodon and
-            the sites whose feeds you follow. YouTube, Vimeo and PeerTube servers, only when you press play on one of their videos. Push notifications go through your browser maker’s push service.
+            the sites whose feeds you follow. For the Layoffs topic, US state labour departments’ WARN pages, and employers’ job boards on Greenhouse, Ashby, Lever and Workday. YouTube, Vimeo and
+            PeerTube servers, only when you press play on one of their videos. Push notifications go through your browser maker’s push service.
           </p>
         </Part>
 

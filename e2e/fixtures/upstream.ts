@@ -1,5 +1,6 @@
 import { NOW, story } from '../../src/test/fixtures'
 import type { Article, Story } from '../../src/lib/types'
+import type { Hiring } from '../../src/lib/hiringTypes'
 import { selfPostUrl, type SelfPostBody } from '../../src/lib/paperwing'
 import { storyKey } from '../../src/lib/storyKey'
 
@@ -219,4 +220,62 @@ export const SELF_POST_BODY: SelfPostBody = {
     { body: SELF_NOW, seenAt: NOW - 2 * HOUR },
   ],
   editedAt: NOW - 2 * HOUR,
+}
+
+/* ----------------------------------------------------------- Layoffs and hiring */
+
+/** A layoff story from the Layoffs topic's TechCrunch feed, about an employer whose job board PaperWing reads. */
+export const DROPBOX_LAYOFFS: Story = story({
+  key: 'rss-tc-layoffs-1',
+  source: 'rss',
+  sourceLabel: 'TechCrunch Layoffs',
+  site: 'techcrunch.com',
+  title: 'Dropbox is laying off roughly 9% of its workforce',
+  url: 'https://techcrunch.com/2026/10/28/dropbox-layoffs/',
+  discussionUrl: null,
+  hasThread: false,
+  score: undefined,
+  comments: undefined,
+  author: undefined,
+  createdAt: NOW - 3 * HOUR,
+})
+
+/** A WARN notice, as /api/feed?src=warn sends it: no link and no thread, its details in its text. */
+export const MICROSOFT_WARN: Story = story({
+  key: 'wn-wa-1grz4f9',
+  source: 'warn',
+  sourceLabel: 'Washington WARN notices',
+  site: 'esd.wa.gov',
+  title: 'Microsoft gives notice of 277 layoffs in Redmond, Washington',
+  url: null,
+  discussionUrl: 'https://esd.wa.gov/about-employees/WARN',
+  hasThread: false,
+  score: undefined,
+  comments: undefined,
+  author: undefined,
+  text: '<p><strong>Filed by:</strong> Microsoft<br><strong>Workers affected:</strong> 277</p>',
+  weight: 86,
+  createdAt: NOW - 30 * HOUR,
+})
+
+/** Dropbox's openings, as /api/feed?src=hiring sends them. */
+export const DROPBOX_HIRING: Hiring = {
+  employer: 'Dropbox',
+  board: 'https://job-boards.greenhouse.io/dropbox',
+  open: 31,
+  fresh: 10,
+  functions: [
+    ['Engineering', 10],
+    ['Marketing', 6],
+    ['Sales', 5],
+  ],
+  latest: [
+    {
+      title: 'Senior Backend Engineer, Core Storage',
+      url: 'https://job-boards.greenhouse.io/dropbox/jobs/1',
+      location: 'Remote - US',
+      function: 'Engineering',
+      postedAt: iso(NOW - 24 * HOUR).slice(0, 10),
+    },
+  ],
 }

@@ -5,11 +5,13 @@ import { tasteKeys } from './StoryRow'
 import { ago, compact } from '../lib/format'
 import { indexedStories, indexStory, useDiscussions } from '../lib/hooks'
 import { useOutlets } from '../lib/coverage'
+import { hiringEmployer } from '../lib/employers'
 import { canonicalUrl } from '../lib/rank'
 import { relatedTopics, topicsForStory } from '../lib/topics'
 import type { Story } from '../lib/types'
 import { scoreUnit, sourceLabel } from './Source'
 import { StoryIcon } from './SourceIcon'
+import { StillHiring } from './StillHiring'
 import { TopicChip } from './TopicTag'
 
 const STOP = new Set(
@@ -134,6 +136,9 @@ export function RelatedView({ story, onOpen, now, alsoOn, coverage = [] }: { sto
   // Coverage the feed already grouped, plus what a news search finds (only for stories that are news).
   const { stories: allCoverage, outlets: total, searching } = useOutlets(story, coverage)
   const outlets = total - 1
+  // A report of one employer's layoffs (an article, or a WARN notice): what that employer is still
+  // hiring for. Not beside someone's own post about losing their job.
+  const hiring = useMemo(() => (story.url || story.source === 'warn' ? hiringEmployer(story.title) : undefined), [story.url, story.source, story.title])
 
   return (
     <div className="mx-auto max-w-[44rem] space-y-9 py-7">
@@ -159,6 +164,7 @@ export function RelatedView({ story, onOpen, now, alsoOn, coverage = [] }: { sto
         </section>
       )}
       {searching && !allCoverage.length && <p className="text-[0.8125rem] text-ink-3">Looking for other outlets’ coverage…</p>}
+      {hiring && <StillHiring employer={hiring.name} now={now} />}
       <Tune story={story} />
       {story.url && (
         <section>

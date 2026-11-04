@@ -64,6 +64,8 @@ export type FeedSource =
   | 'github'
   | 'status'
   | 'statuscheck'
+  | 'hiring'
+  | 'warn'
 
 /** The address of one of api/feed.ts's sources: for an <img>, or a fetch that reads its own errors. `src` stays first (the service worker reads it). */
 export const feedUrl = (src: FeedSource, params: Params = {}) => `/api/feed?${query({ src, ...params })}`

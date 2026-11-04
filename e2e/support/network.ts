@@ -2,6 +2,7 @@ import type { Page, Request, Route } from '@playwright/test'
 import type { SelfPostBody } from '../../src/lib/paperwing'
 import type { SpiceGrade } from '../../src/lib/spiceTypes'
 import type { Article, Story } from '../../src/lib/types'
+import type { Hiring } from '../../src/lib/hiringTypes'
 import type { FoundFeed } from '../../src/lib/publishers'
 import { HN_TOP, SEABED, MELTING, WEB_WE_LOST_ARTICLE, WEB_WE_LOST_THREAD, type HnHit, type HnItem, type LemmyPostView } from '../fixtures/upstream'
 
@@ -43,6 +44,8 @@ export interface Stubs {
   selfPosts: Record<string, Answer<SelfPostBody>>
   /** The reader view: /api/extract, by article URL. */
   extract: Record<string, Answer<Article>>
+  /** An employer's openings (/api/feed?src=hiring), by employer name. */
+  hiring: Record<string, Answer<Hiring>>
   /** A link's card (its own title and description), by URL: what Post a link reads in. */
   cards: Record<string, { title?: string; description?: string }>
   /** Whether this deployment has sync (`/api/sync?status`). */
@@ -63,10 +66,11 @@ const DEFAULTS: Stubs = {
   selfPosts: {},
   extract: { [WEB_WE_LOST_ARTICLE.url]: WEB_WE_LOST_ARTICLE },
   cards: {},
+  hiring: {},
   sync: true,
 }
 
-const MAPS = ['feeds', 'hnItems', 'lemmy', 'bluesky', 'blueskyThreads', 'selfPosts', 'extract', 'cards'] as const
+const MAPS = ['feeds', 'hnItems', 'lemmy', 'bluesky', 'blueskyThreads', 'selfPosts', 'extract', 'cards', 'hiring'] as const
 
 function mergeStubs(base: Stubs, over: Partial<Stubs>): Stubs {
   const out = { ...base, ...over }
@@ -111,6 +115,7 @@ const HOSTS: Record<string, Handler> = {
         return { board: { uri: `at://${did}/io.paperwing.board/${rkey}`, name: 'Board', official: false, moderators: [], moderatorHandles: {} }, stories: s.feeds[`board:${did}`] ?? [] }
       }
       if (src === 'discover') return s.discover
+      if (src === 'hiring') return s.hiring[q.get('employer') ?? ''] ?? fail(400, 'Not an employer whose job board PaperWing reads')
       return s.feeds[`${src}:${q.get('label')}`] ?? s.feeds[src] ?? []
     }
     if (p === '/api/extract') return s.extract[q.get('url') ?? ''] ?? fail(422, 'Could not extract an article')

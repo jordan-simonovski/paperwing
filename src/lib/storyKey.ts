@@ -4,12 +4,12 @@ import { LEMMY_DEFAULT } from './lemmyKey.js'
 // caches): a two-letter network prefix and that network's own id. Built and read here only, by the
 // app and the server alike, so the two can never disagree about a key's shape.
 //
-//   hn-<id>  lb-<id>  dv-<id>  st-<provider>-<incident>
+//   hn-<id>  lb-<id>  dv-<id>  st-<provider>-<incident>  wn-<state>-<notice>
 //   bs-<base64url at:// URI>  fp-<base64url at:// URI>  ln-<base64url URL>
 //   lm-<id>[@<instance>] (programming.dev unless said)  md-<server>-<status id>
 
 export type StoryKeyParts =
-  | { kind: 'hn' | 'lb' | 'dv' | 'st'; id: string }
+  | { kind: 'hn' | 'lb' | 'dv' | 'st' | 'wn'; id: string }
   | { kind: 'bs' | 'fp'; uri: string }
   | { kind: 'ln'; url: string }
   | { kind: 'lm'; id: string; via: string }
@@ -21,6 +21,7 @@ export function storyKey(p: StoryKeyParts): string {
     case 'lb':
     case 'dv':
     case 'st':
+    case 'wn':
       return `${p.kind}-${p.id}`
     case 'bs':
     case 'fp':
@@ -44,6 +45,7 @@ export function parseStoryKey(key: string): StoryKeyParts | undefined {
     case 'lb':
     case 'dv':
     case 'st':
+    case 'wn':
       return { kind, id: rest }
     case 'bs':
     case 'fp': {

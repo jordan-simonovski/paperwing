@@ -217,6 +217,13 @@ export const FEED_KINDS: { [K in FeedRef['kind']]: FeedKind<K> } = {
     mark: () => ({ own: 'status' }),
     fetch: (r) => viaServer('status', { providers: join(r.providers), active: r.active ? '1' : undefined, hosts: join(r.hosts) }),
   },
+  warn: {
+    id: (r) => `wn:${r.state}`,
+    label: (r) => `WARN notices, ${r.state.toUpperCase()}`,
+    brand: () => 'WARN notices',
+    mark: () => ({ source: 'warn' }),
+    fetch: (r) => viaServer('warn', { state: r.state }),
+  },
 }
 
 // The table is typed per kind, so each entry only ever sees its own refs; these read it for any ref.

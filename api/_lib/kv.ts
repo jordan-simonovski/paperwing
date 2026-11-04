@@ -199,6 +199,29 @@ export async function cachedInKv<T>(key: string, seconds: number | (() => number
 }
 
 /**
+ * cachedInKv for a read of someone else's server that can fail: a failure is remembered too, for
+ * `failSeconds`, and repeated to callers in that window instead of asking the server again.
+ */
+export async function cachedOrFailed<T>(key: string, seconds: number, failSeconds: number, build: () => Promise<T>): Promise<T> {
+  const failed = `${key}:failed`
+  if (kvConfigured()) {
+    const reason = await kv()
+      .get(failed)
+      .catch(() => null)
+    if (reason) throw new Error(reason)
+  }
+  try {
+    return await cachedInKv(key, seconds, build)
+  } catch (err) {
+    if (kvConfigured())
+      await kv()
+        .set(failed, err instanceof Error ? err.message : 'The read failed', failSeconds)
+        .catch(() => {})
+    throw err
+  }
+}
+
+/**
  * Counts `by` (1 unless given) against an allowance of `limit` per `seconds`, and says whether
  * this use went over it. A store that can't answer counts as over: allowances fail closed.
  */
