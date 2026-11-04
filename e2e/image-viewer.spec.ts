@@ -120,3 +120,157 @@ test('retry a failed full-size image without closing the album', async ({ page }
   await page.keyboard.press('ArrowRight')
   await expect(viewer.getByRole('status')).toHaveText('3 of 3')
 })
+
+test('zoom and pan an image on desktop, then reset when browsing', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Phones use pinch gestures')
+  await pane(page)
+    .getByRole('link', { name: /Open image 1 of 3/ })
+    .click()
+  const viewer = page.getByRole('dialog', { name: 'Image viewer' })
+  const image = viewer.getByRole('img')
+  await expect(viewer.getByRole('button', { name: 'Zoom in' })).toHaveAttribute('aria-disabled', 'false')
+  await viewer.getByRole('button', { name: 'Zoom in' }).click()
+  await expect(viewer.getByText('150%')).toBeVisible()
+  const before = await image.getAttribute('style')
+  const box = (await image.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2 + 60, { steps: 5 })
+  await page.mouse.up()
+  expect(await image.getAttribute('style')).not.toBe(before)
+  await expect(viewer.getByRole('status')).toHaveText('1 of 3')
+  await viewer.getByRole('button', { name: 'Reset zoom' }).click()
+  await expect(viewer.getByText('100%')).toBeVisible()
+  await viewer.getByRole('button', { name: 'Zoom in' }).click()
+  await page.keyboard.press('ArrowRight')
+  await expect(viewer.getByText('100%')).toBeVisible()
+  await expect(viewer.getByRole('status')).toHaveText('2 of 3')
+  expect(await page.evaluate(() => !!document.activeElement?.closest('dialog'))).toBe(true)
+})
+
+test('pinch zooms only the image and allows panning without switching slides', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Touch gestures on the phone')
+  await pane(page)
+    .getByRole('link', { name: /Open image 1 of 3/ })
+    .click()
+  const viewer = page.getByRole('dialog', { name: 'Image viewer' })
+  const image = viewer.getByRole('img')
+  await expect(image).toBeVisible()
+  const close = viewer.getByRole('button', { name: 'Close image viewer' })
+  const toolbar = await close.boundingBox()
+  const box = (await image.boundingBox())!
+  const x = box.x + box.width / 2
+  const y = box.y + box.height / 2
+  const touch = await page.context().newCDPSession(page)
+  await touch.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [
+      { x: x - 50, y, id: 0 },
+      { x: x + 50, y, id: 1 },
+    ],
+  })
+  for (let step = 1; step <= 5; step++) {
+    await touch.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        { x: x - 50 - step * 10, y, id: 0 },
+        { x: x + 50 + step * 10, y, id: 1 },
+      ],
+    })
+  }
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ x: x + 100, y, id: 1 }] })
+  await expect(image).toHaveCSS('transform', /matrix\(2,/)
+  const before = await image.getAttribute('style')
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x - 40, y, id: 0 }] })
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  expect(await image.getAttribute('style')).not.toBe(before)
+  await expect(viewer.getByRole('status')).toHaveText('1 of 3')
+  expect(await close.boundingBox()).toEqual(toolbar)
+  expect(await page.evaluate(() => window.visualViewport?.scale)).toBe(1)
+  await viewer.getByRole('button', { name: 'Next image' }).click()
+  await expect(viewer.getByRole('img')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+  await touch.detach()
+})
+
+test('download the selected original image as a file', async ({ page }) => {
+  await pane(page)
+    .getByRole('link', { name: /Open image 2 of 3/ })
+    .click()
+  const viewer = page.getByRole('dialog', { name: 'Image viewer' })
+  const downloading = page.waitForEvent('download')
+  const original = page.waitForRequest((request) => request.url().endsWith('?full=1') && request.resourceType() === 'fetch')
+  await viewer.getByRole('button', { name: 'Download image' }).click()
+  await original
+  const download = await downloading
+  expect(download.suggestedFilename()).toBe('paperwing-image-2.png')
+  expect(await download.failure()).toBeNull()
+  const stream = await download.createReadStream()
+  const chunks: Buffer[] = []
+  for await (const chunk of stream!) chunks.push(chunk)
+  expect(Buffer.concat(chunks).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+  await expect(viewer.getByRole('status')).toHaveText('2 of 3')
+})
+
+test('a blocked image download reports failure and can be retried', async ({ page }) => {
+  let blocked = true
+  await page.route('**/icon-512.png?full=0', (route) => (blocked && route.request().resourceType() === 'fetch' ? route.abort() : route.fallback()))
+  await pane(page)
+    .getByRole('link', { name: /Open image 1 of 3/ })
+    .click()
+  const viewer = page.getByRole('dialog', { name: 'Image viewer' })
+  await viewer.getByRole('button', { name: 'Download image' }).click()
+  await expect(viewer.getByRole('alert')).toContainText('Couldn’t download here')
+  blocked = false
+  const downloading = page.waitForEvent('download')
+  await viewer.getByRole('button', { name: 'Download image' }).click()
+  await downloading
+  await expect(viewer.getByRole('alert')).toHaveCount(0)
+})
+
+test('requests opaque iPhone status chrome while retaining safe-area spacing', async ({ page }) => {
+  await expect(page.locator('meta[name="apple-mobile-web-app-status-bar-style"]')).toHaveAttribute('content', 'default')
+  await pane(page)
+    .getByRole('link', { name: /Open image 1 of 3/ })
+    .click()
+  const viewer = page.getByRole('dialog', { name: 'Image viewer' })
+  await expect(viewer).toHaveCSS('padding-top', '12px')
+  expect((await viewer.getByRole('button', { name: 'Close image viewer' }).boundingBox())!.y).toBeGreaterThanOrEqual(12)
+})
+
+for (const action of ['browse', 'close'] as const) {
+  test(`a pending download is cancelled when you ${action}`, async ({ page }) => {
+    let release!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await page.route('**/icon-512.png?full=0', async (route) => {
+      if (route.request().resourceType() !== 'fetch') return route.fallback()
+      await held
+      await route.fulfill({ status: 503, body: '' }).catch(() => {})
+    })
+    await pane(page)
+      .getByRole('link', { name: /Open image 1 of 3/ })
+      .click()
+    const viewer = page.getByRole('dialog', { name: 'Image viewer' })
+    const downloads: string[] = []
+    page.on('download', (download) => downloads.push(download.suggestedFilename()))
+    const requested = page.waitForRequest((request) => request.url().endsWith('?full=0') && request.resourceType() === 'fetch')
+    await viewer.getByRole('button', { name: 'Download image' }).click()
+    const request = await requested
+    await expect(viewer.getByRole('button', { name: 'Download image' })).toHaveAttribute('aria-busy', 'true')
+    const cancelled = page.waitForEvent('requestfailed', { predicate: (failed) => failed === request })
+    await viewer.getByRole('button', { name: action === 'browse' ? 'Next image' : 'Close image viewer' }).click()
+    await cancelled
+    release()
+    if (action === 'close')
+      await pane(page)
+        .getByRole('link', { name: /Open image 2 of 3/ })
+        .click()
+    await expect(viewer.getByRole('alert')).toHaveCount(0)
+    const downloading = page.waitForEvent('download')
+    await viewer.getByRole('button', { name: 'Download image' }).click()
+    expect((await downloading).suggestedFilename()).toBe('paperwing-image-2.png')
+    expect(downloads).toEqual(['paperwing-image-2.png'])
+    await expect(viewer.getByRole('alert')).toHaveCount(0)
+  })
+}

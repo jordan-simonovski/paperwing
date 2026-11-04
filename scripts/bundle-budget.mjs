@@ -7,7 +7,7 @@ import { gzipSync } from 'node:zlib'
 const BUDGET_KB = {
   entry: 300, // index.html's script and everything it statically imports
   css: 22,
-  totalJs: 560, // every chunk, lazy ones included (the service worker precaches them all)
+  totalJs: 565, // every chunk, including the lazy image zoom/download tools (precached by the service worker)
 }
 
 const dist = process.argv[2] ?? 'dist'
