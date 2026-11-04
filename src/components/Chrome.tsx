@@ -88,6 +88,9 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
       <RailLink to="/t/for-you" icon={<Sparkles size={16} />}>
         For you
       </RailLink>
+      <RailLink to="/explore/feeds" icon={<SourceIcon source="bluesky" size={16} />}>
+        Bluesky feeds
+      </RailLink>
       {tech && (
         <RailLink to="/t/front" icon={<Newspaper size={16} />}>
           Tech front pages
@@ -109,6 +112,19 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
           {followed.length ? 'Explore' : 'Pick your topics'}
         </RailLink>
       </div>
+
+      {bskyFeeds.length > 0 && (
+        <>
+          <p className="rail-group rail-label">Bluesky feeds</p>
+          <div className={gap}>
+            {bskyFeeds.map((f) => (
+              <RailLink key={f.uri} to={`/t/${bskyFeedChannel(f.uri)}`} icon={<SourceIcon source="bluesky" size={16} />}>
+                {f.name}
+              </RailLink>
+            ))}
+          </div>
+        </>
+      )}
 
       <p className="rail-group rail-label">Sources</p>
       <div className={gap}>
@@ -169,19 +185,6 @@ function RailLinks({ drawer }: { drawer?: boolean }) {
             {communities.map((c) => (
               <RailLink key={c.name} to={`/t/c:${c.name}`} icon={c.icon ? <img src={c.icon} alt="" className="size-4 rounded-full" loading="lazy" /> : <SourceIcon source="lemmy" size={16} />}>
                 {c.title}
-              </RailLink>
-            ))}
-          </div>
-        </>
-      )}
-
-      {bskyFeeds.length > 0 && (
-        <>
-          <p className="rail-group rail-label">Bluesky feeds</p>
-          <div className={gap}>
-            {bskyFeeds.map((f) => (
-              <RailLink key={f.uri} to={`/t/${bskyFeedChannel(f.uri)}`} icon={<SourceIcon source="bluesky" size={16} />}>
-                {f.name}
               </RailLink>
             ))}
           </div>

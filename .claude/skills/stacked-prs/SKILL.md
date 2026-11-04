@@ -18,19 +18,26 @@ and the [`gh stack` commands](https://docs.github.com/en/pull-requests/reference
 - **Never build a PR from someone else's uncommitted work.** If the tree holds changes that aren't
   yours, branch from `main` and carry only your own commits; anything you build on has to be a PR first.
 
+## Branches and contribution text
+
+Every working branch uses a purpose prefix (`feat/`, `bug/`, `chore/`, `docs/`,
+`refactor/` or `test/`) and a short kebab-case description. Never name a branch after an
+agent, assistant, vendor or model. Follow `AGENTS.md`: no agent attribution in commits,
+trailers, PR titles and descriptions, comments, release notes, documentation or code.
+
 ## Make a stack
 
 The extension is `github/gh-stack` (`gh extension install github/gh-stack`; needs gh 2.0+, Git 2.36+).
 
 ```sh
-gh stack init --base main feature-api        # the bottom layer; adopts the branch if it exists
+gh stack init --base main feat/api        # the bottom layer; adopts the branch if it exists
 # ...commit the first layer...
-gh stack add feature-ui                       # a new layer on top (be on the top branch)
+gh stack add feat/ui                       # a new layer on top (be on the top branch)
 # ...commit the next layer...
 gh stack submit --open                        # pushes every layer, opens a PR for each, links the stack
 ```
 
-To stack PRs that already exist, list them bottom to top: `gh stack link 41 42 feature-ui`.
+To stack PRs that already exist, list them bottom to top: `gh stack link 41 42 feat/ui`.
 `gh stack view` shows the chain; exit code 9 means stacks aren't enabled for the repository yet, which
 is a setting only the owner can change (ask; don't fall back to hand-made chains silently).
 

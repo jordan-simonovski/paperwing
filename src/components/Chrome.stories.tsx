@@ -29,6 +29,7 @@ export const Sidebar: Story = {
   parameters: { app: { prefs: follows, route: { path: '/t/:channel', url: '/t/for-you' } } },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('link', { name: 'For you' })).toHaveClass('active')
+    await expect(canvas.getByRole('link', { name: 'Bluesky feeds' })).toHaveAttribute('href', '/explore/feeds')
     await expect(canvas.queryByRole('link', { name: /Your profile/ })).toBeNull()
   },
 }
@@ -82,6 +83,7 @@ export const DrawerOpen: Story = {
   play: async ({ canvas }) => {
     const close = await canvas.findByRole('button', { name: 'Close menu' })
     await expect(canvas.getByRole('dialog', { name: 'Menu' })).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Bluesky feeds' })).toHaveAttribute('href', '/explore/feeds')
     // The menu deals its rows in, so wait for them to land.
     await waitFor(() => expect(canvas.getByRole('button', { name: 'Toggle dark mode' })).toBeVisible())
     await userEvent.click(close)

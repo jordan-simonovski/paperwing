@@ -20,7 +20,8 @@ Before committing:
   can be. UI you add or change has a story beside it (`*.stories.tsx`), rendered from its parameters only: no
   network, no shared state (see "Stories" in `CONTRIBUTING.md`).
 - If you changed what's stored or sent, the privacy and terms pages say so in the same change.
-- Commits carry no AI attribution: no `Co-Authored-By` or session trailers, and no model names anywhere in the repo.
+- Branch names use a purpose prefix: `feat/`, `bug/`, `chore/`, `docs/`, `refactor/` or `test/`, followed by a short kebab-case description. Never use an AI agent, assistant, vendor or model name in a branch name.
+- No AI or agent attribution anywhere in contributions: commits, trailers, PR titles and descriptions, review comments, release notes, documentation or code. Do not add generated-by notices, session links, AI co-authors or model names. Describe the work and its validation only.
 
 Before opening a pull request, and before any push to `main` (every commit there ships in the next release),
 run the `ship` skill (`.claude/skills/ship/SKILL.md`). It runs these steps in order:

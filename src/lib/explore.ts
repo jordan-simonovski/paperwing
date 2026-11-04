@@ -87,11 +87,11 @@ export async function findBlueskyFeeds(q: string): Promise<FeedHit[]> {
   return feeds.map((f) => ({ uri: f.uri, name: f.displayName, by: f.creator.handle, likes: f.likeCount ?? 0, description: f.description?.replace(/\s+/g, ' ').slice(0, 200), avatar: f.avatar }))
 }
 
-export function toggleBlueskyFeed(f: { uri: string; name: string }) {
+export function toggleBlueskyFeed(f: { uri: string; name: string }, onOpen?: () => void) {
   const { bskyFeeds, set } = usePrefs.getState()
   if (bskyFeeds.some((x) => x.uri === f.uri)) set({ bskyFeeds: bskyFeeds.filter((x) => x.uri !== f.uri) })
   else {
     set({ bskyFeeds: [...bskyFeeds, { uri: f.uri, name: f.name }] })
-    toast(`Added ${f.name}. It's under Bluesky feeds.`)
+    toast(`Added ${f.name}. Find it in Explore, Bluesky feeds.`, { action: onOpen ? { label: 'Open feed', run: onOpen } : undefined })
   }
 }

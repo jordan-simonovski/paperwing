@@ -44,7 +44,7 @@ export function FeedPage() {
   const read = useActivity((s) => s.read)
   const now = useNow()
   const [limit, setLimit] = useState(PAGE)
-  const base = actor ? `/u/${actor}` : boardDid && boardRkey ? `/c/${boardDid}/${boardRkey}` : `/t/${channelId}`
+  const base = actor ? `/u/${actor}` : boardDid && boardRkey ? `/c/${boardDid}/${boardRkey}` : `/t/${channelId.startsWith('feed:') ? encodeURIComponent(channelId) : channelId}`
   // On a board, the reading pane offers its moderators their actions.
   const { data: boardView } = useBoard(channel?.board?.did, channel?.board?.rkey)
 
@@ -149,7 +149,7 @@ export function FeedPage() {
               onRefresh={feed.refetch}
             />
             {OUTAGE_CHANNELS.has(channel.id) && <OutageBanner />}
-            <div role="feed" aria-busy={feed.loading}>
+            <div role={visible.length ? 'feed' : undefined} aria-busy={feed.loading}>
               {feed.loading && !visible.length && pretext && <TypesetLoader label={channel.label} />}
               {feed.loading && !visible.length && Array.from({ length: pretext ? 4 : 8 }, (_, i) => <RowSkeleton key={i} />)}
               {visible.slice(0, rendered).map((s, i) => (

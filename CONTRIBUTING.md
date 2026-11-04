@@ -51,6 +51,12 @@ quotes, a 200-character line). Format what you touched:
 npx prettier --write <files>
 ```
 
+Use purpose-based branch names: `feat/`, `bug/`, `chore/`, `docs/`, `refactor/` or `test/`,
+followed by a short kebab-case description. Never include agent, assistant, vendor or model names.
+Do not add agent attribution to commits, trailers, pull request titles or descriptions, comments,
+release notes, documentation or code. Describe the change and how it was checked; omit generated-by
+notices, session links and AI co-authors.
+
 Then:
 
 - Add a changeset for anything people can notice (`npx changeset`): it becomes an item in What's new. See [Releases](#releases).

@@ -104,6 +104,14 @@ record the mapping you actually used in the receipt.
 On either host, the quick built-in-review shortcut is unavailable unless the host
 actually exposes one. Continue with the official depth gate rather than claiming a run.
 
+## Public contribution text
+
+Follow `AGENTS.md` for branch naming and attribution. Working branches use purpose prefixes
+such as `feat/` or `bug/`, never agent, assistant, vendor or model names. PR titles,
+descriptions, comments, commits, release notes, documentation and code contain no agent
+attribution, generated-by notices or session links. Describe findings, scope and validation
+without crediting a tool or agent. Required execution metadata stays in private scratch receipts.
+
 ## Execution and receipts
 
 Follow the official scope, intent, conditional persona selection, dispatch,
