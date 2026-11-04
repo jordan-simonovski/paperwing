@@ -1,6 +1,6 @@
 import { employerByName, type Employer, type JobBoard } from '../../src/lib/employers.js'
 import type { Hiring, Opening } from '../../src/lib/hiringTypes.js'
-import { fetchText, UA } from './http.js'
+import { fetchJson, UA } from './http.js'
 
 export type { Hiring, Opening }
 
@@ -61,7 +61,7 @@ interface Read {
 
 // Ashby and Lever always send every role's full description: OpenAI's board is 13 MB.
 const BIG_BOARD = 40_000_000
-const getJson = async <T>(url: string): Promise<T> => JSON.parse((await fetchText(url, { maxBytes: BIG_BOARD, timeoutMs: 15_000, headers: { accept: 'application/json' } })).text) as T
+const getJson = <T>(url: string): Promise<T> => fetchJson<T>(url, { maxBytes: BIG_BOARD, timeoutMs: 15_000 })
 
 const role = (title: string, url: string, location: string, department: string, postedAt?: string): Opening => ({
   title: title.replace(/\s+/g, ' ').trim(),
@@ -203,9 +203,9 @@ export async function hiring(name: string, now = Date.now()): Promise<Hiring | u
   // big board claims to be new, its dates say nothing, so no "new" count is better than a wrong one.
   const cutoff = new Date(now - FRESH_DAYS * 86_400_000).toISOString().slice(0, 10)
   const recent = roles.filter((r) => r.postedAt && r.postedAt >= cutoff).length
-  // Workday shows only its newest page here, so it never gets a count either.
+  // Workday shows only its newest page here, so it never gets a count either, family facet or not.
   const reposts = roles.length >= 50 && recent / roles.length > 0.4
-  const fresh = families || reposts ? null : recent
+  const fresh = employer.board.ats === 'workday' || reposts ? null : recent
 
   return {
     employer: employer.name,

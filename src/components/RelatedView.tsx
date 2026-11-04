@@ -136,8 +136,9 @@ export function RelatedView({ story, onOpen, now, alsoOn, coverage = [] }: { sto
   // Coverage the feed already grouped, plus what a news search finds (only for stories that are news).
   const { stories: allCoverage, outlets: total, searching } = useOutlets(story, coverage)
   const outlets = total - 1
-  // A story about one employer's layoffs: what that employer is still hiring for.
-  const hiring = useMemo(() => hiringEmployer(story.title), [story.title])
+  // A report of one employer's layoffs (an article, or a WARN notice): what that employer is still
+  // hiring for. Not beside someone's own post about losing their job.
+  const hiring = useMemo(() => (story.url || story.source === 'warn' ? hiringEmployer(story.title) : undefined), [story.url, story.source, story.title])
 
   return (
     <div className="mx-auto max-w-[44rem] space-y-9 py-7">

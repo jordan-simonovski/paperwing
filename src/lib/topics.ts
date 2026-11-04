@@ -89,6 +89,9 @@ export interface Topic {
 
 const rss = (url: string, label: string): FeedRef => ({ kind: 'rss', url, label })
 
+/** The states whose WARN notices PaperWing reads (api/_lib/warn.ts has an adapter for each). */
+export const WARN_STATES = ['ca', 'wa', 'ny', 'tx', 'il', 'nj', 'ga', 'or', 'va', 'md', 'ct', 'az'] as const
+
 const TECH_TOPICS: Topic[] = [
   {
     id: 'ai',
@@ -779,7 +782,8 @@ const TECH_TOPICS: Topic[] = [
   },
   {
     id: 'layoffs',
-    mastodon: ['layoffs', 'techlayoffs'],
+    // No Mastodon hashtags and no Bluesky talk without a link (bskyFeeds.ts): #layoffs is mostly people
+    // posting about their own, and they deserve better than to be someone's feed.
     label: 'Layoffs',
     hue: 340,
     cluster: 'world',
@@ -793,7 +797,7 @@ const TECH_TOPICS: Topic[] = [
       // US employers with 100 or more staff must file a notice 60 days before a mass layoff. These
       // are the states where tech employers file most; only notices from employers PaperWing
       // follows (src/lib/employers.ts) come through.
-      ...['ca', 'wa', 'ny', 'tx', 'il', 'nj', 'ga', 'or', 'va', 'md', 'ct', 'az'].map((state): FeedRef => ({ kind: 'warn', state })),
+      ...WARN_STATES.map((state): FeedRef => ({ kind: 'warn', state })),
     ],
   },
 ]

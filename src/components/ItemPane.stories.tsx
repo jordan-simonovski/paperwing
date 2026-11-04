@@ -147,3 +147,42 @@ export const Removed: Story = {
     await expect(await canvas.findByText(/didn’t load|isn’t there any more/, {}, { timeout: 5000 })).toBeVisible()
   },
 }
+
+/** A WARN filing: no link and nothing to discuss. Even from a link, once loaded it opens on its details. */
+const notice = story({
+  key: 'wn-wa-1grz4f9',
+  source: 'warn',
+  sourceLabel: 'Washington WARN notices',
+  site: 'esd.wa.gov',
+  title: 'Microsoft gives notice of 277 layoffs in Redmond, Washington',
+  url: null,
+  discussionUrl: 'https://esd.wa.gov/about-employees/WARN',
+  hasThread: false,
+  score: undefined,
+  comments: undefined,
+  author: undefined,
+  text: '<p><strong>Filed by:</strong> Microsoft<br><strong>Workers affected:</strong> 277</p>',
+})
+const noticeQueries = (): [unknown[], unknown][] => [
+  [['thread', notice.key], { story: notice, comments: [] }],
+  [['coverage', notice.key], []],
+]
+
+export const WarnNotice: Story = {
+  args: { itemKey: notice.key },
+  parameters: { app: { route: at(notice.key), queries: noticeQueries() } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('tab', { name: 'Post', selected: true })).toBeVisible()
+    await expect(canvas.getByText('Workers affected:')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Watch replies' })).toBeNull()
+  },
+}
+
+/** Its Discussions tab says why there's nothing there, rather than inviting replies on a filing. */
+export const WarnNoticeDiscussions: Story = {
+  args: { itemKey: notice.key },
+  parameters: { app: { route: at(notice.key, 'discussion'), queries: noticeQueries() } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/This is a record, not a conversation/)).toBeVisible()
+  },
+}

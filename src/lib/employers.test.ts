@@ -95,3 +95,32 @@ describe('employerFiling with everyday-word names', () => {
     expect(employerFiling('Apple Valley Hospital')).toBeUndefined()
   })
 })
+
+describe('employerFiling with short or shared names', () => {
+  // Each of these is a real filer on a state's WARN list, and none is the employer whose name it starts with.
+  it('does not take a different company for one whose name starts the same way', () => {
+    expect(employerFiling('X-Energy, LLC')).toBeUndefined()
+    expect(employerFiling('EA Engineering, Science, and Technology, Inc., PBC')).toBeUndefined()
+    expect(employerFiling('HP Hood LLC')).toBeUndefined()
+    expect(employerFiling("Dell Children's Medical Center")).toBeUndefined()
+    expect(employerFiling('Oracle Elevator Company')).toBeUndefined()
+    expect(employerFiling('Indeed Brewing Company')).toBeUndefined()
+  })
+
+  it('still matches those employers’ own filings', () => {
+    expect(employerFiling('HP Inc.')?.name).toBe('HP')
+    expect(employerFiling('HP Inc. - Palo Alto')?.name).toBe('HP')
+    expect(employerFiling('Dell Technologies')?.name).toBe('Dell')
+    expect(employerFiling('Oracle America, Inc.')?.name).toBe('Oracle')
+    expect(employerFiling('Oracle America, Inc. - Redwood City')?.name).toBe('Oracle')
+    expect(employerFiling('X Corp')?.name).toBe('Twitter/X')
+    expect(employerFiling('Electronic Arts Inc.')?.name).toBe('Electronic Arts')
+  })
+})
+
+describe('hiringEmployer on WARN notices', () => {
+  it('reads the employer from a notice’s title, everyday-word names included', () => {
+    expect(hiringEmployer('Lyft gives notice of 120 layoffs in San Francisco, California')?.name).toBe('Lyft')
+    expect(hiringEmployer('Dropbox gives notice of 57 layoffs in California')?.name).toBe('Dropbox')
+  })
+})

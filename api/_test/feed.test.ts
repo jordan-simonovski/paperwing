@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { setUpstream } from '../_lib/http.js'
 import { FAN_OUT_PER_MINUTE, kv } from '../_lib/kv.js'
 import { STANDARD_COLD_READ_COST } from '../_lib/standard.js'
+import { WARN_STATES } from '../../src/lib/topics.js'
 import { call, fakeUpstreams } from './harness.js'
 import { GET, SOURCES } from '../feed.js'
 
@@ -142,7 +143,8 @@ describe('the fan-out allowance', () => {
   // discussing it), For you reading 20 followed people, 10 joined boards and board suggestions,
   // Follow blogs looking up 6 suggestions, a status channel with 5 custom pages, a releases channel
   // of 40 projects, a few notes, and 5 followed
-  // Standard.site publications read cold (their charge is in the loader, not SOURCES).
+  // Standard.site publications read cold (their charge is in the loader, not SOURCES), and the
+  // Layoffs topic refreshed cold (a WARN list per state) with three layoff stories opened.
   it('leaves room for the app’s own busiest minute', () => {
     const burst =
       30 * costOf('atlinks') +
@@ -153,7 +155,9 @@ describe('the fan-out allowance', () => {
       3 * costOf('notes') +
       10 * costOf('board') +
       costOf('boardpicks') +
-      5 * STANDARD_COLD_READ_COST
+      5 * STANDARD_COLD_READ_COST +
+      WARN_STATES.reduce((n, state) => n + costOf('warn', `state=${state}`), 0) +
+      3 * costOf('hiring')
     expect(burst).toBeLessThanOrEqual(FAN_OUT_PER_MINUTE)
   })
 

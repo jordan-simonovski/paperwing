@@ -103,6 +103,19 @@ describe('the hiring source', () => {
     expect(res.body.latest[0]).toMatchObject({ url: 'https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Senior-GPU-Architect_JR1', location: '' })
   })
 
+  it('gives a Workday board without job families no "new" count either: one page isn’t the board', async () => {
+    net
+      .get('https://zendesk.wd1.myworkdayjobs.com')
+      .intercept({ method: 'POST', path: '/wday/cxs/zendesk/zendesk/jobs' })
+      .reply(200, {
+        total: 141,
+        facets: [],
+        jobPostings: [{ title: 'Senior Software Engineer', externalPath: '/job/Remote/Senior-Software-Engineer_R1', locationsText: 'Remote', postedOn: 'Posted Today' }],
+      })
+    const res = await hiringOf('Zendesk')
+    expect(res.body).toMatchObject({ open: 141, fresh: null })
+  })
+
   it('gives no "new" count for a board that re-posts everything at once', async () => {
     const jobs = Array.from({ length: 60 }, (_, i) => ({ id: i, title: `Engineer ${i}`, absolute_url: `https://x.example/${i}`, first_published: daysAgo(3) }))
     net

@@ -317,7 +317,7 @@ export function SavedPage() {
                   story={s}
                   selected={s.key === (itemKey ?? cursor)}
                   read={stateOf(s.meta) === 'archive' || (!!read[s.key] && s.key !== itemKey && (s.meta.progress ?? 0) > 0.96)}
-                  onOpen={(k, tab) => open(k, tab ?? (s.url ? 'article' : 'discussion'))}
+                  onOpen={(k, tab) => open(k, tab ?? (s.url || !s.hasThread ? 'article' : 'discussion'))}
                   now={now}
                   note={<SavedNote m={s.meta} />}
                   swipe={{

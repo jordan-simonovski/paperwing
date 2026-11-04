@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Story, Thread } from '../../src/lib/types.js'
+import { kv } from '../_lib/kv.js'
 import { countOf, dateOf, noticesIn, noticeStory, parseCsv, type Notice } from '../_lib/warn.js'
 import { GET as feed } from '../feed.js'
 import { GET as thread } from '../thread.js'
@@ -67,6 +68,25 @@ describe('the warn source', () => {
     expect(res.body).toMatchObject({ story: { key: story.key }, comments: [] })
   })
 
+  it('says a notice that has aged out is still on the state’s list, not deleted', async () => {
+    californiaServes(caRow(3, 'Intel Corporation - SC-12', 46317, 67))
+    const res = await call<{ error: string }>(thread, '/api/thread?src=warn&id=wn-ca-zzzzzz')
+    expect(res.status).toBe(404)
+    expect(res.body.error).toContain('no longer in the last 120 days of California’s WARN list')
+    expect(res.body.error).not.toContain('deleted')
+  })
+
+  it('refuses a malformed notice key before reading any state', async () => {
+    // No upstream is faked: a fetch would fail the test.
+    expect((await call(thread, '/api/thread?src=warn&id=wn-ca-../../x')).status).toBe(400)
+    expect((await call(thread, '/api/thread?src=warn&id=wn-zz-abc')).status).toBe(404)
+  })
+
+  it('charges a notice link against the caller’s fan-out allowance, failing closed', async () => {
+    vi.spyOn(kv(), 'bump').mockRejectedValueOnce(new Error('Sync store answered 503'))
+    expect((await call(thread, '/api/thread?src=warn&id=wn-ca-abc123')).status).toBe(429)
+  })
+
   it('reads a paged web table (Washington), newest first', async () => {
     const table = (rows: string[][]) =>
       `<table><tr><th>Company</th><th>Location</th><th>Layoff Start Date</th><th># of Workers</th><th>Closure Layoff</th><th>Type of Layoff</th><th>Received Date</th></tr>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`
@@ -82,6 +102,20 @@ describe('the warn source', () => {
       )
     const res = await call<Story[]>(feed, '/api/feed?src=warn&state=wa')
     expect(res.body.map((s) => s.title)).toEqual(['Amazon gives notice of 95 layoffs in Seattle, Washington'])
+  })
+
+  it('remembers a state it couldn’t read for a while, rather than asking it again for every reader', async () => {
+    process.env.SYNC_MEMORY = '1'
+    try {
+      net.get('https://edd.ca.gov').intercept({ path: '/en/jobs_and_training/Layoff_Services_WARN' }).reply(503, 'busy')
+      expect((await call(feed, '/api/feed?src=warn&state=ca')).status).toBe(502)
+      // Nothing else is faked: a second read of the state would fail the test.
+      const again = await call<{ error: string }>(feed, '/api/feed?src=warn&state=ca')
+      expect(again.status).toBe(502)
+      expect(again.body.error).toContain('503')
+    } finally {
+      delete process.env.SYNC_MEMORY
+    }
   })
 
   it('refuses a state it doesn’t read', async () => {
@@ -159,5 +193,210 @@ describe('reading state tables', () => {
       ['Acme, Inc.', '10/30/2026'],
       ['Say "hi"\nthere', 'x'],
     ])
+  })
+})
+
+// Each state's own way of publishing, from a tiny fixture in its real shape: the page, the file and
+// the requests it takes. Every case has one tracked employer, so a story coming out proves the
+// adapter found the right link, the right sheet and the right columns.
+describe('each state’s adapter', () => {
+  const inline = (r: number, cells: (string | number | undefined)[]) =>
+    `<row r="${r}">${cells.map((c, i) => (c === undefined ? '' : typeof c === 'number' ? `<c r="${'ABCDEFGHIJ'[i]}${r}"><v>${c}</v></c>` : `<c r="${'ABCDEFGHIJ'[i]}${r}" t="inlineStr"><is><t>${c}</t></is></c>`)).join('')}</row>`
+  const sheet = (rows: (string | number | undefined)[][]) => rows.map((cells, i) => inline(i + 1, cells)).join('')
+  const titles = async (state: string) => {
+    const res = await call<Story[]>(feed, `/api/feed?src=warn&state=${state}`)
+    expect(res.status).toBe(200)
+    return res.body.map((s) => s.title)
+  }
+
+  it('New York: the CSV behind its Tableau dashboard', async () => {
+    net
+      .get('https://public.tableau.com')
+      .intercept({ path: '/views/WorkerAdjustmentRetrainingNotificationWARN/WARN.csv?:showVizHome=n' })
+      .reply(
+        200,
+        'Business Legal Name,Date Layoff/Closure Starts,Date of WARN Notice ,Impacted Site Address,Layoff or Closure?,Number of Affected Workers \nIBM Corporation,2026-12-01,2026-10-02,"1 New Orchard Rd, Armonk, NY, 10504",Layoff,120\n',
+      )
+    expect(await titles('ny')).toEqual(['IBM gives notice of 120 layoffs in New York'])
+  })
+
+  it('Texas: this year’s listing, found by its link', async () => {
+    net
+      .get('https://www.twc.texas.gov')
+      .intercept({ path: '/data-reports/warn-notice' })
+      .reply(200, '<a href="/sites/default/files/oei/docs/warn-act-listings-2026-twc.xlsx">2026</a> <a href="/sites/default/files/oei/docs/warn-act-listings-2024-twc.xlsx">2024</a>')
+    net
+      .get('https://www.twc.texas.gov')
+      .intercept({ path: '/sites/default/files/oei/docs/warn-act-listings-2026-twc.xlsx' })
+      .reply(
+        200,
+        Buffer.from(
+          workbook({
+            Sheet1: sheet([
+              ['NOTICE_DATE', 'JOB_SITE_NAME', 'TOTAL_LAYOFF_NUMBER', 'LayOff_Date', 'CITY_NAME'],
+              [46322, 'Oracle America, Inc.', 82, 46387, 'Austin'],
+            ]),
+          }),
+        ),
+      )
+    expect(await titles('tx')).toEqual(['Oracle gives notice of 82 layoffs in Austin, Texas'])
+  })
+
+  it('Illinois: only rows its export marks as WARN notices', async () => {
+    net
+      .get('https://apps.illinoisworknet.com')
+      .intercept({ path: (p) => p.startsWith('/iebs/api/public/export?') })
+      .reply(
+        200,
+        Buffer.from(
+          workbook({
+            Layoffs: sheet([
+              ['Location Name', 'Location City', 'WARN Notice', 'Reason', 'Expected Layoff', 'Initial Date Reported'],
+              ['Uber Technologies, Inc.', 'Chicago', 'TRUE', 'Restructuring', 363, 46300],
+              ['Salesforce, Inc.', 'Chicago', 'FALSE', 'Other', 12, 46300],
+            ]),
+          }),
+        ),
+      )
+    expect(await titles('il')).toEqual(['Uber gives notice of 363 layoffs in Chicago, Illinois'])
+  })
+
+  it('New Jersey: the month a notice was posted, from this year’s sheet', async () => {
+    net
+      .get('https://www.nj.gov')
+      .intercept({ path: '/labor/assets/PDFs/WARN/WARN_Notice_Archive.xlsx' })
+      .reply(
+        200,
+        Buffer.from(
+          workbook({
+            '2026 WARN Notices': sheet([
+              ['Company', 'City', 'Month Posted', 'Effective Date', 'Workforce Affected'],
+              ['Meta Platforms, Inc.', 'Statewide', 'October', 46400, 74],
+            ]),
+          }),
+        ),
+      )
+    const res = await call<Story[]>(feed, '/api/feed?src=warn&state=nj')
+    expect(res.body.map((s) => [s.title, new Date(s.createdAt).toISOString().slice(0, 10)])).toEqual([['Meta gives notice of 74 layoffs in New Jersey', '2026-10-01']])
+  })
+
+  it('Georgia: replays the page’s table settings, nonce included, with its cookie', async () => {
+    net
+      .get('https://www.tcsg.edu')
+      .intercept({ path: '/warn-public-view/' })
+      .reply(
+        200,
+        '<script>window.gvDTglobals.push({"ajax":{"url":"https:\\/\\/www.tcsg.edu\\/wp-admin\\/admin-ajax.php","type":"POST","data":{"action":"gv_datatables_data","view_id":77460,"nonce":"f425","shortcode_atts":{"id":77460}}}});</script>',
+        { headers: { 'set-cookie': 'wp=1; Path=/' } },
+      )
+    net
+      .get('https://www.tcsg.edu')
+      .intercept({ method: 'POST', path: '/wp-admin/admin-ajax.php', body: (b) => b.includes('nonce=f425') && b.includes('shortcode_atts%5Bid%5D=77460'), headers: { cookie: 'wp=1' } })
+      .reply(200, { data: [{ 0: '<a href="https://www.tcsg.edu/warn-public-view/entry/1/">GA2026001</a>', 1: 'Salesforce, Inc.', 2: 'October 30, 2026', 3: '67' }] })
+    expect(await titles('ga')).toEqual(['Salesforce gives notice of 67 layoffs in Georgia'])
+  })
+
+  it('Oregon: posts its form with the anti-forgery token for the spreadsheet', async () => {
+    const start = '/Layoff/WARN/Download'
+    net
+      .get('https://ccwd.hecc.oregon.gov')
+      .intercept({ path: start })
+      .reply(200, '<form><input name="__RequestVerificationToken" type="hidden" value="tok123" /></form>', { headers: { 'set-cookie': 'af=9; Path=/' } })
+    net
+      .get('https://ccwd.hecc.oregon.gov')
+      .intercept({ method: 'POST', path: start, body: (b) => b.includes('__RequestVerificationToken=tok123') && b.includes('WARNFormat=xlsx'), headers: { cookie: 'af=9' } })
+      .reply(200, '<a class="btn btn-primary" href="/Layoff/WARN/Download/GetFile?id=77">Download</a>')
+    net
+      .get('https://ccwd.hecc.oregon.gov')
+      .intercept({ path: '/Layoff/WARN/Download/GetFile?id=77' })
+      .reply(
+        200,
+        Buffer.from(
+          workbook({
+            Sheet1: sheet([
+              ['Oregon WARN notices'],
+              [],
+              ['WARN#', 'Company Name', 'Location', 'Layoff Date', 'Laid Off', 'Layoff Type', 'Received Date'],
+              [9651, 'Intel Corporation', 'Hillsboro', 46387, 150, 'Large Layoff', 46320],
+            ]),
+          }),
+        ),
+      )
+    expect(await titles('or')).toEqual(['Intel gives notice of 150 layoffs in Hillsboro, Oregon'])
+  })
+
+  it('Virginia: the CSV export its page links, whatever it’s called today', async () => {
+    net.get('https://www.virginiaworks.gov').intercept({ path: '/warn-notices/' }).reply(200, '<a href="/warn_notices_1793760343.csv">Download</a>')
+    net
+      .get('https://www.virginiaworks.gov')
+      .intercept({ path: '/warn_notices_1793760343.csv' })
+      .reply(200, 'Company,Notice Date,Impact Date,Employees Affected,Location,Notice Type\n"Amazon.com Services LLC",10/30/2026,12/31/2026,201,Herndon,Layoff\n')
+    expect(await titles('va')).toEqual(['Amazon gives notice of 201 layoffs in Herndon, Virginia'])
+  })
+
+  it('Maryland: this year’s table on the page itself', async () => {
+    net
+      .get('https://www.dllr.state.md.us')
+      .intercept({ path: '/employment/warn.shtml' })
+      .reply(
+        200,
+        '<table><tr><th>Notice Date</th><th>NAICS</th><th>Company</th><th>Location</th><th>Total Employees</th></tr><tr><td>10/30/2026</td><td>5182</td><td>Amazon Data Services, Inc.</td><td>Baltimore</td><td>88</td></tr></table>',
+      )
+    expect(await titles('md')).toEqual(['Amazon gives notice of 88 layoffs in Baltimore, Maryland'])
+  })
+
+  it('Connecticut: the document library’s JSON listing, with the cookie its page sets', async () => {
+    net
+      .get('https://dolpublicdocumentlibrary.ct.gov')
+      .intercept({ path: '/CsblrCategory?prefix=%2Frapid_response%2Fwarn_documents' })
+      .reply(200, '<html></html>', { headers: { 'set-cookie': 'lib=5; Path=/' } })
+    net
+      .get('https://dolpublicdocumentlibrary.ct.gov')
+      .intercept({ path: (p) => p.startsWith('/CsblrCategory/GetSpecializedData?'), headers: { cookie: 'lib=5' } })
+      .reply(200, {
+        totalPages: 1,
+        blobItems: [{ blobProperties: { affected_company: 'Oracle America, Inc.', warn_document_received_date: '10/29/2026', number_of_impacted_workers: '31', layoff_locations: 'Stamford' } }],
+      })
+    expect(await titles('ct')).toEqual(['Oracle gives notice of 31 layoffs in Stamford, Connecticut'])
+  })
+
+  it('Arizona: its paged search, which gives no headcount', async () => {
+    const page = (rows: string[][]) =>
+      `<table><tr><th>Employer</th><th>City</th><th>ZIP</th><th>Notice Date</th><th>WARN Type</th></tr>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`
+    net
+      .get('https://www.azjobconnection.gov')
+      .intercept({ path: (p) => p.startsWith('/search/warn_lookups?') && p.includes('page=1') })
+      .reply(200, page([['PayPal, Inc.', 'Scottsdale', '85260', 'Sep 15, 2026', 'WARN']]))
+    expect(await titles('az')).toEqual(['PayPal gives notice of layoffs in Scottsdale, Arizona'])
+  })
+
+  it('Arizona: says so when its first page has no table, rather than serving no notices', async () => {
+    net
+      .get('https://www.azjobconnection.gov')
+      .intercept({ path: (p) => p.startsWith('/search/warn_lookups?') })
+      .reply(200, '<p>Service unavailable</p>')
+    expect((await call(feed, '/api/feed?src=warn&state=az')).status).toBe(502)
+  })
+
+  it('Washington: follows its pages until they reach back past the window', async () => {
+    const page = (rows: string[][]) =>
+      `<form><input type="hidden" name="__VIEWSTATE" value="vs${rows.length}" /><input type="hidden" name="__EVENTVALIDATION" value="ev" /></form><table><tr><th>Company</th><th>Location</th><th>Layoff Start Date</th><th># of Workers</th><th>Type of Layoff</th><th>Received Date</th></tr>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`
+    const path = '/esd/file/warn/Public/SearchWARN.aspx'
+    net
+      .get('https://fortress.wa.gov')
+      .intercept({ path })
+      .reply(200, page([['Amazon', 'Seattle', '12/7/2026', '95', 'Permanent', '11/2/2026']]))
+    net
+      .get('https://fortress.wa.gov')
+      .intercept({ method: 'POST', path, body: (b) => b.includes('__EVENTARGUMENT=Page%242') && b.includes('__VIEWSTATE=vs1') })
+      .reply(
+        200,
+        page([
+          ['Expedia', 'Seattle', '11/20/2026', '58', 'Permanent', '9/22/2026'],
+          ['Microsoft', 'Redmond', '3/1/2026', '10', 'Permanent', '1/5/2026'],
+        ]),
+      )
+    // No third page is faked: asking for one would fail the test.
+    expect(await titles('wa')).toEqual(['Amazon gives notice of 95 layoffs in Seattle, Washington', 'Expedia gives notice of 58 layoffs in Seattle, Washington'])
   })
 })

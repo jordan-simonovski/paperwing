@@ -1,8 +1,9 @@
 import { parseHTML } from 'linkedom'
 import { employerFiling } from '../../src/lib/employers.js'
+import { WARN_STATES } from '../../src/lib/topics.js'
 import type { Story, Thread } from '../../src/lib/types.js'
 import { decodeEntities, readLimited, safeFetch, UA } from './http.js'
-import { cachedInKv } from './kv.js'
+import { cachedInKv, kv, kvConfigured } from './kv.js'
 import { escapeHtml } from './text.js'
 import { excelDate, readXlsx, type Cell, type Row } from './xlsx.js'
 
@@ -13,7 +14,7 @@ import { excelDate, readXlsx, type Cell, type Row } from './xlsx.js'
 // follow Big Local News's warn-scraper (Apache 2.0), which documents how each state publishes.
 // Every host is fixed in code.
 
-export type StateCode = 'ca' | 'wa' | 'ny' | 'tx' | 'il' | 'nj' | 'ga' | 'or' | 'va' | 'md' | 'ct' | 'az'
+export type StateCode = (typeof WARN_STATES)[number]
 
 export interface Notice {
   state: StateCode
@@ -221,14 +222,15 @@ export const STATES: Record<StateCode, State> = {
       let html = (await get(url)).text()
       const out: Notice[] = []
       const columns = { filer: /^company/, noticed: /^received/, starts: /layoff start/, workers: /# of workers/, place: /^location/, kind: /type of layoff|closure/ }
-      for (let page = 2; page <= 12; page++) {
+      for (let page = 1; ; page++) {
         const found = noticesIn('wa', htmlRows(html), columns)
         out.push(...found)
-        // Newest first: once a page reaches back past the window, the rest are older still.
-        if (!found.length || found.some((n) => n.noticed < since)) break
+        // Newest first: once a page reaches back past the window, the rest are older still. Eleven
+        // pages is well past any 120 days Washington has seen.
+        if (!found.length || found.some((n) => n.noticed < since) || page === 11) break
         const body = new URLSearchParams({
           __EVENTTARGET: 'ucPSW$gvMain',
-          __EVENTARGUMENT: `Page$${page}`,
+          __EVENTARGUMENT: `Page$${page + 1}`,
           __VIEWSTATE: formValue(html, '__VIEWSTATE'),
           __VIEWSTATEGENERATOR: formValue(html, '__VIEWSTATEGENERATOR'),
           __EVENTVALIDATION: formValue(html, '__EVENTVALIDATION'),
@@ -412,7 +414,11 @@ export const STATES: Record<StateCode, State> = {
       for (let page = 1; page <= 5; page++) {
         const html = (await get(`https://www.azjobconnection.gov/search/warn_lookups?q%5Bnotice_eq%5D=true&q%5Bnotice_on_gteq%5D=${since}&page=${page}`)).text()
         const rows = htmlRows(html)
-        if (rows.length < 2) break // past the last page
+        // Past the last page; on the first, no table at all is an error page, not an empty list.
+        if (rows.length < 2) {
+          if (page === 1 && !rows.length) throw new Error('Arizona’s WARN search answered without its table')
+          break
+        }
         // Arizona's table gives no headcount.
         const found = noticesIn('az', rows, { filer: /^employer/, noticed: /^notice date/, place: /^city/, kind: /warn type/ })
         out.push(...found)
@@ -502,10 +508,46 @@ export function noticeStory(n: Notice): Story | undefined {
   }
 }
 
-/** One state's notices in the window, cached for everyone: states update a few times a week. */
+/** A notice's key: its state and the hash of what it says (noticeStory). */
+export const WARN_KEY = /^wn-([a-z]{2})-([0-9a-z]{1,8})$/
+
+/** A notice that isn't (or is no longer) in its state's list as PaperWing reads it. */
+export class NoticeGone extends Error {}
+
+/**
+ * What reading a state asks of it beyond one fetch, against the caller's fan-out allowance
+ * (api/feed.ts): Washington and Arizona page through results and Oregon takes three steps. The
+ * rest are a page and a file at most, and every state's list is shared by all readers through KV.
+ */
+export const WARN_COST: Partial<Record<StateCode, number>> = { wa: 2, az: 1, or: 1 }
+
+/**
+ * One state's notices in the window, cached for everyone: states update a few times a week. A
+ * failed read is remembered for ten minutes too, so a state whose page has changed is asked once
+ * in that time, not once per reader.
+ */
 export async function stateNotices(state: StateCode, now = Date.now()): Promise<Notice[]> {
   const since = new Date(now - WINDOW_DAYS * 86_400_000).toISOString().slice(0, 10)
-  return cachedInKv(`warn:${state}:${since}`, 6 * 3600, async () => (await STATES[state].read(since)).filter((n) => n.noticed >= since))
+  const failed = `warn:${state}:failed`
+  if (kvConfigured()) {
+    const reason = await kv()
+      .get(failed)
+      .catch(() => null)
+    if (reason) throw new Error(reason)
+  }
+  try {
+    // Keyed by state alone, and the window applied again on the way out, so the cache doesn't
+    // empty for everyone at once when the window moves on at midnight.
+    const notices = await cachedInKv(`warn:${state}`, 6 * 3600, async () => (await STATES[state].read(since)).filter((n) => n.noticed >= since))
+    return notices.filter((n) => n.noticed >= since)
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : 'The state’s WARN list could not be read'
+    if (kvConfigured())
+      await kv()
+        .set(failed, reason, 600)
+        .catch(() => {})
+    throw err
+  }
 }
 
 /** A state's notices from employers PaperWing follows, newest first, as stories. */
@@ -519,9 +561,10 @@ export async function warnStories(state: StateCode, now = Date.now()): Promise<S
 
 /** One notice, by its story key, for a link to it: the story and no replies (there's nothing to discuss on a filing). */
 export async function warnThread(key: string, now = Date.now()): Promise<Thread> {
-  const state = /^wn-([a-z]{2})-/.exec(key)?.[1] ?? ''
-  if (!isState(state)) throw new Error('Unknown WARN notice')
+  const state = WARN_KEY.exec(key)?.[1] ?? ''
+  if (!isState(state)) throw new NoticeGone('Not a WARN notice PaperWing knows')
   const story = (await warnStories(state, now)).find((s) => s.key === key)
-  if (!story) throw new Error('This notice is older than PaperWing reaches back (404)')
+  // Not deleted: states keep their lists. It has aged out of the window PaperWing reads, or its details changed.
+  if (!story) throw new NoticeGone(`This notice is no longer in the last ${WINDOW_DAYS} days of ${STATES[state].name}’s WARN list that PaperWing reads. The state’s own list has it.`)
   return { story, comments: [] }
 }

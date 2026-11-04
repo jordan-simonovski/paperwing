@@ -90,7 +90,10 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
     if (headline.current && title) landHeadline(itemKey, headline.current, headline.current.closest<HTMLElement>('.pane-col'))
   }, [itemKey, title])
 
-  const tab = (params.get('tab') as PaneTab | null) ?? (threadable ? 'discussion' : 'article')
+  // A deep link to a story with nothing to discuss (a WARN filing) is fetched like a thread, and only
+  // says so once it arrives: from then on it's shown as what it is, opening on its own words.
+  const discussable = threadable && story?.hasThread !== false
+  const tab = (params.get('tab') as PaneTab | null) ?? (discussable ? 'discussion' : 'article')
   const setTab = (t: PaneTab) =>
     setParams(
       (p) => {
@@ -202,7 +205,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
           <span className="truncate">{sourceName}</span>
         </span>
         <div className="ml-auto flex items-center gap-0.5">
-          {threadable && (
+          {discussable && (
             <button
               className="icon-btn"
               onClick={() => toggleWatch(story)}
@@ -320,14 +323,14 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
             <div className="seg mt-6" role="tablist">
               {(
                 [
-                  ['discussion', threadable ? 'Discussion' : 'Discussions'],
+                  ['discussion', discussable ? 'Discussion' : 'Discussions'],
                   ['article', story.url ? 'Article' : 'Post'],
                   ['related', 'Related'],
                 ] as const
               ).map(([id, label]) => (
                 <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
                   {label}
-                  {id === 'discussion' && threadable && story.comments !== undefined && <span className="num ml-1.5 font-normal text-ink-3">{compact(story.comments)}</span>}
+                  {id === 'discussion' && discussable && story.comments !== undefined && <span className="num ml-1.5 font-normal text-ink-3">{compact(story.comments)}</span>}
                 </button>
               ))}
             </div>
@@ -335,7 +338,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
 
           <div className="mx-auto max-w-[44rem]">
             {tab === 'discussion' &&
-              (threadable ? (
+              (discussable ? (
                 <div className="pt-4">
                   {(story.text || story.media || story.quote) && (
                     <div className="mb-2 rounded-2xl bg-sunk p-5">
@@ -398,7 +401,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
                   )}
                 </div>
               ))}
-            {tab === 'article' && <ArticleView story={story} onDiscussion={threadable ? () => setTab('discussion') : undefined} />}
+            {tab === 'article' && <ArticleView story={story} onDiscussion={discussable ? () => setTab('discussion') : undefined} />}
             {tab === 'related' && <RelatedView story={story} onOpen={(k) => onOpen(k)} now={now} alsoOn={alsoOn} coverage={coverage} />}
           </div>
         </div>

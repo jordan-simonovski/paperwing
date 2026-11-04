@@ -68,7 +68,7 @@ export const EMPLOYERS: Employer[] = [
   { name: 'Datadog', board: { ats: 'greenhouse', slug: 'datadog' } },
   { name: 'dbt Labs' },
   { name: 'Deel' },
-  { name: 'Dell' },
+  { name: 'Dell', aliases: ['Dell Technologies'], generic: true },
   { name: 'DigitalOcean' },
   { name: 'Discord', generic: true, board: { ats: 'greenhouse', slug: 'discord' } },
   { name: 'Docker', generic: true, board: { ats: 'ashby', slug: 'docker' } },
@@ -101,7 +101,7 @@ export const EMPLOYERS: Employer[] = [
   { name: 'HubSpot' },
   { name: 'Hugging Face' },
   { name: 'IBM' },
-  { name: 'Indeed' },
+  { name: 'Indeed', generic: true },
   { name: 'Instacart', board: { ats: 'greenhouse', slug: 'instacart' } },
   { name: 'Intel', board: { ats: 'workday', tenant: 'intel', wd: 1, site: 'External' } },
   { name: 'Intercom', aliases: ['Fin'], generic: true, board: { ats: 'greenhouse', slug: 'intercom' } },
@@ -136,7 +136,7 @@ export const EMPLOYERS: Employer[] = [
   { name: 'Okta', generic: true, board: { ats: 'greenhouse', slug: 'okta' } },
   { name: 'OpenAI', board: { ats: 'ashby', slug: 'openai' } },
   { name: 'Opendoor' },
-  { name: 'Oracle' },
+  { name: 'Oracle', aliases: ['Oracle America'], generic: true },
   { name: 'Outreach', generic: true, board: { ats: 'lever', slug: 'outreach' } },
   { name: 'PagerDuty', board: { ats: 'greenhouse', slug: 'pagerduty' } },
   { name: 'Palantir', board: { ats: 'lever', slug: 'palantir' } },
@@ -236,10 +236,11 @@ for (const e of EMPLOYERS) {
     const key = legalName(n)
     if (!key) continue
     if (!exact.has(key)) exact.set(key, e)
-    // "Amazon - SJC13" is Amazon, but "Block Builders" isn't Block: an everyday-word name only
-    // prefix-matches through a name of two words or more ("Meta Platforms - Menlo Park"), or with its
-    // legal suffix still on ("Apple, Inc. - Cupertino").
-    if (!e.generic || key.includes(' ')) prefixes.push([key, e])
+    // "Amazon - SJC13" is Amazon, but "Block Builders" isn't Block and "HP Hood" isn't HP: an
+    // everyday-word or very short name only prefix-matches through a name of two words or more
+    // ("Meta Platforms - Menlo Park"), or with its legal suffix still on ("Apple, Inc. - Cupertino").
+    const ambiguous = e.generic || (!key.includes(' ') && key.length <= 3)
+    if (!ambiguous || key.includes(' ')) prefixes.push([key, e])
     else for (const suffix of ['inc', 'llc', 'corp', 'corporation']) prefixes.push([`${key} ${suffix}`, e])
   }
 }
@@ -254,8 +255,8 @@ export function employerFiling(filer: string): Employer | undefined {
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-/** Words that say a company is cutting, right after its name: "Block lays off", "Linear's layoffs". */
-const CUTTING = String.raw`(?:['’]s)?\s+(?:is\s+|will\s+|to\s+|has\s+|reportedly\s+)?(?:lay|lays|laid|laying|cut|cuts|cutting|slash|slashes|eliminat\w*|layoffs?|job cuts|announce\w*|begins?)\b`
+/** Words that say a company is cutting, right after its name: "Block lays off", "Linear's layoffs", "Lyft gives notice" (a WARN notice's title). */
+const CUTTING = String.raw`(?:['’]s)?\s+(?:is\s+|will\s+|to\s+|has\s+|reportedly\s+)?(?:lay|lays|laid|laying|cut|cuts|cutting|slash|slashes|eliminat\w*|layoffs?|job cuts|announce\w*|begins?|gives\s+notice)\b`
 const mentions = EMPLOYERS.map((e) => {
   const names = namesOf(e)
     .filter((n) => n.length > 1)
