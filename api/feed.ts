@@ -150,7 +150,10 @@ export const SOURCES: Record<FeedSource, Source> = {
   warn: {
     ttl: 10_800,
     stale: 86_400,
-    cost: (p) => WARN_COST[(p.get('state') ?? '').toLowerCase() as keyof typeof WARN_COST] ?? 0,
+    cost: (p) => {
+      const state = (p.get('state') ?? '').toLowerCase()
+      return Object.hasOwn(WARN_COST, state) ? (WARN_COST[state as keyof typeof WARN_COST] ?? 0) : 0
+    },
     run: (p) => {
       const state = (p.get('state') ?? '').toLowerCase()
       if (!isState(state)) throw new BadRequest('state (a two-letter code PaperWing reads) required')

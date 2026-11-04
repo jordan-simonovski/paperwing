@@ -53,6 +53,57 @@ export const NobodyElse: Story = {
   parameters: { app: { queries: [[['discussions', s.url], []]] } },
 }
 
+const dropboxHiring = {
+  employer: 'Dropbox',
+  board: 'https://job-boards.greenhouse.io/dropbox',
+  open: 31,
+  fresh: 10,
+  functions: [
+    ['Engineering', 10],
+    ['Marketing', 6],
+  ],
+  latest: [],
+}
+
+/** Someone's own post about losing their job: no Still hiring panel beside it, only beside reporting. */
+export const OwnLayoffPost: Story = {
+  args: {
+    story: story({
+      key: 'bs-own',
+      source: 'bluesky',
+      sourceLabel: 'Bluesky',
+      title: 'Dropbox laid off my whole team today. Rough one.',
+      url: null,
+      discussionUrl: 'https://bsky.app/profile/a/post/1',
+    }),
+  },
+  parameters: { app: { queries: [[['hiring', 'Dropbox'], dropboxHiring]] } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: "Similar stories you've loaded" })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Still hiring' })).toBeNull()
+  },
+}
+
+/** A WARN notice has no link, but it is a record of layoffs: the panel shows beside it. */
+export const WarnNotice: Story = {
+  args: {
+    story: story({
+      key: 'wn-ca-abc123',
+      source: 'warn',
+      sourceLabel: 'California WARN notices',
+      site: 'edd.ca.gov',
+      title: 'Dropbox gives notice of 57 layoffs in California',
+      url: null,
+      discussionUrl: 'https://edd.ca.gov/en/jobs_and_training/Layoff_Services_WARN',
+      hasThread: false,
+    }),
+  },
+  parameters: { app: { queries: [[['hiring', 'Dropbox'], dropboxHiring]] } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Still hiring' })).toBeVisible()
+  },
+}
+
 /** A story about one employer's layoffs: what it's still hiring for comes first after the coverage. */
 export const LayoffStory: Story = {
   args: { story: story({ key: 'hn-layoff', title: 'Dropbox is laying off roughly 9% of its workforce', url: 'https://www.businessinsider.com/dropbox-layoffs' }) },

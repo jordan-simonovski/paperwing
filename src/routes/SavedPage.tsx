@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { SOURCE_NAMES } from '../components/Source'
 import { Split, useListKeys } from '../components/Split'
-import { StoryRow, toggleArchived, toggleSaved, toggleWatch } from '../components/StoryRow'
+import { openingTab, StoryRow, toggleArchived, toggleSaved, toggleWatch } from '../components/StoryRow'
 import { useNow } from '../lib/hooks'
 import { stateOf, totalComments, useLibrary, type SavedMeta, type SavedState } from '../lib/library'
 import type { Ranked } from '../lib/rank'
@@ -317,7 +317,7 @@ export function SavedPage() {
                   story={s}
                   selected={s.key === (itemKey ?? cursor)}
                   read={stateOf(s.meta) === 'archive' || (!!read[s.key] && s.key !== itemKey && (s.meta.progress ?? 0) > 0.96)}
-                  onOpen={(k, tab) => open(k, tab ?? (s.url || !s.hasThread ? 'article' : 'discussion'))}
+                  onOpen={(k, tab) => open(k, tab ?? openingTab(s))}
                   now={now}
                   note={<SavedNote m={s.meta} />}
                   swipe={{

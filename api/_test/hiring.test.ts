@@ -126,6 +126,24 @@ describe('the hiring source', () => {
     expect(res.body).toMatchObject({ open: 60, fresh: null })
   })
 
+  it('reads a board once for everyone for a while, however the request is dressed up', async () => {
+    process.env.SYNC_MEMORY = '1'
+    try {
+      net
+        .get('https://boards-api.greenhouse.io')
+        .intercept({ path: '/v1/boards/dropbox/departments' })
+        .reply(200, {
+          departments: [{ name: 'Engineering', jobs: [{ id: 1, title: 'Senior Backend Engineer', absolute_url: 'https://job-boards.greenhouse.io/dropbox/jobs/1', first_published: daysAgo(2) }] }],
+        })
+      expect((await hiringOf('Dropbox')).body.open).toBe(1)
+      // Nothing else is faked: a second read of the board would fail the test.
+      const again = await call<Hiring>(GET, '/api/feed?src=hiring&employer=Dropbox&cachebust=1')
+      expect(again.body.open).toBe(1)
+    } finally {
+      delete process.env.SYNC_MEMORY
+    }
+  })
+
   it('refuses a name that is not an employer PaperWing follows, without fetching anything', async () => {
     const res = await hiringOf('Evil Corp')
     expect(res.status).toBe(400)

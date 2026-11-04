@@ -1,6 +1,7 @@
 import { employerByName, type Employer, type JobBoard } from '../../src/lib/employers.js'
 import type { Hiring, Opening } from '../../src/lib/hiringTypes.js'
 import { fetchJson, UA } from './http.js'
+import { cachedInKv } from './kv.js'
 
 export type { Hiring, Opening }
 
@@ -188,11 +189,20 @@ function read(b: JobBoard, now: number): Promise<Read> {
 const FRESH_DAYS = 14
 const LATEST = 6
 
-/** Openings for one of EMPLOYERS, by name. Undefined for a name that isn't one, or has no board. */
+/**
+ * Openings for one of EMPLOYERS, by name. Undefined for a name that isn't one, or has no board.
+ * Each board is read once for everyone every six hours: some are tens of megabytes, and one fetch
+ * never counts against a reader's fan-out allowance, so the cache is what keeps it to one.
+ */
 export async function hiring(name: string, now = Date.now()): Promise<Hiring | undefined> {
   const employer: Employer | undefined = employerByName(name)
   if (!employer?.board) return undefined
-  const { roles, total, families } = await read(employer.board, now)
+  const board = employer.board
+  return cachedInKv(`hiring:${employer.name}`, 6 * 3600, () => summarise(employer, board, now))
+}
+
+async function summarise(employer: Employer, board: JobBoard, now: number): Promise<Hiring> {
+  const { roles, total, families } = await read(board, now)
   const open = total ?? roles.length
 
   const counts = new Map<string, number>()
@@ -205,11 +215,11 @@ export async function hiring(name: string, now = Date.now()): Promise<Hiring | u
   const recent = roles.filter((r) => r.postedAt && r.postedAt >= cutoff).length
   // Workday shows only its newest page here, so it never gets a count either, family facet or not.
   const reposts = roles.length >= 50 && recent / roles.length > 0.4
-  const fresh = employer.board.ats === 'workday' || reposts ? null : recent
+  const fresh = board.ats === 'workday' || reposts ? null : recent
 
   return {
     employer: employer.name,
-    board: boardUrl(employer.board),
+    board: boardUrl(board),
     open,
     fresh,
     functions: [...counts].sort((a, b) => b[1] - a[1]),

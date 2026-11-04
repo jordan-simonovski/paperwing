@@ -251,7 +251,12 @@ export function employerFiling(filer: string): Employer | undefined {
   const key = legalName(filer)
   const hit = exact.get(key)
   if (hit) return hit
-  return prefixes.find(([p]) => key.startsWith(p + ' '))?.[1]
+  const prefixed = prefixes.find(([p]) => key.startsWith(p + ' '))?.[1]
+  if (prefixed) return prefixed
+  // "IBM - Research Triangle Park": a site set off by a spaced dash leaves the employer's own name
+  // before it, which even a short or everyday-word name can be matched on exactly.
+  const site = /^(.+?)\s+[-–—]\s+\S/.exec(filer)
+  return site ? exact.get(legalName(site[1])) : undefined
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
