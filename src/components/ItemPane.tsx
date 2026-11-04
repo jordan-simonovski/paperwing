@@ -132,6 +132,11 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
     if (useLibrary.getState().items[itemKey]) void useLibrary.getState().markSeen(itemKey)
     scrollRef.current?.scrollTo({ top: 0 })
   }, [itemKey])
+  // Opening a story teaches the taste profile a little, once it's here (a shared link can arrive before its story).
+  useEffect(() => {
+    if (story) useActivity.getState().noteOpen(story)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.key])
   // Staying with a story for 45 seconds in sight teaches the taste profile a little (store.ts, linger).
   const lingering = story
   useEffect(() => {

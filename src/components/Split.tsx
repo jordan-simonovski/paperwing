@@ -164,6 +164,7 @@ export function useListKeys(stories: Story[], itemKey: string | undefined, base:
         case 'o':
           if (current) {
             useActivity.getState().markRead(current.key)
+            useActivity.getState().noteOpen(current)
             const target = current.url ?? current.discussionUrl ?? ''
             // Story links come from feeds and sync; only ever open web addresses.
             if (/^https?:\/\//i.test(target)) window.open(target, '_blank', 'noopener')

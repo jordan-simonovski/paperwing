@@ -267,9 +267,10 @@ function capped(map: Record<string, number>): Record<string, number> {
 
 /**
  * How much each signal teaches the taste profile: a vote the most, a save half that, a hide less;
- * staying with a story a little, and passing one on three visits without opening it less still.
+ * staying with a story a little, and opening one, or passing one on three visits without opening
+ * it, less still. A tap is interest, but a headline can earn one the story doesn't.
  */
-export const LESSON = { vote: 1.5, save: 0.75, hide: 0.6, linger: 0.3, pass: 0.15 }
+export const LESSON = { vote: 1.5, save: 0.75, hide: 0.6, linger: 0.3, open: 0.15, pass: 0.15 }
 /** Visits a story is passed on, unopened, before that teaches the profile anything. */
 const PASSED_ON = 3
 
@@ -306,6 +307,10 @@ interface Activity {
   lingered: Record<string, number>
   /** You stayed with a story: teaches the profile a little, once. */
   linger: (story: Story & { topics?: string[] }) => void
+  /** key -> when opening it taught the profile (once a story). */
+  opened: Record<string, number>
+  /** You opened a story: teaches the profile a little, once. */
+  noteOpen: (story: Story & { topics?: string[] }) => void
   markRead: (key: string) => void
   toggleHidden: (key: string) => void
   /** Records a thread visit and returns the time of the previous one. */
@@ -321,6 +326,7 @@ export const useActivity = create<Activity>()(
       impressions: {},
       glimpses: {},
       lingered: {},
+      opened: {},
       votes: {},
       sites: {},
       noteSite: (key, url) => {
@@ -375,6 +381,11 @@ export const useActivity = create<Activity>()(
         if (get().lingered[story.key]) return
         set((s) => ({ lingered: capped({ ...s.lingered, [story.key]: Date.now() }) }))
         usePrefs.getState().learn(story, LESSON.linger, { passive: true })
+      },
+      noteOpen: (story) => {
+        if (get().opened[story.key]) return
+        set((s) => ({ opened: capped({ ...s.opened, [story.key]: Date.now() }) }))
+        usePrefs.getState().learn(story, LESSON.open, { passive: true })
       },
       markRead: (key) => {
         if (!get().read[key]) set((s) => ({ read: capped({ ...s.read, [key]: Date.now() }) }))
