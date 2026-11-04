@@ -58,7 +58,7 @@ export function isTyping(e: KeyboardEvent): boolean {
  * top (its keys are its own, Escape included, and "x" mustn't hide the story underneath).
  */
 export function keysBelongElsewhere(e: KeyboardEvent): boolean {
-  return isTyping(e) || e.metaKey || e.ctrlKey || e.altKey || !!document.querySelector('.sheet-root.open')
+  return isTyping(e) || e.metaKey || e.ctrlKey || e.altKey || !!document.querySelector('.sheet-root.open, dialog[open]')
 }
 
 /**

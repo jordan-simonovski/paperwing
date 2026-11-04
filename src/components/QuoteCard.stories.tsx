@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { NOW } from '../test/fixtures'
 import { QuoteCard } from './QuoteCard'
 
@@ -37,6 +37,14 @@ export const WithLinkCard: Story = {
 
 export const WithPicture: Story = {
   args: { quote: { author: 'paperwing.io', name: 'PaperWing', html: '<p>Pip, reading.</p>', media: [{ kind: 'image', thumb: '/icon-512.png', alt: 'Pip the paper owl', aspect: 1 }] } },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('link', { name: /^Open image/ }))
+    const page = within(canvasElement.ownerDocument.body)
+    const viewer = within(await page.findByRole('dialog', { name: 'Image viewer' }))
+    await expect(await viewer.findByRole('img', { name: 'Pip the paper owl' })).toBeVisible()
+    await userEvent.click(viewer.getByRole('button', { name: 'Close image viewer' }))
+    await expect(args.onOpen).not.toHaveBeenCalled()
+  },
 }
 
 export const Unavailable: Story = { args: { quote: { author: 'someone.bsky.social', html: '', gone: true } } }
