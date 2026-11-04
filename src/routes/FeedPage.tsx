@@ -9,8 +9,7 @@ import { Split, useListKeys } from '../components/Split'
 import { RowSkeleton, StoryRow } from '../components/StoryRow'
 import { TypesetLoader } from '../components/pretext/TypesetLoader'
 import { BoardContext, useBoard } from '../lib/boards'
-import { usePullToRefresh } from '../lib/gestures'
-import { Pip } from '../components/Pip'
+import { PullToRefresh } from '../components/PullToRefresh'
 import { useChannelFeed, useNow } from '../lib/hooks'
 import { usePretext, useTypesetIn } from '../lib/pretext'
 import { caughtUpAt, kindOf, type SortMode } from '../lib/rank'
@@ -88,7 +87,6 @@ export function FeedPage() {
   // Pretext motion: arriving at a feed, or changing its sort or filters, settles its headlines in.
   const pretext = usePretext()
   useTypesetIn(`${channelId}|${variant}|${sort}|${sourceFilter}|${kindFilter}`, pretext && visible.length > 0 && !itemKey)
-  const ptr = usePullToRefresh(feed.refetch, !itemKey)
 
   // React Router hands a functional update the params of the last render, so two changes before
   // the next render (a source, then a kind, in the filter sheet) would drop the first. Build on
@@ -128,11 +126,6 @@ export function FeedPage() {
         idle={<ChannelBrief channel={channel} stories={feed.stories} statuses={feed.statuses} onOpen={(k) => open(k)} now={now} />}
         list={
           <>
-            <div ref={ptr} className="ptr" aria-hidden>
-              <Pip variant="head" className="ptr-pip" />
-              <span className="ptr-pull">Pull to refresh</span>
-              <span className="ptr-release">Release to refresh</span>
-            </div>
             <FeedHeader
               channel={channel}
               stories={feed.stories}
@@ -148,6 +141,7 @@ export function FeedPage() {
               fetching={feed.fetching}
               onRefresh={feed.refetch}
             />
+            <PullToRefresh key={listKey} onRefresh={feed.refetch} enabled={!itemKey} motion={pretext} />
             {OUTAGE_CHANNELS.has(channel.id) && <OutageBanner />}
             <div role={visible.length ? 'feed' : undefined} aria-busy={feed.loading}>
               {feed.loading && !visible.length && pretext && <TypesetLoader label={channel.label} />}
