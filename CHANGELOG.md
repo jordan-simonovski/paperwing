@@ -1,5 +1,18 @@
 # What's new
 
+## 0.18.0
+
+_Released 5 November 2026_
+
+### New
+
+- **Find more of your interests in Explore.** Follow renewable energy, cars and electric vehicles, or try gardening, DIY, woodworking, photography, hiking and camping, birdwatching, tabletop games, knitting and sewing, coffee or baking. Each topic brings its own sources, related interests and sharing card; searching for literature, reading or book reviews also finds Books.
+- **More helpful previews for shared links.** Profiles use their Bluesky banner or avatar, and feeds and communities can show their existing artwork. Published mixes, boards and searches get distinct PaperWing cards with the linked page’s name and description.
+
+### Improved
+
+- **For you keeps its personal feed to itself.** The Share button is removed from For you, since everyone sees a different feed there. Topics, feeds and published mixes can still be shared.
+
 ## 0.17.0
 
 _Released 4 November 2026_

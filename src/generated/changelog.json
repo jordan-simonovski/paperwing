@@ -1,6 +1,36 @@
 {
-  "version": "0.17.0",
+  "version": "0.18.0",
   "releases": [
+    {
+      "version": "0.18.0",
+      "date": "5 November 2026",
+      "sections": [
+        {
+          "kind": "new",
+          "title": "New",
+          "changes": [
+            {
+              "title": "Find more of your interests in Explore.",
+              "detail": "Follow renewable energy, cars and electric vehicles, or try gardening, DIY, woodworking, photography, hiking and camping, birdwatching, tabletop games, knitting and sewing, coffee or baking. Each topic brings its own sources, related interests and sharing card; searching for literature, reading or book reviews also finds Books."
+            },
+            {
+              "title": "More helpful previews for shared links.",
+              "detail": "Profiles use their Bluesky banner or avatar, and feeds and communities can show their existing artwork. Published mixes, boards and searches get distinct PaperWing cards with the linked page’s name and description."
+            }
+          ]
+        },
+        {
+          "kind": "improved",
+          "title": "Improved",
+          "changes": [
+            {
+              "title": "For you keeps its personal feed to itself.",
+              "detail": "The Share button is removed from For you, since everyone sees a different feed there. Topics, feeds and published mixes can still be shared."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.17.0",
       "date": "4 November 2026",
