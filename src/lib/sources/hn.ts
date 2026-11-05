@@ -28,6 +28,12 @@ interface Item {
   children: Item[]
 }
 
+/**
+ * An Algolia search. Its answers come uncompressed, and a highlight of every matched word is half of
+ * each one; nothing shows them, so they're turned off.
+ */
+const algolia = <T>(path: 'search' | 'search_by_date', params: Record<string, string>) => getJson<T>(`${ALGOLIA}/${path}?${new URLSearchParams({ ...params, attributesToHighlight: '[]' })}`)
+
 const discussion = (id: string | number) => `https://news.ycombinator.com/item?id=${id}`
 
 function mapHit(h: Hit): Story {
@@ -50,12 +56,12 @@ function mapHit(h: Hit): Story {
 /** HN's own ordering from Firebase, hydrated in one Algolia call via OR'd story_<id> tags. */
 export async function hnList(list: 'top' | 'new' | 'best' | 'ask' | 'show'): Promise<Story[]> {
   if (list === 'new') {
-    const data = await getJson<{ hits: Hit[] }>(`${ALGOLIA}/search_by_date?tags=story&hitsPerPage=60`)
+    const data = await algolia<{ hits: Hit[] }>('search_by_date', { tags: 'story', hitsPerPage: '60' })
     return data.hits.map(mapHit)
   }
   const ids = (await getJson<number[]>(`${FIREBASE}/${list}stories.json`)).slice(0, 90)
   const tags = `(${ids.map((id) => `story_${id}`).join(',')})`
-  const data = await getJson<{ hits: Hit[] }>(`${ALGOLIA}/search?tags=${encodeURIComponent(tags)}&hitsPerPage=100`)
+  const data = await algolia<{ hits: Hit[] }>('search', { tags, hitsPerPage: '100' })
   const byId = new Map(data.hits.map((h) => [Number(h.objectID), h]))
   return ids.flatMap((id) => {
     const h = byId.get(id)
@@ -78,17 +84,16 @@ export async function hnSearch(query: string, opts: SearchOptions = {}): Promise
   const filters: string[] = []
   if (days) filters.push(`created_at_i>${Math.floor(Date.now() / 1000 - days * 86_400)}`)
   if (minPoints) filters.push(`points>${minPoints}`)
-  const params = new URLSearchParams({ query, tags: 'story', hitsPerPage: String(limit) })
-  if (filters.length) params.set('numericFilters', filters.join(','))
-  if (anyWord) params.set('optionalWords', query.replace(/"/g, ''))
-  const data = await getJson<{ hits: Hit[] }>(`${ALGOLIA}/${sort === 'date' ? 'search_by_date' : 'search'}?${params}`)
+  const params: Record<string, string> = { query, tags: 'story', hitsPerPage: String(limit) }
+  if (filters.length) params.numericFilters = filters.join(',')
+  if (anyWord) params.optionalWords = query.replace(/"/g, '')
+  const data = await algolia<{ hits: Hit[] }>(sort === 'date' ? 'search_by_date' : 'search', params)
   return data.hits.filter((h) => h.title).map(mapHit)
 }
 
 export async function hnByUrl(url: string): Promise<Story[]> {
   const bare = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
-  const params = new URLSearchParams({ query: bare, restrictSearchableAttributes: 'url', tags: 'story', hitsPerPage: '10' })
-  const data = await getJson<{ hits: Hit[] }>(`${ALGOLIA}/search?${params}`)
+  const data = await algolia<{ hits: Hit[] }>('search', { query: bare, restrictSearchableAttributes: 'url', tags: 'story', hitsPerPage: '10' })
   return data.hits.filter((h) => h.url && h.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') === bare).map(mapHit)
 }
 

@@ -188,7 +188,7 @@ const FIREBASE = 'https://hacker-news.firebaseio.com/v0'
 const DAY = 86_400_000
 
 export async function hnActivity(user: string): Promise<Activity> {
-  const { hits } = await getJson<{ hits: AlgoliaHit[] }>(`https://hn.algolia.com/api/v1/search_by_date?tags=author_${encodeURIComponent(user)}&hitsPerPage=50`)
+  const { hits } = await getJson<{ hits: AlgoliaHit[] }>(`https://hn.algolia.com/api/v1/search_by_date?tags=author_${encodeURIComponent(user)}&hitsPerPage=50&attributesToHighlight=%5B%5D`)
   const items = hits.filter((h) => h._tags.includes('story') || h._tags.includes('comment'))
   const mine: Mine[] = items.map((h) => {
     const story = h._tags.includes('story')

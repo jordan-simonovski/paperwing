@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { memo, useMemo, useRef } from 'react'
 import { compact, domainOf, fullDate, fullNumber, plural, timeAgo } from '../lib/format'
 import { useSwipeActions } from '../lib/gestures'
-import { plainText } from '../lib/html'
+import { plainText } from '../lib/plainText'
 import { stateOf, useLibrary } from '../lib/library'
 import { isWatching, useWatch } from '../lib/watch'
 import { domainKey, type Ranked } from '../lib/rank'
@@ -44,9 +44,11 @@ interface Props {
   swipe?: { right?: [label: string, run: () => void]; left?: [label: string, run: () => void] }
   /** In a feed your taste orders (Hot): say when it clearly moved this story. */
   why?: boolean
+  /** The title's heading level: 2 under the page's title, 3 inside a section that has its own. */
+  level?: 2 | 3
 }
 
-export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpen, now, note, swipe, why }: Props) {
+export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpen, now, note, swipe, why, level = 2 }: Props) {
   const showExcerpts = usePrefs((p) => p.showExcerpts)
   const thumbnails = usePrefs((p) => p.thumbnails)
   // Behind a warning: the note shows, and in blur mode the picture (and, unless only pictures were flagged, the excerpt) is covered.
@@ -136,7 +138,7 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
                 <EyeOff size={13} /> {s.warning}
               </p>
             )}
-            <h3 className="row-title">
+            <Heading level={level} className="row-title">
               <a
                 href={s.url ?? s.discussionUrl ?? '#'}
                 target="_blank"
@@ -154,7 +156,7 @@ export const StoryRow = memo(function StoryRow({ story: s, selected, read, onOpe
               >
                 {s.title}
               </a>
-            </h3>
+            </Heading>
             {excerpt && !(cover && !s.warnMediaOnly) && <p className="mt-1 line-clamp-2 text-[0.875rem] leading-snug text-ink-2">{excerpt}</p>}
             {s.quote && !s.quote.gone && showExcerpts && (
               <p className="row-quote mt-1 line-clamp-2 text-[0.8125rem] leading-snug text-ink-3">
@@ -405,3 +407,5 @@ function WhyLine({ story: s }: { story: Ranked }) {
   if (s.explore) return <p className="mt-1 text-[0.8125rem] text-ink-3">Outside your usual: busy elsewhere, and new to your taste</p>
   return <TasteLine story={s} topics={s.topics} />
 }
+
+const Heading = ({ level, ...rest }: { level: 2 | 3; className: string; children: React.ReactNode }) => (level === 2 ? <h2 {...rest} /> : <h3 {...rest} />)

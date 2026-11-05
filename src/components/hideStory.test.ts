@@ -4,7 +4,7 @@ import { useUI } from '../lib/ui'
 import { story } from '../test/fixtures'
 import { hideStory } from './StoryRow'
 
-vi.mock('../lib/html', () => ({ plainText: vi.fn(), sanitize: vi.fn() }))
+vi.mock('../lib/plainText', () => ({ plainText: vi.fn() }))
 
 const said = () => useUI.getState().toasts.map((t) => t.message)
 

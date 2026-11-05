@@ -11,8 +11,8 @@ const lemmyComment = (id: number, path: string, childCount = 0) => ({
 })
 
 describe('lemmy', () => {
-  it('builds the reply tree from paths and counts what was left out', () => {
-    const tree = lemmyComments([lemmyComment(1, '0.1', 4), lemmyComment(2, '0.1.2', 1), lemmyComment(3, '0.1.2.3'), lemmyComment(4, '0.4'), lemmyComment(9, '0.8.9')])
+  it('builds the reply tree from paths and counts what was left out', async () => {
+    const tree = await lemmyComments([lemmyComment(1, '0.1', 4), lemmyComment(2, '0.1.2', 1), lemmyComment(3, '0.1.2.3'), lemmyComment(4, '0.4'), lemmyComment(9, '0.8.9')])
     expect(tree.map((c) => c.id)).toEqual(['1', '4'])
     expect(tree[0].children[0].children[0].id).toBe('3')
     // Comment 1 has 4 replies in all; 2 are here (2 and 3), so 2 more live on Lemmy.
@@ -20,7 +20,7 @@ describe('lemmy', () => {
     expect(tree[0].html).toContain('<strong>c1</strong>')
     expect(tree[0].author).toBe('ann@lemmy.world')
   })
-  it('treats an image post as the post itself, not a link out', () => {
+  it('treats an image post as the post itself, not a link out', async () => {
     const post = (url: string) =>
       lemmyStory({
         post: { id: 7, name: ' Title ', url, ap_id: 'https://lemmy.world/post/7', nsfw: false, removed: false, deleted: false, published: '2026-10-20T00:00:00Z' },
@@ -28,8 +28,8 @@ describe('lemmy', () => {
         community: { name: 'programming', actor_id: 'https://programming.dev/c/programming' },
         counts: { score: 10, comments: 3 },
       })
-    expect(post('https://x.dev/a.png')).toMatchObject({ key: 'lm-7', url: null, media: [{ kind: 'image' }], author: 'bob', sourceLabel: 'c/programming', title: 'Title' })
-    expect(post('https://x.dev/article')).toMatchObject({ url: 'https://x.dev/article', media: undefined })
+    await expect(post('https://x.dev/a.png')).resolves.toMatchObject({ key: 'lm-7', url: null, media: [{ kind: 'image' }], author: 'bob', sourceLabel: 'c/programming', title: 'Title' })
+    await expect(post('https://x.dev/article')).resolves.toMatchObject({ url: 'https://x.dev/article', media: undefined })
   })
 })
 
