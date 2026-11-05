@@ -113,6 +113,9 @@ export function postHtml(text: string): string {
     .join('')
 }
 
+/** A post's page on bsky.app, from its author's handle and its at:// URI. */
+export const bskyPostUrl = (handle: string, uri: string) => `https://bsky.app/profile/${handle}/post/${uri.split('/').pop()}`
+
 /** The app's key for a Bluesky post: its at:// URI, base64url. Works in the browser and on the server. */
 export const bskyKeyOf = (uri: string): string => storyKey({ kind: 'bs', uri })
 

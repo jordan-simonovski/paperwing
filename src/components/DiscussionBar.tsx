@@ -8,37 +8,41 @@ import type { Story } from '../lib/types'
 import { sourceLabel } from './Source'
 import { StoryIcon } from './SourceIcon'
 
-/**
- * The signature: one link's conversation, split by where it is happening. Each segment is as long
- * as its share of all the comments; tapping one switches the reader to that thread.
- */
-/** Posts by people you follow about this link, by story key: their conversations come first, under their names. */
+/** Every thread about this story: its own, the same link elsewhere, and other coverage of the event. */
+export function usePlaces(story: Story, alsoOn: Story[] = [], coverage: Story[] = []): Story[] {
+  const found = useDiscussions(story.url)
+  return useMemo(() => {
+    const seen = new Set<string>()
+    const out: Story[] = []
+    for (const s of [story, ...alsoOn, ...coverage, ...(found.data ?? [])]) {
+      if (!s.hasThread || seen.has(s.key)) continue
+      seen.add(s.key)
+      out.push(s)
+    }
+    return out.sort((a, b) => (b.comments ?? 0) - (a.comments ?? 0))
+  }, [story, alsoOn, coverage, found.data])
+}
+
+/** Posts by people you follow about this link, by story key. */
 function useFriendPosts(story: Story, alsoOn: Story[]): Map<string, Friend> {
   const friends = useFriendsOf({ ...story, alsoOn })
   return useMemo(() => new Map(friends.flatMap((f) => (friendPlace(f) ? [[f.post!, f] as const] : []))), [friends])
 }
 
-/** Every thread about this story: its own, the same link elsewhere, other coverage of the event, and conversations people you follow started about it. */
-export function usePlaces(story: Story, alsoOn: Story[] = [], coverage: Story[] = []): Story[] {
-  const found = useDiscussions(story.url)
-  const friendPosts = useFriendPosts(story, alsoOn)
-  return useMemo(() => {
-    const seen = new Set<string>()
-    const out: Story[] = []
-    const theirs = [...friendPosts.values()].map(friendPlace).filter((s): s is Story => !!s)
-    for (const s of [story, ...alsoOn, ...coverage, ...(found.data ?? []), ...theirs]) {
-      if (!s.hasThread || seen.has(s.key)) continue
-      seen.add(s.key)
-      out.push(s)
-    }
-    // Conversations people you follow started come first: those are the ones you can join among friends.
-    return out.sort((a, b) => Number(friendPosts.has(b.key)) - Number(friendPosts.has(a.key)) || (b.comments ?? 0) - (a.comments ?? 0))
-  }, [story, alsoOn, coverage, found.data, friendPosts])
-}
-
+/**
+ * The signature: one link's conversation, split by where it is happening. Each segment is as long
+ * as its share of all the comments; tapping one switches the reader to that thread. Conversations
+ * people you follow started come first, under their names: the bar only. The places other parts of
+ * the reader use (the discussion summary among them) stay as usePlaces gives them.
+ */
 export function DiscussionBar({ story, alsoOn = [], coverage = [], onOpen }: { story: Story; alsoOn?: Story[]; coverage?: Story[]; onOpen: (key: string) => void }) {
-  const places = usePlaces(story, alsoOn, coverage)
+  const found = usePlaces(story, alsoOn, coverage)
   const friendPosts = useFriendPosts(story, alsoOn)
+  const places = useMemo(() => {
+    const keys = new Set(found.map((s) => s.key))
+    const theirs = [...friendPosts.values()].map(friendPlace).filter((s): s is Story => !!s && !keys.has(s.key))
+    return [...theirs, ...found].sort((a, b) => Number(friendPosts.has(b.key)) - Number(friendPosts.has(a.key)))
+  }, [found, friendPosts])
   const nameOf = (s: Story) => {
     const f = friendPosts.get(s.key)
     return f ? `${f.name ?? `@${f.handle}`}${f.how === 'quoted' ? ' (quote)' : ''}` : sourceLabel(s)
