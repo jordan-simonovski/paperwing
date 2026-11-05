@@ -29,6 +29,7 @@ export function ChannelShare({ channel, ...view }: { channel: Channel } & Channe
       toast('Couldn’t copy the link. You can select it above and copy it.', { tone: 'error' })
     }
   }
+  if (channel.id === 'for-you') return null
   return (
     <>
       <button ref={opener} className="btn h-8 flex-none px-3 text-[0.8125rem]" aria-label={`Share ${channel.label}`} aria-haspopup="dialog" onClick={() => setOpen(true)}>

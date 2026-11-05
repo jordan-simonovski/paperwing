@@ -2,15 +2,27 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { createElement } from 'react'
+import { Layers, Users, Search, Rss, type LucideIcon } from 'lucide-react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { openSync, type Font } from 'fontkit'
 import { Resvg } from '@resvg/resvg-js'
 import type { Plugin } from 'vite'
 import { TOPICS, CLUSTERS, type Topic } from '../src/lib/topics'
 import { topicIcon } from '../src/lib/topicIcons'
-import { TOPIC_CARD_SIZE, topicImagePath } from '../src/lib/topicCard'
+import { TOPIC_CARD_SIZE, topicImagePath, channelImagePath, type ChannelArtwork } from '../src/lib/topicCard'
 
 const require = createRequire(import.meta.url)
+interface Artwork extends Pick<Topic, 'id' | 'label' | 'blurb' | 'hue'> {
+  cluster?: Topic['cluster']
+  category?: string
+  icon?: LucideIcon
+}
+export const CHANNEL_ARTWORK: (Artwork & { id: ChannelArtwork })[] = [
+  { id: 'mix', label: 'A little of everything.', blurb: 'Hand-picked sources. One lovely place to read.', hue: 285, category: 'Mixes', icon: Layers },
+  { id: 'board', label: 'Good company.', blurb: 'Find your people. Share something worth reading.', hue: 160, category: 'Communities', icon: Users },
+  { id: 'discover', label: 'Follow your curiosity.', blurb: 'There is always something new to discover.', hue: 38, category: 'Discover', icon: Search },
+  { id: 'feed', label: 'Your next good read.', blurb: 'Fresh stories from the sources you love.', hue: 210, category: 'Feeds', icon: Rss },
+]
 
 /** Font outlines make rendering independent of system fonts and browser installations. */
 export function createTopicRenderer(root = process.cwd()) {
@@ -49,7 +61,7 @@ export function createTopicRenderer(root = process.cwd()) {
     }
     return lines
   }
-  const svg = (topic: Topic) => {
+  const svg = (topic: Artwork) => {
     let size = 80
     let title = wrap(topic.label, heading, size, 730)
     const fitsTitle = () => title.length <= 2 && title.every((line) => width(line, heading, size) <= 730)
@@ -59,8 +71,8 @@ export function createTopicRenderer(root = process.cwd()) {
     const hue = Number(topic.hue)
     if (!Number.isFinite(hue)) throw new Error(`Invalid topic hue: ${topic.id}`)
     const accent = `hsl(${hue}, 68%, 76%)`
-    const icon = renderToStaticMarkup(createElement(topicIcon(topic.id), { size: 224, color: accent, strokeWidth: 1.25 }))
-    const cluster = CLUSTERS[topic.cluster].label
+    const icon = renderToStaticMarkup(createElement(topic.icon ?? topicIcon(topic.id), { size: 224, color: accent, strokeWidth: 1.25 }))
+    const cluster = topic.category ?? CLUSTERS[topic.cluster!].label
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${TOPIC_CARD_SIZE.width}" height="${TOPIC_CARD_SIZE.height}" viewBox="0 0 1200 630">
 <rect width="1200" height="630" fill="#10151d"/>
 <rect width="1200" height="10" fill="${accent}"/>
@@ -75,7 +87,7 @@ ${text('Find your next good read.', body, 28, 72, 560, '#c9d0da')}
 ${text('paperwing.io', body, 28, 1128 - width('paperwing.io', body, 28), 560, accent)}
 </svg>`
   }
-  return { svg, png: (topic: Topic) => new Resvg(svg(topic), { font: { loadSystemFonts: false } }).render().asPng() }
+  return { svg, png: (topic: Artwork) => new Resvg(svg(topic), { font: { loadSystemFonts: false } }).render().asPng() }
 }
 
 /** Emits only build assets. Neither renderer nor its dependencies reach the app or API bundle. */
@@ -90,6 +102,7 @@ export function topicCards(): Plugin {
     generateBundle() {
       const render = createTopicRenderer(root)
       for (const topic of TOPICS) this.emitFile({ type: 'asset', fileName: topicImagePath(topic.id).slice(1), source: render.png(topic) })
+      for (const card of CHANNEL_ARTWORK) this.emitFile({ type: 'asset', fileName: channelImagePath(card.id).slice(1), source: render.png(card) })
     },
   }
 }

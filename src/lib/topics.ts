@@ -49,7 +49,7 @@ export const CLUSTERS: Record<ClusterId, { label: string; blurb: string; pack: P
   science: { label: 'Science', blurb: 'Findings, fields and the papers behind them', pack: 'general' },
   culture: { label: 'Culture', blurb: 'Screens, records, books and games', pack: 'general' },
   sport: { label: 'Sport', blurb: 'Find your sport, follow your team or try something new', pack: 'general' },
-  making: { label: 'Making', blurb: 'Printers, circuits and things people build', pack: 'general' },
+  making: { label: 'Making', blurb: 'Tools, textiles, circuits and things people build', pack: 'general' },
   life: { label: 'Life', blurb: 'The everyday good stuff', pack: 'general' },
   intelligence: { label: 'Intelligence', blurb: 'Models, agents, papers and the hardware under them', pack: 'tech' },
   systems: { label: 'Systems', blurb: 'Running software in production and knowing what it is doing', pack: 'tech' },

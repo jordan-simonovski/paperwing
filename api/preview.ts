@@ -7,7 +7,7 @@ import { posts } from './_lib/atlinks.js'
 import { toStory } from './_lib/bsky.js'
 import { fetchJson } from './_lib/http.js'
 import { ogImage, pageCard } from './_lib/og.js'
-import { actorOf, person } from './_lib/people.js'
+import { channelPreview, httpsImage, type Card } from './_lib/channelPreview.js'
 import { lobstersThread } from './_lib/sources.js'
 import { escapeHtml as esc, siteOf } from './_lib/text.js'
 
@@ -17,19 +17,6 @@ import { escapeHtml as esc, siteOf } from './_lib/text.js'
 // fetchers (and only them, by user agent) here instead: a tiny page with the story's own title,
 // description and picture. Topic cards use build-time PNGs and need no upstream requests.
 // People clicking the link get the app as usual.
-
-interface Card {
-  title: string
-  description: string
-  image?: string
-  imageAlt?: string
-  imageSize?: { width: number; height: number }
-  type?: 'website' | 'article'
-  /** A square picture (an avatar): shown as a small card, not cropped into a wide one. */
-  small?: boolean
-  /** The linked page couldn't be read, so this is a stand-in: cached briefly, not for a day. */
-  partial?: boolean
-}
 
 const plain = (html = '') =>
   html
@@ -94,20 +81,10 @@ async function cardFor(key: string): Promise<Card | undefined> {
   return undefined
 }
 
-/** Someone's profile: their name, bio and what they've listed, with their avatar. */
-async function profileCard(raw: string): Promise<Card | undefined> {
-  const actor = actorOf(raw)
-  if (!actor) return undefined
-  const { profile, totals } = await person(actor)
-  const who = profile.name ? `${profile.name} (@${profile.handle})` : `@${profile.handle}`
-  const listed = totals.listed ? `${totals.listed.toLocaleString('en')} ${totals.listed === 1 ? 'story' : 'stories'} listed on PaperWing` : 'On PaperWing'
-  return { title: `${who} on PaperWing`, description: [listed, profile.bio].filter(Boolean).join('. '), image: profile.avatar, small: !!profile.avatar }
-}
-
 function page(card: Card, canonical: string): string {
   const title = clip(card.title, 200)
   const description = clip(card.description, 300)
-  const image = card.image && /^https:\/\//.test(card.image) ? card.image : `https://${HOME}/og.png`
+  const image = httpsImage(card.image) ?? `https://${HOME}/og.png`
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>${esc(title)} · PaperWing</title>
@@ -134,11 +111,11 @@ export async function GET(request: Request): Promise<Response> {
   // The app path the link pointed at (/t/<channel>/<key>), passed on by the rewrite.
   const path = url.searchParams.get('path') ?? ''
   const match = /^\/(t\/[A-Za-z0-9:@._%-]{1,200}|today)\/([A-Za-z0-9._@-]{3,1200})$/.exec(path)
-  const profile = /^\/u\/([A-Za-z0-9:@._%-]{3,260})$/.exec(path)
+  const destination = channelPreview(path, url.searchParams)
   const topic = TOPIC_BY_ID.get(/^\/t\/([a-z0-9-]{1,80})\/?$/.exec(path)?.[1] ?? '')
   // A story link that opens on the article keeps doing so (src/lib/storyLink.ts); only the tabs there are.
   const tab = match && ['article', 'discussion', 'related'].includes(url.searchParams.get('tab') ?? '') ? `?tab=${url.searchParams.get('tab')}` : ''
-  const canonical = `https://${HOME}${topic ? `/t/${topic.id}` : match || profile ? path + tab : '/'}`
+  const canonical = `https://${HOME}${topic ? `/t/${topic.id}` : match ? path + tab : (destination?.path ?? '/')}`
   let card: Card | undefined
   if (topic)
     card = {
@@ -157,7 +134,7 @@ export async function GET(request: Request): Promise<Response> {
       .then(p)
       .catch(() => void (failed = true))
   if (match) card = (await settle(() => cardFor(match[2]))) ?? undefined
-  if (profile) card = (await settle(() => profileCard(decodeURIComponent(profile[1])))) ?? undefined
+  if (!topic && destination) card = (await settle(destination.card)) ?? undefined
   card ??= { title: 'PaperWing', description: 'News from the open web, in one reader: Hacker News, Lemmy, Bluesky, Mastodon and the publishers you trust.' }
   return new Response(page(card, canonical), {
     headers: {

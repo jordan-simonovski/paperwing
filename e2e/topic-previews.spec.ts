@@ -2,8 +2,8 @@ import { expect, test } from './support/test'
 
 test('topic artwork is a static PNG and people still open the topic in the app', async ({ page, request }) => {
   const images: Buffer[] = []
-  for (const id of ['baseball', 'climbing', 'ai']) {
-    const response = await request.get(`/og/topics/${id}.png`)
+  for (const path of ['topics/baseball', 'topics/climbing', 'topics/ai', 'channels/mix', 'channels/board', 'channels/discover', 'channels/feed']) {
+    const response = await request.get(`/og/${path}.png`)
     expect(response.status()).toBe(200)
     expect(response.headers()['content-type']).toContain('image/png')
     const png = await response.body()

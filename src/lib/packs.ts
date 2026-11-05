@@ -1,5 +1,6 @@
 import type { FeedRef, Topic } from './topics.js'
 import { SPORT_TOPICS } from './sports.js'
+import { INTEREST_TOPICS } from './interests.js'
 
 // Everything beyond tech: news, science, culture, sport, making and life. Each topic is a bundle of the
 // open web's own sources: publishers' RSS feeds, the busiest Lemmy communities (read through
@@ -14,6 +15,7 @@ const rss = (url: string, label: string): FeedRef => ({ kind: 'rss', url, label 
 const LW = 'lemmy.world'
 
 export const GENERAL_TOPICS: Topic[] = [
+  ...INTEREST_TOPICS,
   /* ------------------------------------------------------------------ news */
   {
     id: 'world-news',
@@ -159,7 +161,7 @@ export const GENERAL_TOPICS: Topic[] = [
     cluster: 'news',
     blurb: 'The climate, energy transition and the fights over both',
     terms: ['climate', 'global warming', 'emissions', 'carbon dioxide', 'net zero', 'renewable*', 'solar power', 'wind power', 'heatwave*', 'wildfire*', 'fossil fuel*', '=COP\\d+', 'decarboni*'],
-    related: ['science', 'world-news', 'politics-au'],
+    related: ['renewables', 'science', 'world-news', 'politics-au'],
     lemmy: [{ community: 'climate@slrpnk.net', via: LW }],
     mastodon: ['climate', 'climatecrisis'],
     bsky: [{ uri: 'at://did:plc:66lbtw2porscqpmair6mir37/app.bsky.feed.generator/aaabkznpn5x2g', name: 'GreenSky' }],
@@ -420,7 +422,7 @@ export const GENERAL_TOPICS: Topic[] = [
       'deforestation',
       'pollinators?',
     ],
-    related: ['biology', 'climate', 'earth'],
+    related: ['gardening', 'birding', 'biology', 'climate', 'earth'],
     lemmy: [{ community: 'science@lemmy.world', check: true, via: LW }],
     mastodon: ['ecology', 'biodiversity', 'conservation'],
     bsky: [
@@ -540,6 +542,7 @@ export const GENERAL_TOPICS: Topic[] = [
   {
     id: 'books',
     label: 'Books',
+    aliases: ['literature', 'reading', 'book reviews', 'book recommendations', 'reading hobbies'],
     hue: 30,
     cluster: 'culture',
     blurb: 'What to read next, and the people who wrote it',
@@ -560,7 +563,7 @@ export const GENERAL_TOPICS: Topic[] = [
     cluster: 'culture',
     blurb: 'Games, the studios behind them and the industry around both',
     terms: ['video games?', 'nintendo', 'playstation', 'xbox', 'steam deck', 'switch 2', 'game studio', 'indie game*', '=GTA', 'esports', 'game pass', 'roguelike*', '=RPG'],
-    related: ['film-tv', 'hardware'],
+    related: ['tabletop', 'film-tv', 'hardware'],
     lemmy: [
       { community: 'games@lemmy.world', via: LW },
       { community: 'gaming@lemmy.world', via: LW },
@@ -629,7 +632,7 @@ export const GENERAL_TOPICS: Topic[] = [
     cluster: 'sport',
     blurb: 'Formula 1, MotoGP, IndyCar and the rest of the paddock',
     terms: ['formula 1', 'formula one', '=F1', 'grand prix', 'verstappen', 'lewis hamilton', 'ferrari', 'mclaren', 'red bull racing', 'pole position', 'motogp', 'indycar', 'nascar'],
-    related: ['sport'],
+    related: ['cars', 'electric-vehicles', 'sport'],
     lemmy: [{ community: 'formula1@lemmy.world', via: LW }],
     mastodon: ['f1', 'formula1'],
     bsky: [{ uri: 'at://did:plc:gkvpokm7ec5j5yxls6xk4e3z/app.bsky.feed.generator/formula-one', name: 'Formula 1' }],
@@ -705,7 +708,7 @@ export const GENERAL_TOPICS: Topic[] = [
     cluster: 'life',
     blurb: 'Recipes, restaurants and what people are cooking',
     terms: ['cooking', 'home cooking', 'restaurants?', 'chef', 'baking', 'michelin', 'sourdough', 'fermentation'],
-    related: ['books'],
+    related: ['baking', 'coffee', 'gardening', 'books'],
     lemmy: [{ community: 'cooking@lemmy.world', via: LW }],
     mastodon: ['food', 'cooking'],
     bsky: [{ uri: 'at://did:plc:geoqe3qls5mwezckxxsewys2/app.bsky.feed.generator/aaai43yetqshu', name: "What's Cooking" }],

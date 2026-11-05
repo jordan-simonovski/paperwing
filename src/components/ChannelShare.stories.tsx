@@ -20,7 +20,12 @@ export const Topic: Story = {
     await expect(within(sheet).getByRole('textbox', { name: 'Link' })).toHaveValue(`${location.origin}/t/space?sort=new`)
   },
 }
-export const PersonalFeed: Story = { args: { channel: channelFor('for-you') }, play: async ({ canvas }) => userEvent.click(canvas.getByRole('button', { name: 'Share For you' })) }
+export const PersonalFeed: Story = {
+  args: { channel: channelFor('for-you') },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('button', { name: 'Share For you' })).not.toBeInTheDocument()
+  },
+}
 export const UnpublishedMix: Story = {
   args: { channel: { id: 'mix:3m2abcdefghij', label: 'Weekend reading', eyebrow: 'Mix', feeds: [] } },
   play: async ({ canvas }) => userEvent.click(canvas.getByRole('button', { name: 'Share Weekend reading' })),

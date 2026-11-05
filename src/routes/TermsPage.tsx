@@ -72,6 +72,10 @@ export function TermsPage() {
             before its public page can be shared.
           </p>
           <p>
+            Shared links can display previews using public names, descriptions, profile banners, avatars or community artwork from their sources. Those assets remain their owners’ content and subject
+            to the source’s terms. Messaging and social services may cache previews, so changes or removal at the source may take time to appear there.
+          </p>
+          <p>
             Anything you post, reply, vote on or share from PaperWing goes to the network you chose (Bluesky, Mastodon, Hacker News, Lemmy) under your own account, and that network’s terms and rules
             apply to it. It’s yours, and you’re responsible for it.
           </p>
