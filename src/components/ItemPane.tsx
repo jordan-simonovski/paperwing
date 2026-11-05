@@ -1,5 +1,5 @@
 import { useComposer } from '../lib/compose'
-import { FriendsLine } from './FriendsLine'
+import { FriendsList } from './FriendsList'
 import { profilePath } from '../lib/people'
 import { Archive, ArchiveRestore, ArrowDown, Bell, BellRing, ArrowLeft, ArrowUpRight, Bookmark, BookmarkCheck, Loader2, Newspaper, Share2, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -287,7 +287,7 @@ export function ItemPane({ itemKey, onClose, onOpen }: Props) {
               <span title={fullDate(story.createdAt)}>{ago(story.createdAt, now)}</span>
               <FollowSite story={story} />
             </div>
-            <FriendsLine story={{ ...story, alsoOn }} className="mt-2.5" />
+            <FriendsList story={{ ...story, alsoOn }} className="mt-2.5" onOpen={(k) => onOpen(k, 'discussion')} />
             {topics.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {topics.map((t) => (

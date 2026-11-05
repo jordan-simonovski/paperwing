@@ -11,6 +11,17 @@ const post = (rkey: string, handle: string, link: string | undefined, likes = 0,
   indexedAt: '2026-10-31T10:00:00Z',
 })
 
+/** A quote post: its own words, embedding another post (which shares a link) as the record view carries it. */
+const quote = (rkey: string, handle: string, text: string, quoted: ReturnType<typeof post>) => ({
+  ...post(rkey, handle, undefined, 4),
+  record: { text, createdAt: '2026-10-31T11:00:00Z' },
+  replyCount: 7,
+  embed: {
+    $type: 'app.bsky.embed.record#view',
+    record: { $type: 'app.bsky.embed.record#viewRecord', uri: quoted.uri, author: quoted.author, value: quoted.record, embeds: quoted.embed ? [quoted.embed] : [] },
+  },
+})
+
 vi.mock('../atproto', () => ({
   appview: async () => ({
     feed: [
@@ -24,6 +35,8 @@ vi.mock('../atproto', () => ({
       { post: post('6', 'frank.example', undefined, 0, true), reply: { root: post('1', 'alice.example', 'https://example.com/a?utm=x', 3) } },
       // Alice also replies there, but she shared it: she stays a sharer.
       { post: post('7', 'alice.example', undefined, 0, true), reply: { root: post('1', 'alice.example', 'https://example.com/a?utm=x', 3) } },
+      // Gina quotes Alice's post with words of her own: a conversation of hers about /a.
+      { post: quote('8', 'gina.example', 'This is the part everyone is missing', post('1', 'alice.example', 'https://example.com/a?utm=x', 3)) },
     ],
   }),
   useAtproto: { getState: () => ({ did: 'did:plc:me' }) },
@@ -42,16 +55,26 @@ describe('Bluesky following', () => {
     expect(stories.every((s) => s.followed)).toBe(true)
   })
 
-  it('knows who you follow shared or discussed each link, sharers first, each once', async () => {
+  it('knows how each person you follow took part, quotes first, each person once', async () => {
     const { friendsByLink, linkId } = await import('./bluesky')
     const friends = await friendsByLink()
     expect(friends[linkId('https://example.com/a')]?.map((f) => [f.handle, f.how])).toEqual([
-      ['alice.example', 'shared'],
-      ['bob.example', 'shared'],
-      ['carol.example', 'shared'],
+      ['gina.example', 'quoted'],
+      ['alice.example', 'posted'],
+      ['bob.example', 'posted'],
       ['frank.example', 'replied'],
+      ['carol.example', 'reposted'],
     ])
     expect(friends[linkId('https://other.dev/y')]?.map((f) => f.handle)).toEqual(['erin.example'])
+  })
+
+  it('keeps each person’s own post to open, but not a repost, which isn’t theirs', async () => {
+    const { friendsByLink, linkId } = await import('./bluesky')
+    const { bskyKeyOf } = await import('../bskyPost')
+    const byHandle = Object.fromEntries((await friendsByLink())[linkId('https://example.com/a')].map((f) => [f.handle, f]))
+    expect(byHandle['gina.example']).toMatchObject({ post: bskyKeyOf(post('8', 'gina.example', undefined).uri), text: 'This is the part everyone is missing', replies: 7 })
+    expect(byHandle['frank.example'].post).toBe(bskyKeyOf(post('6', 'frank.example', undefined).uri))
+    expect(byHandle['carol.example'].post).toBeUndefined()
   })
 })
 
