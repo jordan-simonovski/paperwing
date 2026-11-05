@@ -1,6 +1,6 @@
 import { Loader2, Send } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { LIMITS, send, useComposer, type ComposeTarget } from '../lib/compose'
 import { graphemes } from '../lib/facets'
 import { toast } from '../lib/ui'
@@ -8,7 +8,9 @@ import { Sheet } from './Sheet'
 import { ShareLinks } from './ShareLinks'
 import { PostLink } from './PostLink'
 import { ShareSheet } from './ShareSheet'
-import { WritePost } from './WritePost'
+
+// Writing a post brings a markdown editor (marked, DOMPurify): loaded when it opens, not with the app.
+const WritePost = lazy(() => import('./WritePost').then((m) => ({ default: m.WritePost })))
 
 const TITLES: Record<ComposeTarget['kind'], string> = {
   'bsky-reply': 'Reply on Bluesky',
@@ -38,7 +40,12 @@ export function Composer() {
   if (!target) return null
   if (target.kind === 'share') return <ShareSheet story={target.story} board={target.board} onClose={close} />
   if (target.kind === 'post-link') return <PostLink url={target.url} title={target.title} board={target.board} onClose={close} />
-  if (target.kind === 'self-post') return <WritePost board={target.board} edit={target.edit} onClose={close} />
+  if (target.kind === 'self-post')
+    return (
+      <Suspense fallback={null}>
+        <WritePost board={target.board} edit={target.edit} onClose={close} />
+      </Suspense>
+    )
   if (target.kind === 'links') return <ShareLinks story={target.story} onClose={close} />
   const limit = LIMITS[target.kind]
   const used = graphemes(text)

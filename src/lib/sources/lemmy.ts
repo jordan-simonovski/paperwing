@@ -1,4 +1,3 @@
-import { marked } from 'marked'
 import type { Comment, Media, Story, Thread } from '../types'
 import { LEMMY_DEFAULT, LEMMY_INSTANCES, lemmyKey } from '../lemmyKey'
 import { useLemmyAccount } from '../lemmyAccount'
@@ -47,7 +46,15 @@ interface CommentView {
   counts: Counts & { child_count: number }
 }
 
-const md = (text: string) => marked.parse(text, { async: false, gfm: true, breaks: true })
+type Markdown = (text: string) => string
+let parser: Promise<Markdown> | undefined
+/** Markdown to HTML. marked is 39 KB the app's first paint doesn't need: it loads beside the first Lemmy request instead. */
+const markdown = () =>
+  (parser ??= import('marked').then(
+    ({ marked }) =>
+      (text: string) =>
+        marked.parse(text, { async: false, gfm: true, breaks: true }) as string,
+  ))
 /** A post's own words: cross-posts open with a "cross-posted from: <link>" line that says nothing. */
 const body = (text?: string) => text?.replace(/^\s*cross-posted from:.*$/gim, '').trim() || undefined
 /** "name@instance" for anyone not on the instance reading them, the way Lemmy shows remote users. */
@@ -58,7 +65,11 @@ const handle = (u: { name: string; actor_id: string }, via = LEMMY_DEFAULT) => {
 const IMAGE = /\.(jpe?g|png|gif|webp|avif)(\?|$)/i
 const isImage = (p: PostView['post']) => !!p.url && (p.url_content_type?.startsWith('image/') || IMAGE.test(p.url))
 
-export function lemmyStory(v: PostView, via = LEMMY_DEFAULT): Story {
+export async function lemmyStory(v: PostView, via = LEMMY_DEFAULT): Promise<Story> {
+  return toStory(v, await markdown(), via)
+}
+
+function toStory(v: PostView, md: Markdown, via: string): Story {
   const p = v.post
   const own = body(p.body)
   const image = isImage(p)
@@ -88,12 +99,16 @@ const usable = (v: PostView) => !v.post.nsfw && !v.post.removed && !v.post.delet
 export async function lemmyFeed(community: string | undefined, sort: LemmySort = 'Hot', via = LEMMY_DEFAULT): Promise<Story[]> {
   const qs = new URLSearchParams({ sort, limit: '40', type_: 'All' })
   if (community) qs.set('community_name', community)
-  const { posts } = await getJson<{ posts: PostView[] }>(`${base(via)}/api/v3/post/list?${qs}`)
-  return posts.filter(usable).map((v) => lemmyStory(v, via))
+  const [md, { posts }] = await Promise.all([markdown(), getJson<{ posts: PostView[] }>(`${base(via)}/api/v3/post/list?${qs}`)])
+  return posts.filter(usable).map((v) => toStory(v, md, via))
 }
 
 /** Builds the reply tree from Lemmy's flat list, where each comment's path is "0.<ancestor ids>.<id>". */
-export function lemmyComments(views: CommentView[], via = LEMMY_DEFAULT): Comment[] {
+export async function lemmyComments(views: CommentView[], via = LEMMY_DEFAULT): Promise<Comment[]> {
+  return toComments(views, await markdown(), via)
+}
+
+function toComments(views: CommentView[], md: Markdown, via: string): Comment[] {
   const byId = new Map<string, Comment>()
   const replies = new Map<string, number>()
   for (const v of views) {
@@ -131,11 +146,12 @@ export function lemmyComments(views: CommentView[], via = LEMMY_DEFAULT): Commen
 
 export async function lemmyThread(id: string, via = LEMMY_DEFAULT): Promise<Thread> {
   const api = base(via)
-  const [{ post_view }, { comments }] = await Promise.all([
+  const [md, { post_view }, { comments }] = await Promise.all([
+    markdown(),
     getJson<{ post_view: PostView }>(`${api}/api/v3/post?id=${id}`),
     getJson<{ comments: CommentView[] }>(`${api}/api/v3/comment/list?post_id=${id}&max_depth=8&sort=Top&type_=All`),
   ])
-  return { story: lemmyStory(post_view, via), comments: lemmyComments(comments, via) }
+  return { story: toStory(post_view, md, via), comments: toComments(comments, md, via) }
 }
 
 /**
@@ -145,21 +161,24 @@ export async function lemmyThread(id: string, via = LEMMY_DEFAULT): Promise<Thre
 export async function lemmySearch(q: string, days?: number, sort: 'top' | 'new' = 'top'): Promise<Story[]> {
   const top = !days ? 'TopAll' : days <= 1 ? 'TopDay' : days <= 7 ? 'TopWeek' : days <= 31 ? 'TopMonth' : 'TopYear'
   const qs = new URLSearchParams({ q, type_: 'Posts', listing_type: 'All', sort: sort === 'new' ? 'New' : top, limit: '50' })
-  const { posts } = await getJson<{ posts: PostView[] }>(`${LEMMY}/api/v3/search?${qs}`)
+  const [md, { posts }] = await Promise.all([markdown(), getJson<{ posts: PostView[] }>(`${LEMMY}/api/v3/search?${qs}`)])
   const words = q
     .toLowerCase()
     .split(/\s+/)
     .filter((w) => w.length > 1)
-  return posts.filter((v) => usable(v) && words.every((w) => v.post.name.toLowerCase().includes(w))).map((v) => lemmyStory(v))
+  return posts.filter((v) => usable(v) && words.every((w) => v.post.name.toLowerCase().includes(w))).map((v) => toStory(v, md, LEMMY_DEFAULT))
 }
 
 /** Lemmy posts sharing a link, across every community either instance knows about, each post once. */
 export async function lemmyByUrl(url: string): Promise<Story[]> {
   const qs = new URLSearchParams({ q: url, type_: 'Url', listing_type: 'All', limit: '10' })
-  const found = await Promise.allSettled([...LEMMY_INSTANCES].map(async (via) => ({ via, posts: (await getJson<{ posts: PostView[] }>(`${base(via)}/api/v3/search?${qs}`)).posts })))
+  const [md, found] = await Promise.all([
+    markdown(),
+    Promise.allSettled([...LEMMY_INSTANCES].map(async (via) => ({ via, posts: (await getJson<{ posts: PostView[] }>(`${base(via)}/api/v3/search?${qs}`)).posts }))),
+  ])
   if (found.every((f) => f.status === 'rejected')) throw (found[0] as PromiseRejectedResult).reason
   const seen = new Set<string>()
   return found.flatMap((f) =>
-    f.status === 'fulfilled' ? f.value.posts.filter((v) => usable(v) && v.counts.comments > 0 && !seen.has(v.post.ap_id) && !!seen.add(v.post.ap_id)).map((v) => lemmyStory(v, f.value.via)) : [],
+    f.status === 'fulfilled' ? f.value.posts.filter((v) => usable(v) && v.counts.comments > 0 && !seen.has(v.post.ap_id) && !!seen.add(v.post.ap_id)).map((v) => toStory(v, md, f.value.via)) : [],
   )
 }

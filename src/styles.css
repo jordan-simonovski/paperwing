@@ -5,6 +5,17 @@
  * refused: eyebrows, tracked caps, mono labels, middle-dot meta, hairline row rules, counting-mark meters, grain, glass blur, cream + serif */
 @import 'tailwindcss';
 
+/* The wordmark's face: Fraunces cut down to "PaperWing" at weight 600, soft and wonky, optical size
+   left live (scripts/wordmark-font.py). The full font is 121 KB; this is under 4, so the build inlines
+   it and the wordmark never swaps in late. */
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('./assets/fraunces-wordmark.woff2') format('woff2');
+}
+
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme {

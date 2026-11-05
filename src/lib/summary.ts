@@ -1,4 +1,4 @@
-import { plainText } from './html'
+import { plainText } from './plainText'
 import type { DiscussionSummary, SummaryComment, SummaryRequest } from './summaryTypes'
 import type { Comment, Story, Thread } from './types'
 import { getJson, remembered } from './remembered'

@@ -159,7 +159,7 @@ export function TodayPage() {
                 </h2>
                 {sec.stories.map((s) => {
                   const r = stories.find((x) => x.key === s.key)!
-                  return <StoryRow key={s.key} story={r} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} />
+                  return <StoryRow key={s.key} story={r} selected={s.key === (itemKey ?? cursor)} read={!!read[s.key] && s.key !== itemKey} onOpen={open} now={now} level={3} />
                 })}
               </section>
             )

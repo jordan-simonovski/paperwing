@@ -5,10 +5,10 @@ import { gzipSync } from 'node:zlib'
 // The entry is the script index.html loads; its static imports (modulepreloads) load with it.
 // Raise a budget only on purpose, in the same change that needs it, and say why in the PR.
 const BUDGET_KB = {
-  // The 13 everyday interests and icons add ~4.1 KB gzip; matching also runs on the first screen.
-  entry: 307, // index.html's script and everything it statically imports
-  css: 22,
-  totalJs: 572, // expanded interests and sharing copy total ~570.1 KB; every chunk is precached
+  // ~276.8 KB once marked and DOMPurify left for the reader and composer; held there.
+  entry: 280, // index.html's script and everything it statically imports
+  css: 25, // the wordmark's face is inlined (~5 KB) in place of a 121 KB font file
+  totalJs: 575, // ~573.6 KB: splitting marked and DOMPurify out costs ~1.6 KB of chunk overhead; every chunk is precached
 }
 
 const dist = process.argv[2] ?? 'dist'
