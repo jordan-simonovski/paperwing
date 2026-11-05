@@ -9,7 +9,7 @@ import { READER, story } from '../test/fixtures'
 import { Votes } from './StoryRow'
 
 vi.mock('../lib/atproto', async (real) => ({ ...(await real<typeof import('../lib/atproto')>()), createRecord: vi.fn(), deleteRecord: vi.fn() }))
-vi.mock('../lib/html', () => ({ plainText: vi.fn(), sanitize: vi.fn() }))
+vi.mock('../lib/plainText', () => ({ plainText: vi.fn() }))
 
 const post = story({
   key: 'bs-paperwing',

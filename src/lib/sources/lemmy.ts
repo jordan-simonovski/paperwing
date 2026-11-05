@@ -2,6 +2,7 @@ import type { Comment, Media, Story, Thread } from '../types'
 import { LEMMY_DEFAULT, LEMMY_INSTANCES, lemmyKey } from '../lemmyKey'
 import { useLemmyAccount } from '../lemmyAccount'
 import { getJson } from './http'
+import { once } from '../once'
 import { webUrl } from '../webUrl'
 
 // Lemmy, read through two instances: programming.dev, a tech-focused instance that federates the
@@ -47,14 +48,17 @@ interface CommentView {
 }
 
 type Markdown = (text: string) => string
-let parser: Promise<Markdown> | undefined
-/** Markdown to HTML. marked is 39 KB the app's first paint doesn't need: it loads beside the first Lemmy request instead. */
-const markdown = () =>
-  (parser ??= import('marked').then(
-    ({ marked }) =>
+/**
+ * Markdown to HTML. marked is 39 KB the app's first paint doesn't need: it loads beside the first
+ * Lemmy request instead, and a load that fails is tried again on the next request.
+ */
+const markdown = once(() =>
+  import('marked').then(
+    ({ marked }): Markdown =>
       (text: string) =>
         marked.parse(text, { async: false, gfm: true, breaks: true }) as string,
-  ))
+  ),
+)
 /** A post's own words: cross-posts open with a "cross-posted from: <link>" line that says nothing. */
 const body = (text?: string) => text?.replace(/^\s*cross-posted from:.*$/gim, '').trim() || undefined
 /** "name@instance" for anyone not on the instance reading them, the way Lemmy shows remote users. */

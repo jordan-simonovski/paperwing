@@ -4,13 +4,16 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { LIMITS, send, useComposer, type ComposeTarget } from '../lib/compose'
 import { graphemes } from '../lib/facets'
 import { toast } from '../lib/ui'
+import { LoadBoundary } from './LoadBoundary'
 import { Sheet } from './Sheet'
 import { ShareLinks } from './ShareLinks'
 import { PostLink } from './PostLink'
 import { ShareSheet } from './ShareSheet'
 
 // Writing a post brings a markdown editor (marked, DOMPurify): loaded when it opens, not with the app.
-const WritePost = lazy(() => import('./WritePost').then((m) => ({ default: m.WritePost })))
+// React.lazy keeps a failed load for good, so after one the next open starts a fresh one.
+const loadWritePost = () => lazy(() => import('./WritePost').then((m) => ({ default: m.WritePost })))
+let WritePost = loadWritePost()
 
 const TITLES: Record<ComposeTarget['kind'], string> = {
   'bsky-reply': 'Reply on Bluesky',
@@ -42,9 +45,17 @@ export function Composer() {
   if (target.kind === 'post-link') return <PostLink url={target.url} title={target.title} board={target.board} onClose={close} />
   if (target.kind === 'self-post')
     return (
-      <Suspense fallback={null}>
-        <WritePost board={target.board} edit={target.edit} onClose={close} />
-      </Suspense>
+      <LoadBoundary
+        onFail={() => {
+          WritePost = loadWritePost()
+          close()
+          toast('Couldn’t open the editor. Check your connection and try again.', { tone: 'error' })
+        }}
+      >
+        <Suspense fallback={null}>
+          <WritePost board={target.board} edit={target.edit} onClose={close} />
+        </Suspense>
+      </LoadBoundary>
     )
   if (target.kind === 'links') return <ShareLinks story={target.story} onClose={close} />
   const limit = LIMITS[target.kind]

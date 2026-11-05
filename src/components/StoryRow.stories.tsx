@@ -13,7 +13,20 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const HackerNews: Story = {}
+/** Its title is a level-2 heading, under the page's title. */
+export const HackerNews: Story = {
+  play: async ({ canvas, args }) => {
+    await expect(canvas.getByRole('heading', { level: 2, name: args.story.title })).toBeVisible()
+  },
+}
+
+/** Inside a section with its own heading (Today's), the title steps down a level. */
+export const InASection: Story = {
+  args: { level: 3 },
+  play: async ({ canvas, args }) => {
+    await expect(canvas.getByRole('heading', { level: 3, name: args.story.title })).toBeVisible()
+  },
+}
 
 export const CrossPosted: Story = {
   args: {
