@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { TOPICS } from '../src/lib/topics'
-import { createTopicRenderer } from './topicCards'
+import { createTopicRenderer, CHANNEL_ARTWORK } from './topicCards'
 import { topicImagePath } from '../src/lib/topicCard'
 import { readFileSync } from 'node:fs'
 
 describe('static topic artwork', () => {
   it('lays out the whole catalogue without clipping and renders real 1200×630 PNGs', () => {
     const render = createTopicRenderer()
-    for (const topic of TOPICS) {
+    for (const topic of [...TOPICS, ...CHANNEL_ARTWORK]) {
       const svg = render.svg(topic)
       expect(svg).toContain('width="1200" height="630"')
       expect(svg).not.toMatch(/<text\b|https?:\/\/(?!www\.w3\.org)/)
@@ -31,5 +31,12 @@ describe('static topic artwork', () => {
     const fallback = config.rewrites.find((r) => r.destination === '/index.html')
     expect(config.rewrites.indexOf(rule)).toBeLessThan(config.rewrites.indexOf(fallback))
     expect(new RegExp(`^${fallback.source}$`).test('/og/topics/missing.png')).toBe(false)
+    expect(new RegExp(`^${fallback.source}$`).test('/og/channels/missing.png')).toBe(false)
+    for (const source of ['/u/:actor', '/c/:did/:rkey', '/mix/:did/:rkey', '/search']) {
+      const route = config.rewrites.find((r) => r.source === source)
+      expect(route.destination).toBe(`/api/preview?path=${source}`)
+      expect(route.has).toEqual(rule.has)
+      expect(config.rewrites.indexOf(route)).toBeLessThan(config.rewrites.indexOf(fallback))
+    }
   })
 })

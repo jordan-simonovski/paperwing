@@ -17,10 +17,29 @@ caching; sharing services may retain older previews until they crawl again.
 
 For social crawlers, the `/t/:channel` rewrite serves the existing preview endpoint.
 Curated topics receive their public name, description and static image URL. There
-is no per-request rendering or upstream lookup. Unknown topics and custom feeds
-use the generic PaperWing preview. Ordinary browsers continue to receive the app.
+is no per-request rendering or upstream lookup for these topics. Ordinary browsers continue to receive the app.
 Missing topic PNGs are excluded from the SPA rewrite so they cannot return HTML
 disguised as an image.
 
 Tests cover catalogue-wide metadata and text layout, PNG dimensions, bot routing,
 fallbacks, static asset delivery, and opening a topic in the app.
+
+The same build emits four reusable images under `/og/channels/`: mix, board, feed
+and discover. Public mix and board records supply the metadata; they currently have
+no cover-image field. Explicit interests and `/search?q=…` links use the discovery
+image with the words from the link. RSS and Standard.site links use the feed image
+and hostname without fetching the publisher. Local mixes and personal views stay
+generic, and recognised credential-bearing feed URLs are omitted entirely.
+
+Profiles use a single public Bluesky profile lookup, preferring a banner (large
+card) and falling back to an avatar (small card). Bluesky feeds and lists reuse
+their avatars. Lemmy communities resolve through lemmy.world and use a banner or
+icon. Labelled profiles, feeds and creators, blocked owners/records, and removed,
+private or NSFW communities do not contribute metadata or artwork. These remote
+lookups use the guarded fetcher; failures receive a five-minute cache lifetime.
+Public mix and board records are read directly without loading their stories.
+
+Crawler rewrites also cover `/u/:actor`, `/c/:did/:rkey`, `/mix/:did/:rkey` and
+`/search`. All images are existing assets or build output: request-time code only
+assembles escaped metadata. Third-party sharing services control their own cache
+and may crop artwork differently; no request-time image composition is performed.

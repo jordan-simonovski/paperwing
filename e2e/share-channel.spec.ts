@@ -3,6 +3,12 @@ import { MELTING } from './fixtures/upstream'
 import { gotoFeed, row } from './support/app'
 import { expect, test } from './support/test'
 
+test('For you has no share button because its feed belongs to the reader', async ({ page }) => {
+  await gotoFeed(page)
+  await expect(page.getByRole('heading', { name: 'For you', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Share For you', exact: true })).toHaveCount(0)
+})
+
 test('a topic has a share link that preserves its view and can be copied', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text: string) => sessionStorage.setItem('copied-link', text) } })

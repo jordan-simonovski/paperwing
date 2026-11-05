@@ -31,7 +31,7 @@ describe('topic preview cards', () => {
     expect(html).toContain('<meta property="og:image:alt" content="Climbing &amp; bouldering on PaperWing">')
     expect(html).toContain('<link rel="canonical" href="https://paperwing.io/t/climbing">')
   })
-  it.each(['/t/not-a-topic', '/t/q:private-interest', '/t/%3Cscript%3E'])('uses the generic card for %s', async (path) => {
+  it.each(['/t/not-a-topic', '/t/mix:private-mix', '/t/%3Cscript%3E'])('uses the generic card for %s', async (path) => {
     const html = await card(path)
     expect(html).toContain('https://paperwing.io/og.png')
     expect(html).not.toContain('/og/topics/')

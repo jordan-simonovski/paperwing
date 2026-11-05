@@ -46,6 +46,22 @@ export const NoMatchingTopics: Story = {
   },
 }
 
+export const FindInterests: Story = {
+  parameters: FindSports.parameters,
+  play: async ({ canvas }) => {
+    const search = canvas.getByRole('searchbox', { name: 'Find a topic' })
+    await userEvent.type(search, 'renewables')
+    await expect(canvas.getByRole('heading', { name: 'Renewable energy' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Follow Renewable energy' }))
+    await expect(usePrefs.getState().followed).toContain('renewables')
+    await userEvent.clear(search)
+    await userEvent.type(search, 'hobbies')
+    for (const name of ['Photography', 'Gardening', 'Knitting & sewing', 'Board games & tabletop']) {
+      await expect(canvas.getByRole('heading', { name })).toBeVisible()
+    }
+  },
+}
+
 export const AddAndOpenFeed: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Add Science' }))

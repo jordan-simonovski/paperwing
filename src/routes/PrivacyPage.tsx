@@ -120,6 +120,11 @@ export function PrivacyPage() {
             public results so other readers get them faster. Our host, Vercel, keeps short-lived request logs, as any website’s host does.
           </p>
           <p>
+            When a messaging or social service previews a shared PaperWing link, our server may read the public profile, Bluesky feed, Lemmy community, board or published mix it names. The preview
+            includes public titles, descriptions and existing artwork, and the service may fetch that artwork from its original host and cache the preview. Topic artwork is built ahead of time.
+            Personal feeds use a generic card; previews do not read your follows or local mixes. A shared search or interest link includes the words in that link.
+          </p>
+          <p>
             Suggested posts from community boards in For you are picked from how lively each board is across PaperWing, only from posts their posters also put on the front page, and are the same for
             everyone. Nothing about you is sent to pick them: the boards you’ve joined are left out on your device. You can turn suggestions, and PaperWing’s announcements, off under Settings, Tuning.
           </p>
