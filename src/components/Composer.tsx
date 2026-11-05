@@ -1,8 +1,9 @@
 import { Loader2, Send } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { LIMITS, send, useComposer, type ComposeTarget } from '../lib/compose'
 import { graphemes } from '../lib/facets'
+import { retryableLazy } from '../lib/retryableLazy'
 import { toast } from '../lib/ui'
 import { LoadBoundary } from './LoadBoundary'
 import { Sheet } from './Sheet'
@@ -11,9 +12,8 @@ import { PostLink } from './PostLink'
 import { ShareSheet } from './ShareSheet'
 
 // Writing a post brings a markdown editor (marked, DOMPurify): loaded when it opens, not with the app.
-// React.lazy keeps a failed load for good, so after one the next open starts a fresh one.
-const loadWritePost = () => lazy(() => import('./WritePost').then((m) => ({ default: m.WritePost })))
-let WritePost = loadWritePost()
+// If it doesn't arrive, the next open loads it again.
+const writePost = retryableLazy(() => import('./WritePost').then((m) => m.WritePost))
 
 const TITLES: Record<ComposeTarget['kind'], string> = {
   'bsky-reply': 'Reply on Bluesky',
@@ -47,13 +47,13 @@ export function Composer() {
     return (
       <LoadBoundary
         onFail={() => {
-          WritePost = loadWritePost()
+          writePost.retry()
           close()
           toast('Couldn’t open the editor. Check your connection and try again.', { tone: 'error' })
         }}
       >
         <Suspense fallback={null}>
-          <WritePost board={target.board} edit={target.edit} onClose={close} />
+          <writePost.Component board={target.board} edit={target.edit} onClose={close} />
         </Suspense>
       </LoadBoundary>
     )
