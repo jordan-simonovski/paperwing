@@ -1,5 +1,5 @@
 import { expect, test } from './support/test'
-import { row } from './support/app'
+import { gotoFeed, row } from './support/app'
 import { story } from '../src/test/fixtures'
 
 const publication = { url: 'https://lab.leaflet.pub', title: 'Leaflet Lab Notes', site: 'lab.leaflet.pub', posts: 0, format: 'standard' as const }
@@ -26,7 +26,8 @@ test('following a Standard.site publication reads its native feed and keeps it a
 })
 
 test('pasting a site into the palette offers to follow it, and finds its feed', async ({ page, net }) => {
-  await page.goto('/t/for-you')
+  // The shortcut listens once the app has drawn: a key pressed before then goes nowhere.
+  await gotoFeed(page)
   await page.keyboard.press('/')
   await page.getByRole('combobox').fill(publication.url)
   await page.getByRole('option', { name: /Follow this site/ }).click()
