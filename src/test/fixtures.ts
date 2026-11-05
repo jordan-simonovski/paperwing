@@ -4,6 +4,8 @@ import type { Ranked } from '../lib/rank'
 import type { Reader } from '../lib/channelFeed'
 import { feedLabel } from '../lib/sources'
 import type { Comment, Story, Thread } from '../lib/types'
+import { bskyKeyOf } from '../lib/bskyPost'
+import type { Friend } from '../lib/friends'
 
 // Stories and tests build their data from these, so a change to Story's shape is fixed in one place.
 
@@ -178,3 +180,14 @@ export const testReader = (overrides: Partial<Reader> = {}): Reader => ({
   taste: () => ({ memory: {}, affinity: {}, votes: {} }),
   ...overrides,
 })
+
+/** A post someone you follow quoted a story in. */
+export const FRIEND_QUOTE = bskyKeyOf('at://did:plc:rich/app.bsky.feed.post/3kq1')
+/** People you follow who took part in a story, one of each kind. */
+export const FRIENDS: Friend[] = [
+  { handle: 'richburroughs.dev', name: 'Rich Burroughs', how: 'quoted', post: FRIEND_QUOTE, text: 'This is the part of the Salon story nobody is talking about: the archive.', likes: 41, replies: 9 },
+  { handle: 'iancoldwater.com', name: 'Ian Coldwater', how: 'posted', post: bskyKeyOf('at://did:plc:ian/app.bsky.feed.post/3kq2'), text: 'Goodbye from Salon', likes: 12, replies: 2 },
+  { handle: 'molly.wiki', name: 'Molly White', how: 'replied', post: bskyKeyOf('at://did:plc:molly/app.bsky.feed.post/3kq3'), text: 'Thirty years of web writing, gone quiet.', likes: 3, replies: 0 },
+  { handle: 'pfrazee.com', how: 'reposted' },
+  { handle: 'jay.bsky.team', name: 'Jay', how: 'reposted' },
+]

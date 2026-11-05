@@ -180,39 +180,75 @@ export interface Friend {
   handle: string
   name?: string
   avatar?: string
-  /** Shared the link (a post or a repost), or joined the conversation about it (a reply). */
-  how: 'shared' | 'replied'
+  /**
+   * How they took part: quoted a post sharing the link with words of their own, posted it, replied
+   * in a conversation about it, or reposted someone else's post of it. ('shared' is how a cache
+   * from before these were told apart says posted or reposted.)
+   */
+  how: 'quoted' | 'posted' | 'replied' | 'reposted' | 'shared'
+  /** Their own post about it, as a story key: what to open, like or reply to. Never for a repost, which isn't theirs. */
+  post?: string
+  /** Their words in it, short. */
+  text?: string
+  likes?: number
+  replies?: number
+  /** When they posted it (ms). */
+  at?: number
 }
 
+/** Most worth your attention first: someone's own words about it, then their post, a reply, a repost. */
+export const TOOK_PART: Record<Friend['how'], number> = { quoted: 0, posted: 1, shared: 1, replied: 2, reposted: 3 }
+
+/** The link a post shares, or the link of the post it quotes. */
+const linkOf = (p: PostView) => sharedLink(p) ?? quotedPost(p)?.link?.url
+
 /**
- * Who you follow has shared or discussed each link lately, by linkId: posts and reposts sharing it,
- * and replies under a post that shares it. Sharing counts before replying, and each person once.
+ * Who you follow has taken part in each link's conversation lately, by linkId: posting it, quoting a
+ * post of it, replying under one, or reposting one. Each person once, as the way they took part
+ * that says most, and their own post kept so it can be opened and answered.
  */
 export async function friendsByLink(): Promise<Record<string, Friend[]>> {
   const items = await timeline()
   const out = new Map<string, Friend[]>()
-  const add = (link: string | undefined, who: Who, how: Friend['how']) => {
+  const add = (link: string | undefined, who: Who, how: Friend['how'], post?: PostView) => {
     if (!link) return
     const id = linkId(link)
     const list = out.get(id) ?? []
     const at = list.findIndex((f) => f.handle === who.handle)
-    if (at >= 0) {
-      if (how === 'shared') list[at].how = 'shared'
-      return
+    if (at >= 0 && TOOK_PART[list[at].how] <= TOOK_PART[how]) return
+    const created = post ? Date.parse(post.record.createdAt) : NaN
+    const friend: Friend = {
+      handle: who.handle,
+      ...(who.displayName?.trim() ? { name: who.displayName.trim() } : {}),
+      ...(who.avatar ? { avatar: who.avatar } : {}),
+      how,
+      ...(post
+        ? {
+            post: bskyKeyOf(post.uri),
+            text: postWords(post).slice(0, 280),
+            likes: post.likeCount ?? 0,
+            replies: post.replyCount ?? 0,
+            ...(Number.isFinite(created) ? { at: created } : {}),
+          }
+        : {}),
     }
-    list.push({ handle: who.handle, ...(who.displayName?.trim() ? { name: who.displayName.trim() } : {}), ...(who.avatar ? { avatar: who.avatar } : {}), how })
+    if (at >= 0) list[at] = friend
+    else list.push(friend)
     out.set(id, list)
   }
   for (const { post, reason, reply } of items) {
     const reposter = reason?.$type === 'app.bsky.feed.defs#reasonRepost' ? reason.by : undefined
     if (post.record.reply) {
       // A reply in your timeline is by someone you follow: they're in the conversation about the thread's link.
-      if (!reposter) add(reply?.root ? sharedLink(reply.root) : undefined, post.author, 'replied')
+      if (!reposter) add(reply?.root ? linkOf(reply.root) : undefined, post.author, 'replied', post)
       continue
     }
-    add(sharedLink(post), reposter ?? post.author, 'shared')
+    const own = sharedLink(post)
+    if (reposter) add(own ?? linkOf(post), reposter, 'reposted')
+    else if (own) add(own, post.author, 'posted', post)
+    else add(quotedPost(post)?.link?.url, post.author, 'quoted', post)
   }
-  for (const list of out.values()) list.sort((a, b) => (a.how === b.how ? 0 : a.how === 'shared' ? -1 : 1))
+  for (const list of out.values()) list.sort((a, b) => TOOK_PART[a.how] - TOOK_PART[b.how])
   // A plain object, so the query cache can keep it across launches.
   return Object.fromEntries(out)
 }
