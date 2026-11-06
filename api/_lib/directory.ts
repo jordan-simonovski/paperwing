@@ -56,7 +56,6 @@ const parse = (raw: string): Entry | undefined => {
     return undefined
   }
 }
-const bare = (url: string) => url.replace(/\/$/, '')
 
 /** Jetstream's replay over a WebSocket: it ends when it reaches the present, goes quiet, closes or runs out of time. */
 const jetstream: PostSource = async function* (cursor, deadline) {
@@ -97,12 +96,8 @@ const jetstream: PostSource = async function* (cursor, deadline) {
   }
 }
 
-/** The publication an author's post names, confirmed by its own website. */
-async function confirm(did: string, site: string, latest: number, now: number): Promise<[string, Entry] | undefined> {
-  // A post on a loose page names the site; the site's well-known names its publication.
-  const uri = site.startsWith('at://') ? site : (await standardPublication(site)).uri
-  // A post only vouches for its own author's publication.
-  if (publicationUri.exec(uri)?.[1] !== did) return undefined
+/** The publication a post names, confirmed by its own website. */
+async function confirm(uri: string, latest: number, now: number): Promise<[string, Entry] | undefined> {
   const value = object((await getRecord<unknown>(uri)).value)
   if (typeof value?.url !== 'string' || hidden(selfLabels(value))) return undefined
   const pub = await standardPublication(value.url, uri)
@@ -115,8 +110,8 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   // The first run looks back a day, which fills the directory without a separate backfill.
   const cursor = Number(await store.get(CURSOR)) || (now - DAY) * 1000
   const off = blocked()
-  // Each author's newest post per site, this run.
-  const posted = new Map<string, { did: string; site: string; latest: number }>()
+  // Each publication's newest post, this run.
+  const posted = new Map<string, number>()
   let last = 0
   let posts = 0
   for await (const ev of source(cursor, Date.now() + READ_FOR)) {
@@ -126,47 +121,44 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
     if (ev.kind !== 'commit' || ev.commit?.collection !== 'site.standard.document' || (op !== 'create' && op !== 'update') || !record) continue
     const did = ev.did
     const at = typeof record.publishedAt === 'string' ? Date.parse(record.publishedAt) : NaN
-    if (typeof did !== 'string' || !DID.test(did) || off.has(did) || typeof record.site !== 'string' || record.site.length > 2000 || hidden(selfLabels(record))) continue
+    if (typeof did !== 'string' || !DID.test(did) || off.has(did) || typeof record.site !== 'string' || hidden(selfLabels(record))) continue
     // A date in the future isn't a recent post.
     if (!(at <= now + 60_000) || at < now - QUIET) continue
-    // A post only vouches for its own author's publication (one naming a site is checked through it).
-    if (record.site.startsWith('at://') && publicationUri.exec(record.site)?.[1] !== did) continue
+    // ponytail: only posts in a publication count (loose ones naming a plain site were 325 of 330 failed checks, measured), and a post only vouches for its own author's publication.
+    if (publicationUri.exec(record.site)?.[1] !== did) continue
     posts++
-    const key = `${did} ${bare(record.site)}`
-    if ((posted.get(key)?.latest ?? 0) < at) posted.set(key, { did, site: bare(record.site), latest: at })
+    posted.set(record.site, Math.max(posted.get(record.site) ?? 0, at))
   }
   if (last) await store.set(CURSOR, String(last), 7 * 86_400)
 
-  const known = new Map(Object.entries(await store.hgetall(KEY)).flatMap(([uri, raw]) => (parse(raw) ? [[uri, parse(raw)!] as const] : [])))
-  const byUrl = new Map([...known].map(([uri, e]) => [bare(e.url), uri]))
+  const [known, failed] = await Promise.all([store.hgetall(KEY), store.hgetall(FAILED)])
   const updates = new Map<string, Entry>()
-  const failed = await store.hgetall(FAILED)
-  const toCheck: { did: string; site: string; latest: number }[] = []
-  for (const p of posted.values()) {
-    const uri = p.site.startsWith('at://') ? p.site : byUrl.get(p.site)
-    const entry = uri && uri.split('/')[2] === p.did ? known.get(uri) : undefined
-    if (uri && entry && now - entry.checkedAt < RECHECK) updates.set(uri, { ...entry, latest: Math.max(entry.latest, updates.get(uri)?.latest ?? 0, p.latest) })
-    else if (!(now - Number(failed[`${p.did} ${p.site}`]) < RETRY)) toCheck.push(p)
+  const toCheck: [string, number][] = []
+  for (const [uri, latest] of posted) {
+    const entry = known[uri] ? parse(known[uri]) : undefined
+    if (entry && now - entry.checkedAt < RECHECK) updates.set(uri, { ...entry, latest: Math.max(entry.latest, latest) })
+    else if (!(now - Number(failed[uri]) < RETRY)) toCheck.push([uri, latest])
   }
   const checks = toCheck.slice(0, MAX_CHECKS)
-  const results = await pool(checks, 16, (p) => confirm(p.did, p.site, p.latest, now))
-  const confirmed = results.filter((c): c is [string, Entry] => !!c)
-  const refused = checks.filter((_, i) => !results[i]).map((p) => `${p.did} ${p.site}`)
+  const results = await pool(checks, 16, ([uri, latest]) => confirm(uri, latest, now))
+  for (const r of results) if (r) updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, (known[r[0]] && parse(known[r[0]])?.latest) || 0) })
+  const refused = checks.filter((_, i) => !results[i]).map(([uri]) => uri)
   if (refused.length)
     await store.hset(
       FAILED,
-      refused.map((k) => [k, String(now)]),
+      refused.map((uri) => [uri, String(now)]),
     )
-  const retry = Object.keys(failed).filter((k) => !(now - Number(failed[k]) < RETRY))
+  const retry = Object.keys(failed).filter((uri) => !(now - Number(failed[uri]) < RETRY))
   if (retry.length) await store.hdel(FAILED, retry)
-  for (const [uri, e] of confirmed) updates.set(uri, { ...e, latest: Math.max(e.latest, known.get(uri)?.latest ?? 0, updates.get(uri)?.latest ?? 0) })
   if (updates.size)
     await store.hset(
       KEY,
       [...updates].map(([uri, e]) => [uri, JSON.stringify(e)]),
     )
 
-  const quiet = [...known].filter(([uri, e]) => e.latest < now - QUIET && !updates.has(uri)).map(([uri]) => uri)
+  const quiet = Object.entries(known)
+    .filter(([uri, raw]) => !updates.has(uri) && (parse(raw)?.latest ?? 0) < now - QUIET)
+    .map(([uri]) => uri)
   if (quiet.length) await store.hdel(KEY, quiet)
   return { posts, checked: checks.length, listed: updates.size }
 }

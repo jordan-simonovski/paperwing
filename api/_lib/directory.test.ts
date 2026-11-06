@@ -76,7 +76,7 @@ describe('the open web directory', () => {
     ])
   })
 
-  it('leaves out an unconfirmed site, adult or hidden labels, future dates, someone else’s publication and blocked accounts', async () => {
+  it('leaves out an unconfirmed site, adult or hidden labels, future dates, loose posts, someone else’s publication and blocked accounts', async () => {
     const unverified = writer({ checked: 'refused' })
     const adult = writer({ labels: ['porn'] })
     const labelledPost = writer({ checked: 'never' })
@@ -84,6 +84,7 @@ describe('the open web directory', () => {
     const victim = writer({ checked: 'never' })
     const impostor = writer({ checked: 'never' })
     const blocked = writer({ checked: 'never' })
+    const loose = writer({ checked: 'never' })
     process.env.PAPERWING_BLOCKED = blocked.did
     const { source } = stream(
       post(unverified, NOW - day),
@@ -93,6 +94,8 @@ describe('the open web directory', () => {
       // A post can only vouch for its own author's publication.
       post({ did: impostor.did, uri: victim.uri }, NOW - day),
       post(blocked, NOW - day),
+      // A post that names a plain site, in no publication: nothing to list, so nobody is asked.
+      post(loose, NOW - day, { site: loose.site }),
       { ...post(unverified, NOW - day), did: 'not-a-did' },
       { ...post(unverified, NOW - day), commit: { operation: 'delete', collection: 'site.standard.document' } },
     )
