@@ -15,8 +15,8 @@ const KEY = 'rd:directory'
 const CURSOR = 'rd:directory:cursor'
 const DID = /^did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)$/
 const DAY = 86_400_000
-// ponytail: 100 accounts a run fits push.ts's 60 seconds; ~15k accounts is a pass every ~12 hours at a run every 10 minutes. Raise the batch or the rate if a pass grows past a day.
-const BATCH = 100
+// ponytail: 200 accounts a run (about 30 seconds, measured at 14 per 100) inside push.ts's 60; ~15k accounts is a pass every ~12 hours at a run every 10 minutes. Raise the rate before the batch if a pass grows past a day.
+const BATCH = 200
 /** Not posted for this long: not one to suggest. */
 const QUIET = 90 * DAY
 /** Not found again for this long (deleted, no longer verified, gone quiet): dropped from the list. */
