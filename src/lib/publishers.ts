@@ -77,5 +77,11 @@ export interface FoundFeed {
   format?: PublisherFormat
 }
 
+/** A blog in Explore's open web directory: who wrote it (their DID), and who lists it in a blogroll. */
+export interface DirectoryFeed extends FoundFeed {
+  author: string
+  listedBy?: string[]
+}
+
 /** The same publisher request everywhere: channels, mixes and a followed feed's own page. */
 export const publisherRef = (f: PublisherFeed): Extract<FeedRef, { kind: 'rss' | 'standard' }> => ({ kind: f.format === 'standard' ? 'standard' : 'rss', url: f.url, label: f.label })

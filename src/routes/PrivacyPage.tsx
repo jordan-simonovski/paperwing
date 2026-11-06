@@ -139,7 +139,10 @@ export function PrivacyPage() {
           </p>
           <p>
             For New on the open web in Explore, the server reads Bluesky’s public stream of Standard.site posts (through Jetstream) every hour. When someone posts to a publication, it checks the
-            publication against its own website the same way, and keeps its name, address and the date of its newest post, for three months after that post. Nothing about you is involved.
+            publication against its own website the same way, reads the author’s public Bluesky profile (their follower count and any labels on their account), and asks Constellation’s public index
+            how many blogrolls list it and how many people discuss its newest post. It keeps the publication’s name and address, the date of its newest post, those counts and the accounts whose
+            blogrolls list it, for three months after that post. Accounts that ask not to be shown to logged-out viewers aren’t listed. Nothing about you is involved: if you’re signed in with Bluesky,
+            your browser reads who you follow straight from Bluesky to bring their blogs forward, and that list never reaches PaperWing.
           </p>
           <p>
             Importing an OPML file from another reader reads it on your device. The feeds it holds, and the names of the folders they were in, join your feed settings and encrypted sync; folder names

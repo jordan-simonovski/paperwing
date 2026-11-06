@@ -1,5 +1,7 @@
-import type { FoundFeed } from '../../src/lib/publishers.js'
+import type { DirectoryFeed } from '../../src/lib/publishers.js'
+import { BSKY_PATHS } from './atlinks.js'
 import { getRecord, pool } from './frontpage.js'
+import { fetchJson } from './http.js'
 import { kv } from './kv.js'
 import { blocked } from './paperwing.js'
 import { hidden, object, publicationUri, selfLabels, standardPublication } from './standard.js'
@@ -27,6 +29,14 @@ const RETRY = DAY
 const READ_FOR = 20_000
 const RUN_FOR = 45_000
 const MAX_CHECKS = 60
+const APPVIEW = 'https://public.api.bsky.app'
+const CONSTELLATION = 'https://constellation.microcosm.blue'
+/** Accounts never listed, beyond the adult and hidden labels: ones that asked not to be shown to logged-out viewers, and automated ones. */
+const UNLISTED = ['!no-unauthenticated', 'bot', '!automation']
+// ponytail: thresholds from the first day's 211 listed blogs (measured): under 10 followers was mostly
+// empty or auto-generated feeds, and more than a dozen freshly dated posts a day was feeds, not blogs.
+const MIN_FOLLOWERS = 10
+const FEED_PER_DAY = 12
 
 /** One event from Jetstream, as sent: nothing in it is trusted. */
 export interface Posted {
@@ -46,6 +56,21 @@ interface Entry {
   latest: number
   /** When its website last confirmed it. */
   checkedAt: number
+  /** Its newest post's path, for counting who discusses it. */
+  post?: string
+  /** What the last check found: the author's Bluesky followers, who lists it in a blogroll, and how many discuss its newest post. */
+  followers?: number
+  listedBy?: string[]
+  discussed?: number
+  /** When its posts of the last day were published: a feed, not a blog, past FEED_PER_DAY. */
+  recent?: number[]
+}
+
+/** What a run saw of one publication. */
+interface Seen {
+  latest: number
+  post?: string
+  fresh: number[]
 }
 
 const parse = (raw: string): Entry | undefined => {
@@ -95,12 +120,59 @@ const jetstream: PostSource = async function* (cursor, deadline) {
   }
 }
 
-/** The publication a post names, confirmed by its own website. */
-async function confirm(uri: string, latest: number, now: number): Promise<[string, Entry] | undefined> {
+type Links = Record<string, Record<string, { distinct_dids?: number }>>
+/** Every kind of record linking to a URL, counted (Constellation). A signal, so a failure counts as none. */
+const linksTo = (target: string) =>
+  fetchJson<{ links?: Links }>(`${CONSTELLATION}/links/all?target=${encodeURIComponent(target)}`, { timeoutMs: 6000 })
+    .then((r) => (object(r.links) as Links | undefined) ?? {})
+    .catch((): Links => ({}))
+const count = (links: Links, collection: string, path: (p: string) => boolean) =>
+  Math.max(
+    0,
+    ...Object.entries(object(links[collection]) ?? {}).flatMap(([p, c]) => {
+      const n = object(c)?.distinct_dids
+      return path(p) && typeof n === 'number' ? [n] : []
+    }),
+  )
+
+/** Recent post times, the ones from this run added once each, the day's only. */
+const freshen = (recent: number[] = [], fresh: number[], now: number) =>
+  [...new Set([...recent, ...fresh])]
+    .filter((t) => t > now - DAY)
+    .sort((a, b) => a - b)
+    .slice(-50)
+
+/**
+ * The publication a post names, confirmed by its own website, with what says whether it's worth
+ * suggesting: an author account that isn't labelled, automated or brand new, who lists it, and how
+ * many discuss its newest post.
+ */
+async function confirm(uri: string, seen: Seen, now: number): Promise<[string, Entry] | undefined> {
   const value = object((await getRecord<unknown>(uri)).value)
   if (typeof value?.url !== 'string' || hidden(selfLabels(value))) return undefined
   const pub = await standardPublication(value.url, uri)
-  return [uri, { url: pub.url, name: pub.name, latest, checkedAt: now }]
+  const did = uri.split('/')[2]
+  const [profile, home, newest] = await Promise.all([
+    fetchJson<{ followersCount?: unknown; labels?: unknown[] }>(`${APPVIEW}/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(did)}`, { timeoutMs: 6000 }),
+    linksTo(pub.url),
+    seen.post ? linksTo(`${pub.url}${seen.post}`) : Promise.resolve<Links>({}),
+  ])
+  const labels = (Array.isArray(profile.labels) ? profile.labels : []).flatMap((l) => (typeof object(l)?.val === 'string' ? [object(l)!.val as string] : []))
+  const followers = typeof profile.followersCount === 'number' ? profile.followersCount : 0
+  if (hidden(labels) || labels.some((l) => UNLISTED.includes(l)) || followers < MIN_FOLLOWERS) return undefined
+  const blogrolls = count(home, 'io.paperwing.blogroll', (p) => p === '.feeds[].url')
+  const listedBy = blogrolls
+    ? await fetchJson<{ linking_dids?: unknown[] }>(
+        `${CONSTELLATION}/links/distinct-dids?target=${encodeURIComponent(pub.url)}&collection=io.paperwing.blogroll&path=${encodeURIComponent('.feeds[].url')}&limit=20`,
+        { timeoutMs: 6000 },
+      )
+        .then((r) =>
+          Array.isArray(r.linking_dids) ? r.linking_dids.filter((d): d is string => typeof d === 'string' && publicationUri.test(`at://${d}/site.standard.publication/x`)).slice(0, 20) : [],
+        )
+        .catch(() => [])
+    : []
+  const discussed = count(newest, 'app.bsky.feed.post', (p) => BSKY_PATHS.test(p))
+  return [uri, { url: pub.url, name: pub.name, latest: seen.latest, checkedAt: now, post: seen.post, followers, listedBy, discussed, recent: freshen([], seen.fresh, now) }]
 }
 
 /** One scheduled run: the posts since the last run, their publications checked or re-dated, quiet ones forgotten. */
@@ -110,8 +182,8 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   // The first run looks back a day, which fills the directory without a separate backfill.
   const cursor = Number(await store.get(CURSOR)) || (now - DAY) * 1000
   const off = blocked()
-  // Each publication's newest post, this run.
-  const posted = new Map<string, number>()
+  // Each publication's newest post this run, and the new posts it published today.
+  const posted = new Map<string, Seen>()
   let last = 0
   let posts = 0
   for await (const ev of source(cursor, Date.now() + READ_FOR)) {
@@ -127,25 +199,30 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
     // ponytail: only posts in a publication count (loose ones naming a plain site were 325 of 330 failed checks, measured), and a post only vouches for its own author's publication.
     if (publicationUri.exec(record.site)?.[1] !== did) continue
     posts++
-    posted.set(record.site, Math.max(posted.get(record.site) ?? 0, at))
+    const seen = posted.get(record.site) ?? { latest: 0, fresh: [] }
+    const path = typeof record.path === 'string' && record.path.startsWith('/') && record.path.length <= 500 ? record.path : undefined
+    if (at > seen.latest) Object.assign(seen, { latest: at, post: path ?? seen.post })
+    // A new post dated today (an imported archive is dated when it was written).
+    if (op === 'create' && at > now - DAY) seen.fresh.push(at)
+    posted.set(record.site, seen)
   }
   const [known, failed] = await Promise.all([store.hgetall(KEY), store.hgetall(FAILED)])
   const updates = new Map<string, Entry>()
-  const toCheck: [string, number][] = []
+  const toCheck: [string, Seen][] = []
   // One publication per account a run, so nobody can take every check by posting to many.
   const authors = new Set<string>()
-  for (const [uri, latest] of posted) {
+  for (const [uri, seen] of posted) {
     const entry = known[uri] ? parse(known[uri]) : undefined
     const author = uri.split('/')[2]
     // Confirmed this week: just re-dated. One due a check is re-dated only if the check confirms it, so a
     // server too slow to answer can't keep a publication listed and current without ever being re-checked.
     if (entry && now - entry.checkedAt < RECHECK) {
-      updates.set(uri, { ...entry, latest: Math.max(entry.latest, latest) })
+      updates.set(uri, { ...entry, ...(seen.latest > entry.latest ? { latest: seen.latest, post: seen.post ?? entry.post } : {}), recent: freshen(entry.recent, seen.fresh, now) })
       continue
     }
     if (!(now - Number(failed[uri]) < RETRY) && !authors.has(author)) {
       authors.add(author)
-      toCheck.push([uri, latest])
+      toCheck.push([uri, seen])
     }
   }
   const checks = toCheck.slice(0, MAX_CHECKS)
@@ -156,10 +233,10 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   const work = pool(
     checks.map((c, i) => [c, i] as const),
     16,
-    async ([[uri, latest], i]) => {
+    async ([[uri, seen], i]) => {
       if (Date.now() >= runEnd) return
       asked++
-      results[i] = (await confirm(uri, latest, now).catch(() => undefined)) ?? 'refused'
+      results[i] = (await confirm(uri, seen, now).catch(() => undefined)) ?? 'refused'
     },
   )
   let timer: ReturnType<typeof setInterval> | undefined
@@ -167,8 +244,10 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   clearInterval(timer)
   const refused = new Set<string>()
   results.forEach((r, i) => {
-    if (Array.isArray(r)) updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, (known[r[0]] && parse(known[r[0]])?.latest) || 0) })
-    else if (r === 'refused') refused.add(checks[i][0])
+    if (Array.isArray(r)) {
+      const before = known[r[0]] ? parse(known[r[0]]) : undefined
+      updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, before?.latest ?? 0), recent: freshen(before?.recent, r[1].recent ?? [], now) })
+    } else if (r === 'refused') refused.add(checks[i][0])
   })
   // A listed publication its website no longer confirms, that's now labelled adult or hidden, or whose
   // server couldn't be reached on its re-check leaves the list until a later post confirms it again.
@@ -202,15 +281,30 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   return { posts, checked: asked, listed: updates.size }
 }
 
-/** The directory as the app shows it: newest post first, each ready to follow. */
-export async function directory(now = Date.now()): Promise<FoundFeed[]> {
+// ponytail: each point of signal buys two hours of freshness: log2 of the author's followers, three a
+// blogroll listing, two a person discussing the newest post (up to ten). Tune the weights here.
+const credit = (e: Entry) => 2 * HOUR * (Math.log2(1 + (e.followers ?? 0)) + 3 * (e.listedBy?.length ?? 0) + 2 * Math.min(e.discussed ?? 0, 10))
+const HOUR = 3_600_000
+
+/** The directory as the app shows it, each ready to follow: recent posts first, with credit for being read, listed and discussed. */
+export async function directory(now = Date.now()): Promise<DirectoryFeed[]> {
   const off = blocked()
   return Object.entries(await kv().hgetall(KEY))
     .flatMap(([uri, raw]) => {
       const e = parse(raw)
-      return e && e.latest >= now - QUIET && !off.has(uri) && !off.has(uri.split('/')[2]) ? [e] : []
+      const feed = (e?.recent ?? []).filter((t) => t > now - DAY).length > FEED_PER_DAY
+      return e && !feed && e.latest >= now - QUIET && !off.has(uri) && !off.has(uri.split('/')[2]) ? [{ e, author: uri.split('/')[2] }] : []
     })
-    .sort((a, b) => b.latest - a.latest)
+    .sort((a, b) => b.e.latest + credit(b.e) - (a.e.latest + credit(a.e)))
     .slice(0, 300)
-    .map((e) => ({ url: e.url, title: e.name, site: new URL(e.url).hostname, posts: 0, latest: e.latest, format: 'standard' as const }))
+    .map(({ e, author }) => ({
+      url: e.url,
+      title: e.name,
+      site: new URL(e.url).hostname,
+      posts: 0,
+      latest: e.latest,
+      format: 'standard' as const,
+      author,
+      ...(e.listedBy?.length ? { listedBy: e.listedBy } : {}),
+    }))
 }

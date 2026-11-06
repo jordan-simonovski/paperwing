@@ -18,7 +18,27 @@ afterEach(() => {
  * A writer on their own PDS with one publication on their own site. `checked`: whether the crawl gets
  * as far as asking (and whether the site confirms it).
  */
-function writer({ labels, checked = 'yes', publications = 1, onAsk }: { labels?: string[]; checked?: 'yes' | 'refused' | 'never'; publications?: number; onAsk?: () => void } = {}) {
+function writer({
+  labels,
+  checked = 'yes',
+  publications = 1,
+  onAsk,
+  followers = 100,
+  account = [],
+  listedBy = [],
+  discussed = 0,
+}: {
+  labels?: string[]
+  checked?: 'yes' | 'refused' | 'never'
+  publications?: number
+  onAsk?: () => void
+  /** The author's Bluesky profile: followers, and labels on the account. */
+  followers?: number
+  account?: string[]
+  /** Who lists the blog in their blogroll, and how many people discuss its newest post on Bluesky. */
+  listedBy?: string[]
+  discussed?: number
+} = {}) {
   n++
   // A valid did:plc for every writer: n in base 32, in the DID alphabet.
   const did = `did:plc:${[...n.toString(32)]
@@ -47,6 +67,32 @@ function writer({ labels, checked = 'yes', publications = 1, onAsk }: { labels?:
         .intercept({ path: '/.well-known/site.standard.publication' })
         .reply(200, checked === 'yes' ? uri : 'at://did:plc:someoneelsesomeoneelse12/site.standard.publication/x')
         .persist()
+    // Once confirmed: who the author is on Bluesky, and who lists or discusses the blog.
+    if (checked === 'yes' && !labels) {
+      const param = (p: string, name: string, base: string) => new URL(p, base).searchParams.get(name)
+      net
+        .get('https://public.api.bsky.app')
+        .intercept({ path: (p) => p.startsWith('/xrpc/app.bsky.actor.getProfile?') && param(p, 'actor', 'https://public.api.bsky.app') === did })
+        .reply(200, { did, handle: `writer-${n}.example`, followersCount: followers, labels: account.map((val) => ({ val })) })
+        .persist()
+      const C = 'https://constellation.microcosm.blue'
+      net
+        .get(C)
+        .intercept({ path: (p) => p.startsWith('/links/all?') && param(p, 'target', C) === site })
+        .reply(200, { links: listedBy.length ? { 'io.paperwing.blogroll': { '.feeds[].url': { records: listedBy.length, distinct_dids: listedBy.length } } } : {} })
+        .persist()
+      net
+        .get(C)
+        .intercept({ path: (p) => p.startsWith('/links/all?') && !!param(p, 'target', C)?.startsWith(`${site}/`) })
+        .reply(200, { links: discussed ? { 'app.bsky.feed.post': { '.embed.external.uri': { records: discussed, distinct_dids: discussed } } } : {} })
+        .persist()
+      if (listedBy.length)
+        net
+          .get(C)
+          .intercept({ path: (p) => p.startsWith('/links/distinct-dids?') && param(p, 'target', C) === site })
+          .reply(200, { total: listedBy.length, linking_dids: listedBy, cursor: null })
+          .persist()
+    }
   }
   // More publications in the same account, for the per-author cap.
   const more = Array.from({ length: publications - 1 }, (_, i) => `at://${did}/site.standard.publication/3me5vykp6lf${i}a`)
@@ -58,7 +104,7 @@ const post = (author: { did: string; uri: string }, at: number, extra: Record<st
   did: author.did,
   time_us: at * 1000,
   kind: 'commit',
-  commit: { operation: 'create', collection: 'site.standard.document', record: { site: author.uri, title: 'A post', publishedAt: new Date(at).toISOString(), ...extra } },
+  commit: { operation: 'create', collection: 'site.standard.document', record: { site: author.uri, title: 'A post', path: `/p/${at}`, publishedAt: new Date(at).toISOString(), ...extra } },
 })
 
 /** Jetstream's replay, faked: these events, and a note of the cursor each run asked from. */
@@ -80,8 +126,8 @@ describe('the open web directory', () => {
     const { source } = stream(post(older, NOW - 5 * day), post(newer, NOW - 3 * day), post(newer, NOW - day))
     expect(await crawlDirectory(NOW, source)).toMatchObject({ checked: 2, listed: 2 })
     expect(await directory(NOW)).toEqual([
-      { url: newer.site, title: newer.name, site: new URL(newer.site).hostname, posts: 0, latest: NOW - day, format: 'standard' },
-      { url: older.site, title: older.name, site: new URL(older.site).hostname, posts: 0, latest: NOW - 5 * day, format: 'standard' },
+      { url: newer.site, title: newer.name, site: new URL(newer.site).hostname, posts: 0, latest: NOW - day, format: 'standard', author: newer.did },
+      { url: older.site, title: older.name, site: new URL(older.site).hostname, posts: 0, latest: NOW - 5 * day, format: 'standard', author: older.did },
     ])
   })
 
@@ -220,6 +266,36 @@ describe('the open web directory', () => {
     expect(await directory(NOW)).toEqual([])
     process.env.PAPERWING_BLOCKED = one.uri
     expect(await directory(NOW)).toEqual([])
+  })
+
+  it('leaves out accounts labelled adult or automated, ones not shown to logged-out viewers, and brand-new ones', async () => {
+    const adult = writer({ account: ['porn'] })
+    const privateAccount = writer({ account: ['!no-unauthenticated'] })
+    const bot = writer({ account: ['bot'] })
+    const brandNew = writer({ followers: 3 })
+    const { source } = stream(...[adult, privateAccount, bot, brandNew].map((w) => post(w, NOW - day)))
+    expect(await crawlDirectory(NOW, source)).toMatchObject({ checked: 4, listed: 0 })
+    expect(await directory(NOW)).toEqual([])
+  })
+
+  it('puts a blog people list and discuss ahead of a newer one nobody does', async () => {
+    const quiet = writer({ followers: 12 })
+    const read = writer({ followers: 400, listedBy: ['did:plc:readerreaderreaderreader', 'did:plc:anotheranotheranotherano'], discussed: 3 })
+    await crawlDirectory(NOW, stream(post(quiet, NOW - 3_600_000), post(read, NOW - 12 * 3_600_000)).source)
+    const list = await directory(NOW)
+    expect(list.map((f) => f.url)).toEqual([read.site, quiet.site])
+    // Who wrote it and who lists it, so the app can bring forward the ones by people you follow.
+    expect(list[0]).toMatchObject({ author: read.did, listedBy: ['did:plc:readerreaderreaderreader', 'did:plc:anotheranotheranotherano'] })
+  })
+
+  it('hides a feed that publishes more than a dozen new posts a day, but not a blog importing its archive', async () => {
+    const feed = writer()
+    const importer = writer()
+    const hourly = Array.from({ length: 13 }, (_, i) => post(feed, NOW - i * 3_600_000))
+    // Thirty old posts imported today, and one new one.
+    const archive = [...Array.from({ length: 30 }, (_, i) => post(importer, NOW - (30 + i) * day)), post(importer, NOW - 3_600_000)]
+    await crawlDirectory(NOW, stream(...hourly, ...archive).source)
+    expect((await directory(NOW)).map((f) => f.url)).toEqual([importer.site])
   })
 
   it('forgets publications that have gone quiet', async () => {
