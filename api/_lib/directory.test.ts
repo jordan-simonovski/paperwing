@@ -113,6 +113,13 @@ describe('the open web directory', () => {
     expect((await directory(NOW)).map((f) => f.latest)).toEqual([NOW - 1000])
   })
 
+  it('asks about a site that didn’t confirm at most once a day', async () => {
+    const one = writer({ checked: 'refused' })
+    await crawlDirectory(NOW, stream(post(one, NOW - day)).source)
+    // Its next post within the day costs nothing: no upstream is faked for it.
+    expect(await crawlDirectory(NOW + 3_600_000, stream(post(one, NOW)).source)).toMatchObject({ checked: 0, listed: 0 })
+  })
+
   it('forgets publications that have gone quiet', async () => {
     const one = writer()
     await crawlDirectory(NOW, stream(post(one, NOW - day)).source)

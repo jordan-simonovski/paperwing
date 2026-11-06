@@ -14,15 +14,19 @@ import { hidden, publicationUri, selfLabels, standardPublication } from './stand
 const JETSTREAM = 'wss://jetstream2.us-east.bsky.network'
 const KEY = 'rd:directory'
 const CURSOR = 'rd:directory:cursor'
+/** Author and site pairs whose website didn't confirm them, and when it was asked. */
+const FAILED = 'rd:directory:failed'
 const DID = /^did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)$/
 const DAY = 86_400_000
 /** Not posted for this long: not one to suggest, and forgotten. */
 const QUIET = 90 * DAY
 /** How long a website's confirmation lasts before the next post checks it again. */
 const RECHECK = 7 * DAY
-// ponytail: an hour of Standard.site posts is ~4k events from ~100 authors (measured). The caps keep a run inside push.ts's 60 seconds; a busier hour carries on from the cursor next run, and authors past the check cap wait for their next post.
-const READ_FOR = 25_000
-const MAX_CHECKS = 100
+/** How long a site that didn't confirm (or couldn't be reached) waits to be asked again. */
+const RETRY = DAY
+// ponytail: an hour of Standard.site posts is ~4k events from ~100 authors, and 100 checks take ~18s (measured). The caps keep a run near 30 of push.ts's 60 seconds; a busier hour carries on from the cursor next run, and authors past the check cap wait for their next post.
+const READ_FOR = 20_000
+const MAX_CHECKS = 60
 
 /** One event from Jetstream, as sent: nothing in it is trusted. */
 export interface Posted {
@@ -136,15 +140,25 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   const known = new Map(Object.entries(await store.hgetall(KEY)).flatMap(([uri, raw]) => (parse(raw) ? [[uri, parse(raw)!] as const] : [])))
   const byUrl = new Map([...known].map(([uri, e]) => [bare(e.url), uri]))
   const updates = new Map<string, Entry>()
+  const failed = await store.hgetall(FAILED)
   const toCheck: { did: string; site: string; latest: number }[] = []
   for (const p of posted.values()) {
     const uri = p.site.startsWith('at://') ? p.site : byUrl.get(p.site)
     const entry = uri && uri.split('/')[2] === p.did ? known.get(uri) : undefined
     if (uri && entry && now - entry.checkedAt < RECHECK) updates.set(uri, { ...entry, latest: Math.max(entry.latest, updates.get(uri)?.latest ?? 0, p.latest) })
-    else toCheck.push(p)
+    else if (!(now - Number(failed[`${p.did} ${p.site}`]) < RETRY)) toCheck.push(p)
   }
   const checks = toCheck.slice(0, MAX_CHECKS)
-  const confirmed = (await pool(checks, 16, (p) => confirm(p.did, p.site, p.latest, now))).filter((c): c is [string, Entry] => !!c)
+  const results = await pool(checks, 16, (p) => confirm(p.did, p.site, p.latest, now))
+  const confirmed = results.filter((c): c is [string, Entry] => !!c)
+  const refused = checks.filter((_, i) => !results[i]).map((p) => `${p.did} ${p.site}`)
+  if (refused.length)
+    await store.hset(
+      FAILED,
+      refused.map((k) => [k, String(now)]),
+    )
+  const retry = Object.keys(failed).filter((k) => !(now - Number(failed[k]) < RETRY))
+  if (retry.length) await store.hdel(FAILED, retry)
   for (const [uri, e] of confirmed) updates.set(uri, { ...e, latest: Math.max(e.latest, known.get(uri)?.latest ?? 0, updates.get(uri)?.latest ?? 0) })
   if (updates.size)
     await store.hset(
