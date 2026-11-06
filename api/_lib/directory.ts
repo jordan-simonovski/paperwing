@@ -23,7 +23,7 @@ const QUIET = 90 * DAY
 const RECHECK = 7 * DAY
 /** How long a site that didn't confirm (or couldn't be reached) waits to be asked again. */
 const RETRY = DAY
-// ponytail: an hour of Standard.site posts is ~4k events from ~100 authors, and 100 checks take ~18s (measured). A check can take ~25s or more at worst (four requests in a row, author-chosen hosts), so the run stops waiting at 45s and saves what it has, well inside push.ts's 60 seconds. A busier hour carries on from the cursor next run, and authors past the caps wait for their next post.
+// ponytail: an hour of Standard.site posts is ~4k events from ~100 authors, and 100 checks take ~18s (measured). A check can take ~25s or more at worst (four requests in a row, author-chosen hosts), so the run stops waiting at 45s and saves what it has in three rounds of KV writes, inside push.ts's 60 seconds while the store is healthy (a slow store fails safe: the cursor is saved last). A busier hour carries on from the cursor next run, and authors past the caps wait for their next post.
 const READ_FOR = 20_000
 const RUN_FOR = 45_000
 const MAX_CHECKS = 60
@@ -137,9 +137,12 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   for (const [uri, latest] of posted) {
     const entry = known[uri] ? parse(known[uri]) : undefined
     const author = uri.split('/')[2]
-    // A listed one is re-dated either way; if it's due a check that refuses it, it leaves the list below.
-    if (entry) updates.set(uri, { ...entry, latest: Math.max(entry.latest, latest) })
-    if (entry && now - entry.checkedAt < RECHECK) continue
+    // Confirmed this week: just re-dated. One due a check is re-dated only if the check confirms it, so a
+    // server too slow to answer can't keep a publication listed and current without ever being re-checked.
+    if (entry && now - entry.checkedAt < RECHECK) {
+      updates.set(uri, { ...entry, latest: Math.max(entry.latest, latest) })
+      continue
+    }
     if (!(now - Number(failed[uri]) < RETRY) && !authors.has(author)) {
       authors.add(author)
       toCheck.push([uri, latest])
@@ -164,31 +167,39 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   clearInterval(timer)
   const refused = new Set<string>()
   results.forEach((r, i) => {
-    if (Array.isArray(r)) updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, updates.get(r[0])?.latest ?? 0) })
+    if (Array.isArray(r)) updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, (known[r[0]] && parse(known[r[0]])?.latest) || 0) })
     else if (r === 'refused') refused.add(checks[i][0])
   })
-  if (refused.size)
-    await store.hset(
-      FAILED,
-      [...refused].map((uri) => [uri, String(now)]),
-    )
   // A listed publication its website no longer confirms, that's now labelled adult or hidden, or whose
   // server couldn't be reached on its re-check leaves the list until a later post confirms it again.
   const unlisted = [...refused].filter((uri) => known[uri])
   const retry = Object.keys(failed).filter((uri) => !refused.has(uri) && !(now - Number(failed[uri]) < RETRY))
-  if (retry.length) await store.hdel(FAILED, retry)
-  if (updates.size)
-    await store.hset(
-      KEY,
-      [...updates].map(([uri, e]) => [uri, JSON.stringify(e)]),
-    )
   const quiet = Object.entries(known)
     .filter(([uri, raw]) => !updates.has(uri) && (parse(raw)?.latest ?? 0) < now - QUIET)
     .map(([uri]) => uri)
-  if (quiet.length || unlisted.length) await store.hdel(KEY, [...new Set([...quiet, ...unlisted])])
+  const gone = [...new Set([...quiet, ...unlisted])]
+  // Two independent chains, so a slow store costs two rounds here rather than four.
+  await Promise.all([
+    (async () => {
+      if (refused.size)
+        await store.hset(
+          FAILED,
+          [...refused].map((uri) => [uri, String(now)]),
+        )
+      if (retry.length) await store.hdel(FAILED, retry)
+    })(),
+    (async () => {
+      if (updates.size)
+        await store.hset(
+          KEY,
+          [...updates].map(([uri, e]) => [uri, JSON.stringify(e)]),
+        )
+      if (gone.length) await store.hdel(KEY, gone)
+    })(),
+  ])
   // Only once what the run found is saved: a run that fails partway reads the same posts again.
   if (last) await store.set(CURSOR, String(last), 7 * 86_400)
-  return { posts, checked: asked, listed: updates.size - [...refused].filter((uri) => updates.has(uri)).length }
+  return { posts, checked: asked, listed: updates.size }
 }
 
 /** The directory as the app shows it: newest post first, each ready to follow. */

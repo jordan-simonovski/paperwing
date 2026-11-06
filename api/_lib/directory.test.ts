@@ -163,10 +163,10 @@ describe('the open web directory', () => {
       const others = Array.from({ length: 15 }, () => writer())
       const later = NOW + 8 * day
       const res = await crawlDirectory(later, stream(...[slow, ...others, listed].map((w) => post(w, later - day))).source)
-      expect(res).toMatchObject({ checked: 16, listed: 17 })
-      // Not asked, so neither failed nor dropped: just re-dated, and checked on its next post.
+      expect(res).toMatchObject({ checked: 16, listed: 16 })
+      // Not asked: neither failed nor dropped, and not re-dated either, so it's checked on its next post.
       expect(Object.keys(await kv().hgetall('rd:directory:failed'))).not.toContain(listed.uri)
-      expect((await directory(later)).map((f) => f.url)).toContain(listed.site)
+      expect((await directory(later)).find((f) => f.url === listed.site)).toMatchObject({ latest: NOW - day })
     } finally {
       vi.useRealTimers()
     }
