@@ -4,6 +4,7 @@ import { emptyState, incidentSource, planAlerts, pushPayload, type AlertPrefs, t
 import { clientKey, fail, json, readJson } from './_lib/http.js'
 import { kv, kvConfigured, overLimit } from './_lib/kv.js'
 import { outageReport } from './_lib/outageScan.js'
+import { crawlDirectory } from './_lib/directory.js'
 import { ensureSchedules, publicOrigin, qstashConfigured, scheduleSignature, verifyQStash } from './_lib/qstash.js'
 import { MAX_CUSTOM, STATUS_PAGES, statusIncidents } from './_lib/statuspages.js'
 import { commentCounts } from './_lib/threadCounts.js'
@@ -346,9 +347,11 @@ export async function GET(request: Request): Promise<Response> {
   // A scheduled run: Vercel's cron or another scheduler with CRON_SECRET, or QStash's signature for
   // alerts. With neither set up, nobody can trigger sends.
   const secret = process.env.CRON_SECRET
-  const task = p.get('task') === 'alerts' ? 'alerts' : 'edition'
+  const task = p.get('task') === 'alerts' || p.get('task') === 'directory' ? p.get('task') : 'edition'
   const allowed = (!!secret && sameSecret(request.headers.get('authorization'), secret)) || verifyQStash(request)
   if (!allowed) return fail('Not allowed', 401)
+  // The open web directory isn't push: it runs whether or not push is set up.
+  if (task === 'directory') return json(await crawlDirectory(), 0)
   if (!configured()) return fail('Push is not set up', 501)
   const { publicKey, privateKey } = await vapidKeys()
   webpush.setVapidDetails(SUBJECT, publicKey, privateKey)

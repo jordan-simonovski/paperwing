@@ -47,6 +47,7 @@ describe('QStash schedules', () => {
     expect(calls.map(([u]) => u)).toEqual([
       'https://qstash.upstash.io/v2/schedules/https://readout.example/api/push?task=alerts',
       'https://qstash.upstash.io/v2/schedules/https://readout.example/api/push?task=edition',
+      'https://qstash.upstash.io/v2/schedules/https://readout.example/api/push?task=directory',
     ])
     for (const [, init] of calls) expect((init.headers as Record<string, string>)['Upstash-Forward-x-vercel-protection-bypass']).toBe('bypass')
     vi.unstubAllGlobals()

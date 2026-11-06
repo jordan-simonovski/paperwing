@@ -47,7 +47,8 @@ export function TermsPage() {
             download, you can open the original instead.
           </p>
           <p>
-            Discourse forums and Standard.site publications are read from their public feeds or records. Following them here does not sign you in to those services or publish a subscription there.
+            Discourse forums and Standard.site publications are read from their public feeds or records. Following them here does not sign you in to those services or publish a subscription there. The
+            publications in New on the open web are found automatically, not chosen or reviewed by us: being listed isn’t an endorsement.
           </p>
           <p>
             WARN notices in the Layoffs topic are public records, restated from each state’s own list, which can lag, change or contain mistakes; the state’s list is the record. Open roles under Still

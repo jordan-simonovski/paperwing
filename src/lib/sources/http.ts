@@ -41,6 +41,7 @@ export type FeedSource =
   | 'lobsters'
   | 'rss'
   | 'standard'
+  | 'directory'
   | 'card'
   | 'cardimage'
   | 'paperwing'

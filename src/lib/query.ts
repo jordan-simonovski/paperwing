@@ -54,6 +54,7 @@ export const keys = {
   mix: (uri: string) => ['mix', uri] as const,
   explore: (what: string, q: string) => ['explore', what, q] as const,
   discover: (what: string) => ['discover', what] as const,
+  directory: ['directory'] as const,
 }
 
 const cache = createStore('readout-cache', 'queries')
