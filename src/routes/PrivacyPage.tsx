@@ -138,6 +138,14 @@ export function PrivacyPage() {
             The publication address and format stay with your other feed settings, including encrypted sync and your public blogroll if you turn it on.
           </p>
           <p>
+            For New on the open web in Explore, the server reads Bluesky’s public stream of Standard.site posts (through Jetstream) every hour. When someone posts to a publication, it checks the
+            publication against its own website the same way and asks Constellation’s public index how many blogrolls list it and how many people discuss its newest post. It keeps the publication’s
+            name and address, its newest post’s address and date, when that day’s posts were published, the author’s follower count, that count of discussion, and the accounts whose public blogrolls
+            list it, for three months after its newest post. Every hour it rereads the public Bluesky profiles of listed authors and of those blogroll accounts, and the blogrolls themselves: an
+            account that’s labelled adult or automated, asks not to be shown to logged-out viewers, or is deleted is dropped within the hour, and so is a blogroll that stops listing the blog. If
+            you’re signed in with Bluesky, your browser reads who you follow straight from Bluesky to bring their blogs forward; that list never reaches PaperWing.
+          </p>
+          <p>
             Importing an OPML file from another reader reads it on your device. The feeds it holds, and the names of the folders they were in, join your feed settings and encrypted sync; folder names
             never go into your public blogroll. An import leaves out feeds whose address holds a password, or a token in a part of it it can recognise, so those don’t reach PaperWing unless you add
             one yourself. Your public blogroll and published mixes leave out those feeds too, however you followed them (a mix keeps them in your own copy; one you published before is published again

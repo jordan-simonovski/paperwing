@@ -29,6 +29,23 @@ Some features need a service behind them. Copy `.env.example` to `.env.local` an
 
 Never commit `.env.local`, keys, tokens or app passwords.
 
+### Local services
+
+To work on what needs the database (sync, rate limits, caches, the open web directory) without an
+Upstash account, run the hosted services locally with Docker:
+
+```sh
+npm run dev:full        # starts Redis behind Upstash's REST API (compose.yaml), then the app with it
+npm run task directory  # runs a scheduled task the way QStash would: alerts, edition or directory
+docker compose down -v  # stops the services and empties the local database
+```
+
+`dev:full` points the functions at the local database and sets `CRON_SECRET` to `local`, whatever
+`.env.local` says; the data stays between runs. The functions run in the dev server, with the same
+rewrites as production (read from `vercel.json`), so `curl -A Bluesky localhost:5173/t/space` gets the
+link preview a social app would. `npx vercel dev` also works if you've linked the project, but it's
+slower and isn't needed for anything here.
+
 ## Before you open a pull request (or push to main)
 
 Run the same checks CI runs:

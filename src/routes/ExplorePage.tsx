@@ -10,6 +10,7 @@ import { BoardDirectory } from '../components/BoardDirectory'
 import { BlueskyFeeds } from '../components/BlueskyFeeds'
 import { toast } from '../lib/ui'
 import { FeedFinder, FeedRow } from '../components/FollowBlogs'
+import { OpenWebDirectory } from '../components/OpenWebDirectory'
 import { bskyFeedChannel } from '../lib/channels'
 import { findBlueskyFeeds, findCommunities, toggleBlueskyFeed, toggleCommunity } from '../lib/explore'
 import { usePrefs } from '../lib/store'
@@ -196,6 +197,7 @@ function Publishers() {
           </div>
         </section>
       )}
+      <OpenWebDirectory />
       {sections.map((c) => (
         <section key={c} className="mt-10">
           <h2 className="text-[1.125rem] font-bold">{CLUSTERS[c].label}</h2>

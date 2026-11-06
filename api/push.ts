@@ -4,6 +4,7 @@ import { emptyState, incidentSource, planAlerts, pushPayload, type AlertPrefs, t
 import { clientKey, fail, json, readJson } from './_lib/http.js'
 import { kv, kvConfigured, overLimit } from './_lib/kv.js'
 import { outageReport } from './_lib/outageScan.js'
+import { crawlDirectory } from './_lib/directory.js'
 import { ensureSchedules, publicOrigin, qstashConfigured, scheduleSignature, verifyQStash } from './_lib/qstash.js'
 import { MAX_CUSTOM, STATUS_PAGES, statusIncidents } from './_lib/statuspages.js'
 import { commentCounts } from './_lib/threadCounts.js'
@@ -13,7 +14,8 @@ import { alertPages } from '../src/lib/statusPageList.js'
 //   GET  /api/push?key            whether push is set up, the public key, when alerts last ran
 //   GET  /api/push?task=edition   the daily edition
 //   GET  /api/push?task=alerts    replies, incidents and outage spikes, every five minutes
-// Both runs come from Upstash QStash schedules PaperWing creates itself (api/_lib/qstash.ts), signed
+//   GET  /api/push?task=directory the open web directory's crawl, hourly (api/_lib/directory.ts)
+// These runs come from Upstash QStash schedules PaperWing creates itself (api/_lib/qstash.ts), signed
 // by QStash; CRON_SECRET as a bearer token works too, for any other scheduler.
 //   POST /api/push                { subscription, alerts } to register, { remove }, { seen } when the app opens,
 //                                 or { test } to send this device a test notification
@@ -346,9 +348,11 @@ export async function GET(request: Request): Promise<Response> {
   // A scheduled run: Vercel's cron or another scheduler with CRON_SECRET, or QStash's signature for
   // alerts. With neither set up, nobody can trigger sends.
   const secret = process.env.CRON_SECRET
-  const task = p.get('task') === 'alerts' ? 'alerts' : 'edition'
+  const task = p.get('task') === 'alerts' || p.get('task') === 'directory' ? p.get('task') : 'edition'
   const allowed = (!!secret && sameSecret(request.headers.get('authorization'), secret)) || verifyQStash(request)
   if (!allowed) return fail('Not allowed', 401)
+  // The open web directory isn't push: it runs whether or not push is set up.
+  if (task === 'directory') return json(await crawlDirectory(), 0)
   if (!configured()) return fail('Push is not set up', 501)
   const { publicKey, privateKey } = await vapidKeys()
   webpush.setVapidDetails(SUBJECT, publicKey, privateKey)

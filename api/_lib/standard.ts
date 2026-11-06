@@ -6,13 +6,22 @@ import { escapeHtml } from './text.js'
 import { cachedInKv, fanOutLimited, kv, kvConfigured, type Payer } from './kv.js'
 
 const DID = 'did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)'
-const publicationUri = new RegExp(`^at://(${DID})/site\\.standard\\.publication/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
+export const publicationUri = new RegExp(`^at://(${DID})/site\\.standard\\.publication/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
 const documentUri = new RegExp(`^at://(${DID})/site\\.standard\\.document/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
-const object = (v: unknown): Record<string, unknown> | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
+export const object = (v: unknown): Record<string, unknown> | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const canonical = (url: URL) => `${url.origin}${url.pathname.replace(/\/$/, '')}`
 const verification = (url: URL) => `${url.origin}/.well-known/site.standard.publication${url.pathname.replace(/\/$/, '')}`
 const headLinks = (html: string) => Array.from(parseHTML(html.slice(0, 600_000)).document.head.querySelectorAll('link'))
+
+/** The labels an author put on their own record. */
+export function selfLabels(record: Record<string, unknown>): string[] {
+  const labels = object(record.labels)
+  return Array.isArray(labels?.values) ? labels.values.flatMap((v) => (typeof object(v)?.val === 'string' ? [object(v)!.val as string] : [])) : []
+}
+
+/** Labels that keep a record out of anything public: adult, hidden and spam alike. */
+export const hidden = (labels: string[]) => labels.some((l) => ['!hide', '!takedown', 'porn', 'sexual', 'nudity', 'graphic-media', 'gore', 'spam'].includes(l))
 
 export class StandardRateLimit extends Error {
   constructor() {
@@ -101,15 +110,9 @@ async function readStandardFeed(raw: string): Promise<Story[]> {
       const url = new URL(`${pub.url}${r.path ?? ''}`)
       const base = new URL(pub.url)
       if (url.origin !== base.origin || (url.pathname !== base.pathname && !url.pathname.startsWith(`${base.pathname.replace(/\/$/, '')}/`))) continue
-      const labels = object(r.labels)
-      const values = Array.isArray(labels?.values)
-        ? labels.values.flatMap((v) => {
-            const l = object(v)
-            return typeof l?.val === 'string' ? [{ src: did, val: l.val }] : []
-          })
-        : []
+      const values = selfLabels(r).map((val) => ({ src: did, val }))
       // Public publisher feeds and published mixes keep adult and hidden content out alike.
-      if (values.some((l) => ['!hide', '!takedown', 'porn', 'sexual', 'nudity', 'graphic-media', 'gore', 'spam'].includes(l.val))) continue
+      if (hidden(values.map((l) => l.val))) continue
       const description = text(r.description, 1000) || text(r.textContent, 1000)
       candidates.push({
         uri: record.uri,

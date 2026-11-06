@@ -2,6 +2,7 @@ import { fail, json } from './_lib/http.js'
 import { fanOutLimited } from './_lib/kv.js'
 import type { FeedSource } from '../src/lib/sources/http.js'
 import { discoverFeeds } from './_lib/discover.js'
+import { directory } from './_lib/directory.js'
 import { favicon } from './_lib/icon.js'
 import { frontpageActivity, frontpageFeed } from './_lib/frontpage.js'
 import { openNetworkDiscussions } from './_lib/atlinks.js'
@@ -107,6 +108,8 @@ export const SOURCES: Record<FeedSource, Source> = {
   mix: { ttl: 300, run: (p) => readMix(need(p, 'uri')) },
   // Headlines for a search, from any publisher.
   news: { ttl: 900, run: (p) => newsSearch(need(p, 'q')) },
+  // Blogs on atproto that found their own way in (Standard.site), from the scheduled crawl's list in KV.
+  directory: { ttl: 3600, run: () => directory() },
   // A site's feeds, from any link to it. Sites rarely change their feeds. Up to a dozen whole feeds per call.
   discover: { ttl: 86_400, cost: 5, run: (p) => discoverFeeds(need(p, 'url')) },
   // Who on Bluesky and Frontpage is discussing a link.

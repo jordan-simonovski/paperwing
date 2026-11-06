@@ -45,6 +45,7 @@ export const keys = {
   board: (did: string | undefined, rkey: string | undefined) => ['board', did, rkey] as const,
   anyBoard: ['board'] as const,
   friends: (did: string | undefined) => ['friends', did] as const,
+  following: (did: string | undefined) => ['following', did] as const,
   me: (did: string | undefined) => ['me', did] as const,
   search: (source: string, q: string, range: string, sort: string) => ['search', source, q, range, sort] as const,
   blueskyStatus: ['bluesky-status'] as const,
@@ -54,6 +55,7 @@ export const keys = {
   mix: (uri: string) => ['mix', uri] as const,
   explore: (what: string, q: string) => ['explore', what, q] as const,
   discover: (what: string) => ['discover', what] as const,
+  directory: ['directory'] as const,
 }
 
 const cache = createStore('readout-cache', 'queries')

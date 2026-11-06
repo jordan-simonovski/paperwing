@@ -4,6 +4,9 @@ import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { topicCards } from './scripts/topicCards'
+import { rewrite } from './scripts/vercelRewrites'
+
+const { rewrites } = JSON.parse(readFileSync('vercel.json', 'utf8')) as { rewrites: Parameters<typeof rewrite>[2] }
 
 // Mirrors Vercel's file-based functions in dev: /api/<name> -> api/<name>.ts exporting GET/POST(request).
 function vercelApiDev(): Plugin {
@@ -14,13 +17,9 @@ function vercelApiDev(): Plugin {
       // and friends) for local development, without overriding anything already set.
       for (const [k, v] of Object.entries(loadEnv(server.config.mode, process.cwd(), ''))) process.env[k] ??= v
       server.middlewares.use(async (req, res, next) => {
-        // Same rewrites as vercel.json: the Bluesky feed generator's well-known and xrpc paths.
-        if (req.url?.startsWith('/.well-known/did.json')) req.url = '/api/atproto?route=did'
-        else if (req.url === '/rss' || req.url?.startsWith('/rss/')) req.url = `/api/rss?path=${encodeURIComponent(req.url.slice(4).replace(/^\//, ''))}`
-        else if (req.url?.startsWith('/xrpc/')) {
-          const [path, qs = ''] = req.url.slice('/xrpc/'.length).split('?')
-          req.url = `/api/atproto?route=${path}${qs ? `&${qs}` : ''}`
-        }
+        // vercel.json's own rewrites, as production applies them (link previews for bots included).
+        const to = req.url && rewrite(req.url, (name) => [req.headers[name]].flat()[0], rewrites)
+        if (to) req.url = to
         if (!req.url?.startsWith('/api/')) return next()
         const url = new URL(req.url, 'http://localhost')
         const name = url.pathname.slice('/api/'.length).replace(/\/$/, '')
