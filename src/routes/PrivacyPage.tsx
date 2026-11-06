@@ -138,9 +138,8 @@ export function PrivacyPage() {
             The publication address and format stay with your other feed settings, including encrypted sync and your public blogroll if you turn it on.
           </p>
           <p>
-            For New on the open web in Explore, the server regularly reads the public list of Bluesky (atproto) accounts that hold a Standard.site publication, checks each publication against its own
-            website the same way, and keeps the name, address and date of the newest post of each one that posted in the last three months. Nothing about you is involved. A publication leaves the list
-            within a few days of being deleted, or of its website no longer confirming it.
+            For New on the open web in Explore, the server reads Bluesky’s public stream of Standard.site posts (through Jetstream) every hour. When someone posts to a publication, it checks the
+            publication against its own website the same way, and keeps its name, address and the date of its newest post, for three months after that post. Nothing about you is involved.
           </p>
           <p>
             Importing an OPML file from another reader reads it on your device. The feeds it holds, and the names of the folders they were in, join your feed settings and encrypted sync; folder names

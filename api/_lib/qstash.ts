@@ -50,11 +50,11 @@ export function verifyQStash(request: Request, body = '', now = Date.now()): boo
   return claims.body === undefined || claims.body.replace(/=+$/, '') === b64url(createHash('sha256').update(body).digest())
 }
 
-/** What PaperWing schedules: alerts every five minutes, the daily edition at 21:00 UTC (08:00 in Sydney in summer), and the open web directory's crawl every ten minutes. */
+/** What PaperWing schedules: alerts every five minutes, the daily edition at 21:00 UTC (08:00 in Sydney in summer), and the open web directory's crawl hourly. */
 export const SCHEDULES = [
   { id: 'readout-alerts', cron: '*/5 * * * *', task: 'alerts' },
   { id: 'readout-edition', cron: '0 21 * * *', task: 'edition' },
-  { id: 'readout-directory', cron: '*/10 * * * *', task: 'directory' },
+  { id: 'readout-directory', cron: '7 * * * *', task: 'directory' },
 ]
 
 /**

@@ -21,7 +21,7 @@ export function OpenWebDirectory() {
         New on the open web
       </h2>
       <p className="mt-1 max-w-xl text-[0.875rem] text-ink-2">
-        Blogs that publish on Bluesky’s open network with Standard.site, newest post first. Nobody picks them: a blog shows up here once its own website confirms it.
+        Blogs that publish on Bluesky’s open network with Standard.site, newest post first. Nobody picks them: a blog shows up here when it posts and its own website confirms it.
       </p>
       {list.isError ? (
         <CouldntReach what="the open web’s blogs" onRetry={() => void list.refetch()} />
