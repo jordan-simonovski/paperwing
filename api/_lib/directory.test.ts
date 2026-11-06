@@ -203,7 +203,29 @@ describe('the open web directory', () => {
     expect(res.body.map((f) => f.url)).toEqual([one.site])
   })
 
-  it('only crawls on a scheduled run', async () => {
+  it('only crawls on a scheduled run, and then runs even without push set up', async () => {
     expect((await call(push, '/api/push?task=directory')).status).toBe(401)
+    process.env.CRON_SECRET = 'the-secret'
+    // Jetstream, faked at the socket: it opens to the right address and closes with nothing to send.
+    const opened: string[] = []
+    vi.stubGlobal(
+      'WebSocket',
+      class {
+        onclose?: () => void
+        constructor(url: string) {
+          opened.push(url)
+          setTimeout(() => this.onclose?.(), 0)
+        }
+        close() {}
+      },
+    )
+    try {
+      const res = await call(push, '/api/push?task=directory', { headers: { authorization: 'Bearer the-secret' } })
+      expect(res).toMatchObject({ status: 200, body: { posts: 0, checked: 0, listed: 0 } })
+      expect(opened).toEqual([expect.stringMatching(/^wss:\/\/jetstream2\.us-east\.bsky\.network\/subscribe\?wantedCollections=site\.standard\.document&cursor=\d+$/)])
+    } finally {
+      vi.unstubAllGlobals()
+      delete process.env.CRON_SECRET
+    }
   })
 })
