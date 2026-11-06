@@ -17,7 +17,8 @@ services:
       SRH_MODE: env
       SRH_TOKEN: local
       SRH_CONNECTION_STRING: redis://redis:6379
-    ports: ['8079:80']
+    # Loopback only: the token is in this file, so nobody else on the network may reach it.
+    ports: ['127.0.0.1:8079:80']
     depends_on:
       redis:
         condition: service_healthy
