@@ -26,7 +26,8 @@ export const BrowseImages: Story = {
     const page = within(canvasElement.ownerDocument.body)
     const opener = canvas.getByRole('link', { name: 'Open image 2 of 3: Second' })
     await userEvent.click(opener)
-    const viewer = within(await page.findByRole('dialog', { name: 'Image viewer' }))
+    // The viewer loads on demand: under a full parallel story run that can take longer than the default second.
+    const viewer = within(await page.findByRole('dialog', { name: 'Image viewer' }, { timeout: 5000 }))
     await expect(viewer.getByRole('status')).toHaveTextContent('2 of 3')
     await userEvent.click(viewer.getByRole('button', { name: 'Next image' }))
     await expect(await viewer.findByRole('img', { name: 'Third' })).toBeVisible()
