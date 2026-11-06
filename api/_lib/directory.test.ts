@@ -35,6 +35,7 @@ function writer({ labels, checked = 'yes', publications = 1, onAsk }: { labels?:
       .get('https://plc.directory')
       .intercept({ path: `/${did}` })
       .reply(200, { service: [{ id: '#atproto_pds', serviceEndpoint: pds }] })
+      .persist()
     net
       .get(pds)
       .intercept({ path: (p) => p.startsWith('/xrpc/com.atproto.repo.getRecord?') })
@@ -152,17 +153,47 @@ describe('the open web directory', () => {
     expect(await crawlDirectory(NOW, stream(...many).source)).toMatchObject({ checked: 1 })
   })
 
-  it('leaves checks that would start too late for the next post, so a run stays inside its limit', async () => {
+  it('starts no checks past its deadline, and a listed blog that misses its check stays listed', async () => {
+    const listed = writer()
+    await crawlDirectory(NOW, stream(post(listed, NOW - day)).source)
     vi.useFakeTimers({ toFake: ['Date'] })
     try {
-      // The first site's answer takes the clock past the point where new checks may start.
-      const slow = writer({ onAsk: () => vi.setSystemTime(Date.now() + 20_000) })
+      // The first site's answer takes the clock past the run's deadline.
+      const slow = writer({ onAsk: () => vi.setSystemTime(Date.now() + 50_000) })
       const others = Array.from({ length: 15 }, () => writer())
-      const late = writer({ checked: 'never' })
-      const res = await crawlDirectory(NOW, stream(...[slow, ...others, late].map((w) => post(w, NOW - day))).source)
-      expect(res).toMatchObject({ checked: 17, listed: 16 })
-      // Not asked, so not counted against it either: its next post gets a check.
-      expect(Object.keys(await kv().hgetall('rd:directory:failed'))).not.toContain(late.uri)
+      const later = NOW + 8 * day
+      const res = await crawlDirectory(later, stream(...[slow, ...others, listed].map((w) => post(w, later - day))).source)
+      expect(res).toMatchObject({ checked: 16, listed: 17 })
+      // Not asked, so neither failed nor dropped: just re-dated, and checked on its next post.
+      expect(Object.keys(await kv().hgetall('rd:directory:failed'))).not.toContain(listed.uri)
+      expect((await directory(later)).map((f) => f.url)).toContain(listed.site)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops waiting on a check still running at its deadline, and saves what it has', async () => {
+    const pds = 'https://slow-pds.example'
+    const did = 'did:plc:slowslowslowslowslowslow'
+    const uri = `at://${did}/site.standard.publication/3me5vykp6lf2y`
+    net
+      .get('https://plc.directory')
+      .intercept({ path: `/${did}` })
+      .reply(200, { service: [{ id: '#atproto_pds', serviceEndpoint: pds }] })
+    // A server that takes its time answering.
+    net
+      .get(pds)
+      .intercept({ path: (p) => p.startsWith('/xrpc/com.atproto.repo.getRecord?') })
+      .reply(200, { uri, value: { url: 'https://slow.example', name: 'Slow' } })
+      .delay(2000)
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      const run = crawlDirectory(NOW, stream(post({ did, uri }, NOW - day)).source)
+      await new Promise((r) => setTimeout(r, 50))
+      vi.setSystemTime(Date.now() + 50_000)
+      expect(await run).toMatchObject({ checked: 1, listed: 0 })
+      expect(await kv().get('rd:directory:cursor')).toBe(String((NOW - day) * 1000))
+      expect(Object.keys(await kv().hgetall('rd:directory:failed'))).toEqual([])
     } finally {
       vi.useRealTimers()
     }
@@ -172,8 +203,11 @@ describe('the open web directory', () => {
     const one = writer()
     // Saving what the run found fails: its posts must be read again next run.
     const save = vi.spyOn(kv(), 'hset').mockRejectedValueOnce(new Error('the store is down'))
-    await expect(crawlDirectory(NOW, stream(post(one, NOW - 2 * day)).source)).rejects.toThrow('the store is down')
-    save.mockRestore()
+    try {
+      await expect(crawlDirectory(NOW, stream(post(one, NOW - 2 * day)).source)).rejects.toThrow('the store is down')
+    } finally {
+      save.mockRestore()
+    }
     const next = stream()
     await crawlDirectory(NOW, next.source)
     expect(next.asked).toEqual([(NOW - day) * 1000])

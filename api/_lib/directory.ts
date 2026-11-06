@@ -23,9 +23,9 @@ const QUIET = 90 * DAY
 const RECHECK = 7 * DAY
 /** How long a site that didn't confirm (or couldn't be reached) waits to be asked again. */
 const RETRY = DAY
-// ponytail: an hour of Standard.site posts is ~4k events from ~100 authors, and 100 checks take ~18s (measured). 20s of reading, checks started within the next 15s, and a check's own timeouts (~17s at worst) keep a run under push.ts's 60 seconds; a busier hour carries on from the cursor next run, and authors past the caps wait for their next post.
+// ponytail: an hour of Standard.site posts is ~4k events from ~100 authors, and 100 checks take ~18s (measured). A check can take ~25s or more at worst (four requests in a row, author-chosen hosts), so the run stops waiting at 45s and saves what it has, well inside push.ts's 60 seconds. A busier hour carries on from the cursor next run, and authors past the caps wait for their next post.
 const READ_FOR = 20_000
-const CHECK_FOR = 15_000
+const RUN_FOR = 45_000
 const MAX_CHECKS = 60
 
 /** One event from Jetstream, as sent: nothing in it is trusted. */
@@ -106,6 +106,7 @@ async function confirm(uri: string, latest: number, now: number): Promise<[strin
 /** One scheduled run: the posts since the last run, their publications checked or re-dated, quiet ones forgotten. */
 export async function crawlDirectory(now = Date.now(), source: PostSource = jetstream): Promise<{ posts: number; checked: number; listed: number }> {
   const store = kv()
+  const runEnd = Date.now() + RUN_FOR
   // The first run looks back a day, which fills the directory without a separate backfill.
   const cursor = Number(await store.get(CURSOR)) || (now - DAY) * 1000
   const off = blocked()
@@ -136,27 +137,43 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   for (const [uri, latest] of posted) {
     const entry = known[uri] ? parse(known[uri]) : undefined
     const author = uri.split('/')[2]
-    if (entry && now - entry.checkedAt < RECHECK) updates.set(uri, { ...entry, latest: Math.max(entry.latest, latest) })
-    else if (!(now - Number(failed[uri]) < RETRY) && !authors.has(author)) {
+    // A listed one is re-dated either way; if it's due a check that refuses it, it leaves the list below.
+    if (entry) updates.set(uri, { ...entry, latest: Math.max(entry.latest, latest) })
+    if (entry && now - entry.checkedAt < RECHECK) continue
+    if (!(now - Number(failed[uri]) < RETRY) && !authors.has(author)) {
       authors.add(author)
       toCheck.push([uri, latest])
     }
   }
   const checks = toCheck.slice(0, MAX_CHECKS)
-  // A check that would start late waits for its author's next post, so slow servers can't hold a run past its limit.
-  const stopAt = Date.now() + CHECK_FOR
+  // Checks still running at the deadline are left for their authors' next posts (neither failed nor
+  // unlisted), and none start after it: the run always gets to save what it found.
+  const results: ([string, Entry] | 'refused' | 'late')[] = checks.map(() => 'late')
+  let asked = 0
+  const work = pool(
+    checks.map((c, i) => [c, i] as const),
+    16,
+    async ([[uri, latest], i]) => {
+      if (Date.now() >= runEnd) return
+      asked++
+      results[i] = (await confirm(uri, latest, now).catch(() => undefined)) ?? 'refused'
+    },
+  )
+  let timer: ReturnType<typeof setInterval> | undefined
+  await Promise.race([work, new Promise<void>((resolve) => (timer = setInterval(() => Date.now() >= runEnd && resolve(), 250)))])
+  clearInterval(timer)
   const refused = new Set<string>()
-  const results = await pool(checks, 16, async ([uri, latest]) => (Date.now() < stopAt ? confirm(uri, latest, now) : ('late' as const)))
   results.forEach((r, i) => {
-    if (Array.isArray(r)) updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, (known[r[0]] && parse(known[r[0]])?.latest) || 0) })
-    else if (!r) refused.add(checks[i][0])
+    if (Array.isArray(r)) updates.set(r[0], { ...r[1], latest: Math.max(r[1].latest, updates.get(r[0])?.latest ?? 0) })
+    else if (r === 'refused') refused.add(checks[i][0])
   })
   if (refused.size)
     await store.hset(
       FAILED,
       [...refused].map((uri) => [uri, String(now)]),
     )
-  // A listed publication its website no longer confirms (or now labelled adult or hidden) leaves the list.
+  // A listed publication its website no longer confirms, that's now labelled adult or hidden, or whose
+  // server couldn't be reached on its re-check leaves the list until a later post confirms it again.
   const unlisted = [...refused].filter((uri) => known[uri])
   const retry = Object.keys(failed).filter((uri) => !refused.has(uri) && !(now - Number(failed[uri]) < RETRY))
   if (retry.length) await store.hdel(FAILED, retry)
@@ -171,7 +188,7 @@ export async function crawlDirectory(now = Date.now(), source: PostSource = jets
   if (quiet.length || unlisted.length) await store.hdel(KEY, [...new Set([...quiet, ...unlisted])])
   // Only once what the run found is saved: a run that fails partway reads the same posts again.
   if (last) await store.set(CURSOR, String(last), 7 * 86_400)
-  return { posts, checked: checks.length, listed: updates.size }
+  return { posts, checked: asked, listed: updates.size - [...refused].filter((uri) => updates.has(uri)).length }
 }
 
 /** The directory as the app shows it: newest post first, each ready to follow. */
