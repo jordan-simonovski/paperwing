@@ -108,9 +108,9 @@ export const SOURCES: Record<FeedSource, Source> = {
   mix: { ttl: 300, run: (p) => readMix(need(p, 'uri')) },
   // Headlines for a search, from any publisher.
   news: { ttl: 900, run: (p) => newsSearch(need(p, 'q')) },
-  // A site's feeds, from any link to it. Sites rarely change their feeds. Up to a dozen whole feeds per call.
   // Blogs on atproto that found their own way in (Standard.site), from the scheduled crawl's list in KV.
   directory: { ttl: 3600, run: () => directory() },
+  // A site's feeds, from any link to it. Sites rarely change their feeds. Up to a dozen whole feeds per call.
   discover: { ttl: 86_400, cost: 5, run: (p) => discoverFeeds(need(p, 'url')) },
   // Who on Bluesky and Frontpage is discussing a link.
   atlinks: { ttl: 600, cost: 1, run: (p) => openNetworkDiscussions(need(p, 'url')) },

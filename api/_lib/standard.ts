@@ -8,7 +8,7 @@ import { cachedInKv, fanOutLimited, kv, kvConfigured, type Payer } from './kv.js
 const DID = 'did:(?:plc:[a-z2-7]{24}|web:[a-z0-9.%:-]+)'
 export const publicationUri = new RegExp(`^at://(${DID})/site\\.standard\\.publication/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
 const documentUri = new RegExp(`^at://(${DID})/site\\.standard\\.document/([A-Za-z0-9_~:-][A-Za-z0-9._~:-]{0,511})$`)
-const object = (v: unknown): Record<string, unknown> | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
+export const object = (v: unknown): Record<string, unknown> | undefined => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const canonical = (url: URL) => `${url.origin}${url.pathname.replace(/\/$/, '')}`
 const verification = (url: URL) => `${url.origin}/.well-known/site.standard.publication${url.pathname.replace(/\/$/, '')}`
