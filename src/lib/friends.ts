@@ -1,6 +1,5 @@
 import { keys } from './query'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
 import { canReadTimeline, useAtproto } from './atproto'
 import { friendsByLink, linkId, TOOK_PART, type Friend } from './sources/bluesky'
 import { bskyPostUrl } from './bskyPost'
@@ -17,31 +16,6 @@ export function useFriendMap() {
   const did = useAtproto((a) => a.did)
   const allowed = useAtproto((a) => canReadTimeline(a.scope))
   return useQuery({ queryKey: keys.friends(did), queryFn: friendsByLink, enabled: !!did && allowed !== false, staleTime: 5 * 60_000, retry: 1 })
-}
-
-// ponytail: the first 1,000 accounts you follow (ten pages); read further if people follow more and miss blogs.
-const FOLLOW_PAGES = 10
-
-/** Everyone you follow on Bluesky (their DIDs), read from Bluesky's public API in your browser; nothing about it reaches PaperWing's server. */
-async function follows(did: string): Promise<string[]> {
-  const out: string[] = []
-  let cursor: string | undefined
-  for (let page = 0; page < FOLLOW_PAGES; page++) {
-    const res = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.graph.getFollows?actor=${encodeURIComponent(did)}&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
-    if (!res.ok) throw new Error(`Bluesky answered ${res.status}`)
-    const body = (await res.json()) as { follows?: { did?: string }[]; cursor?: string }
-    for (const f of body.follows ?? []) if (typeof f.did === 'string') out.push(f.did)
-    cursor = body.cursor
-    if (!cursor || !body.follows?.length) break
-  }
-  return out
-}
-
-/** The accounts you follow on Bluesky, when you're signed in: empty otherwise, and while they load. */
-export function useFollowing(): Set<string> {
-  const did = useAtproto((a) => a.did)
-  const { data } = useQuery({ queryKey: keys.following(did), queryFn: () => follows(did!), enabled: !!did, staleTime: 60 * 60_000, retry: 1 })
-  return useMemo(() => new Set(data ?? []), [data])
 }
 
 /**

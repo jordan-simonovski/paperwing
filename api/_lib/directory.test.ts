@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { call, fakeUpstreams, memoryStore } from '../_test/harness'
 import { crawlDirectory, directory, type Posted } from './directory'
 import { kv } from './kv'
@@ -10,6 +10,38 @@ memoryStore()
 const NOW = Date.UTC(2026, 10, 6)
 const day = 86_400_000
 let n = 0
+/** Authors' Bluesky profiles, answered in batches by one stub for the whole file (stubs outlive a test here), registered by the first writer that needs it. */
+const profiles = new Map<string, { followers: number; labels: string[] }>()
+let profilesStubbed = false
+/** Set to make Bluesky's profile lookup fail for the rest of a test. */
+let profilesDown = false
+function profilesOf(did: string, profile: { followers: number; labels: string[] }) {
+  profiles.set(did, profile)
+  if (profilesStubbed) return
+  profilesStubbed = true
+  const A = 'https://public.api.bsky.app'
+  net
+    .get(A)
+    .intercept({ path: (p) => p.startsWith('/xrpc/app.bsky.actor.getProfiles?') })
+    .reply(({ path }) =>
+      profilesDown
+        ? { statusCode: 503, data: 'busy' }
+        : {
+            statusCode: 200,
+            data: {
+              profiles: new URL(path, A).searchParams.getAll('actors').flatMap((d) => {
+                const p = profiles.get(d)
+                return p ? [{ did: d, handle: `${d.slice(-6)}.example`, followersCount: p.followers, labels: p.labels.map((val) => ({ val })) }] : []
+              }),
+            },
+          },
+    )
+    .persist()
+}
+beforeEach(() => {
+  profiles.clear()
+  profilesDown = false
+})
 afterEach(() => {
   delete process.env.PAPERWING_BLOCKED
 })
@@ -29,7 +61,8 @@ function writer({
   discussed = 0,
 }: {
   labels?: string[]
-  checked?: 'yes' | 'refused' | 'never'
+  /** 'profile': refused on the author's profile alone, before their server or site is asked anything. */
+  checked?: 'yes' | 'refused' | 'never' | 'profile'
   publications?: number
   onAsk?: () => void
   /** The author's Bluesky profile: followers, and labels on the account. */
@@ -49,8 +82,10 @@ function writer({
   const pds = `https://pds-${n}.example`
   const site = `https://writer-${n}.example`
   const name = `Writer ${n}`
-  const state = { labels }
-  if (checked !== 'never') {
+  const state = { labels, down: false, listers: listedBy }
+  const profile = { followers, labels: account }
+  if (checked !== 'never') profilesOf(did, profile)
+  if (checked !== 'never' && checked !== 'profile') {
     net
       .get('https://plc.directory')
       .intercept({ path: `/${did}` })
@@ -59,7 +94,11 @@ function writer({
     net
       .get(pds)
       .intercept({ path: (p) => p.startsWith('/xrpc/com.atproto.repo.getRecord?') })
-      .reply(200, () => (onAsk?.(), { uri, value: { url: site, name, ...(state.labels ? { labels: { values: state.labels.map((val) => ({ val })) } } : {}) } }))
+      .reply(() =>
+        state.down
+          ? { statusCode: 503, data: 'down' }
+          : (onAsk?.(), { statusCode: 200, data: { uri, value: { url: site, name, ...(state.labels ? { labels: { values: state.labels.map((val) => ({ val })) } } : {}) } } }),
+      )
       .persist()
     if (!labels)
       net
@@ -70,11 +109,6 @@ function writer({
     // Once confirmed: who the author is on Bluesky, and who lists or discusses the blog.
     if (checked === 'yes' && !labels) {
       const param = (p: string, name: string, base: string) => new URL(p, base).searchParams.get(name)
-      net
-        .get('https://public.api.bsky.app')
-        .intercept({ path: (p) => p.startsWith('/xrpc/app.bsky.actor.getProfile?') && param(p, 'actor', 'https://public.api.bsky.app') === did })
-        .reply(200, { did, handle: `writer-${n}.example`, followersCount: followers, labels: account.map((val) => ({ val })) })
-        .persist()
       const C = 'https://constellation.microcosm.blue'
       net
         .get(C)
@@ -90,21 +124,37 @@ function writer({
         net
           .get(C)
           .intercept({ path: (p) => p.startsWith('/links/distinct-dids?') && param(p, 'target', C) === site })
-          .reply(200, { total: listedBy.length, linking_dids: listedBy, cursor: null })
+          .reply(200, () => ({ total: state.listers.length, linking_dids: state.listers, cursor: null }))
           .persist()
     }
   }
   // More publications in the same account, for the per-author cap.
   const more = Array.from({ length: publications - 1 }, (_, i) => `at://${did}/site.standard.publication/3me5vykp6lf${i}a`)
-  return { did, uri, site, name, more, relabel: (l: string[]) => (state.labels = l) }
+  return {
+    did,
+    uri,
+    site,
+    name,
+    more,
+    relabel: (l: string[]) => (state.labels = l),
+    relabelAccount: (l: string[]) => (profile.labels = l),
+    serverDown: () => (state.down = true),
+    listers: (l: string[]) => (state.listers = l),
+  }
 }
 
 /** A document write as Jetstream sends it. */
+let rkeys = 0
 const post = (author: { did: string; uri: string }, at: number, extra: Record<string, unknown> = {}): Posted => ({
   did: author.did,
   time_us: at * 1000,
   kind: 'commit',
-  commit: { operation: 'create', collection: 'site.standard.document', record: { site: author.uri, title: 'A post', path: `/p/${at}`, publishedAt: new Date(at).toISOString(), ...extra } },
+  commit: {
+    operation: 'create',
+    collection: 'site.standard.document',
+    rkey: `doc${++rkeys}`,
+    record: { site: author.uri, title: 'A post', path: `/p/${at}`, publishedAt: new Date(at).toISOString(), ...extra },
+  },
 })
 
 /** Jetstream's replay, faked: these events, and a note of the cursor each run asked from. */
@@ -222,6 +272,7 @@ describe('the open web directory', () => {
     const pds = 'https://slow-pds.example'
     const did = 'did:plc:slowslowslowslowslowslow'
     const uri = `at://${did}/site.standard.publication/3me5vykp6lf2y`
+    profilesOf(did, { followers: 100, labels: [] })
     net
       .get('https://plc.directory')
       .intercept({ path: `/${did}` })
@@ -269,16 +320,41 @@ describe('the open web directory', () => {
   })
 
   it('leaves out accounts labelled adult or automated, ones not shown to logged-out viewers, and brand-new ones', async () => {
-    const adult = writer({ account: ['porn'] })
-    const privateAccount = writer({ account: ['!no-unauthenticated'] })
-    const bot = writer({ account: ['bot'] })
-    const brandNew = writer({ followers: 3 })
+    // Turned away on their Bluesky profile alone: their servers and sites are never asked.
+    const adult = writer({ account: ['porn'], checked: 'profile' })
+    const privateAccount = writer({ account: ['!no-unauthenticated'], checked: 'profile' })
+    const bot = writer({ account: ['bot'], checked: 'profile' })
+    const brandNew = writer({ followers: 3, checked: 'profile' })
     const { source } = stream(...[adult, privateAccount, bot, brandNew].map((w) => post(w, NOW - day)))
-    expect(await crawlDirectory(NOW, source)).toMatchObject({ checked: 4, listed: 0 })
+    expect(await crawlDirectory(NOW, source)).toMatchObject({ checked: 0, listed: 0 })
     expect(await directory(NOW)).toEqual([])
   })
 
+  it('drops a listed blog within the hour once its author is labelled or stops being shown to logged-out viewers', async () => {
+    const one = writer()
+    const two = writer()
+    await crawlDirectory(NOW, stream(post(one, NOW - day), post(two, NOW - day)).source)
+    one.relabelAccount(['!no-unauthenticated'])
+    two.relabelAccount(['porn'])
+    // The next run, with nothing new from either of them.
+    await crawlDirectory(NOW + 3_600_000, stream().source)
+    expect(await directory(NOW + 3_600_000)).toEqual([])
+  })
+
+  it('changes nothing in a run where Bluesky can’t say who the authors are', async () => {
+    const one = writer()
+    await crawlDirectory(NOW, stream(post(one, NOW - day)).source)
+    const next = writer({ checked: 'never' })
+    // Bluesky's profile lookup is down for this run.
+    profilesDown = true
+    expect(await crawlDirectory(NOW + 3_600_000, stream(post(next, NOW)).source)).toMatchObject({ checked: 0 })
+    expect((await directory(NOW + 3_600_000)).map((f) => f.url)).toEqual([one.site])
+  })
+
   it('puts a blog people list and discuss ahead of a newer one nobody does', async () => {
+    // Two readers with blogrolls, both accounts that could be listed themselves.
+    profilesOf('did:plc:readerreaderreaderreader', { followers: 80, labels: [] })
+    profilesOf('did:plc:anotheranotheranotherano', { followers: 50, labels: [] })
     const quiet = writer({ followers: 12 })
     const read = writer({ followers: 400, listedBy: ['did:plc:readerreaderreaderreader', 'did:plc:anotheranotheranotherano'], discussed: 3 })
     await crawlDirectory(NOW, stream(post(quiet, NOW - 3_600_000), post(read, NOW - 12 * 3_600_000)).source)
@@ -296,6 +372,40 @@ describe('the open web directory', () => {
     const archive = [...Array.from({ length: 30 }, (_, i) => post(importer, NOW - (30 + i) * day)), post(importer, NOW - 3_600_000)]
     await crawlDirectory(NOW, stream(...hourly, ...archive).source)
     expect((await directory(NOW)).map((f) => f.url)).toEqual([importer.site])
+  })
+
+  it('counts a feed’s posts across runs, and each post once even when several share a time', async () => {
+    const hourly = writer()
+    for (let i = 12; i >= 0; i--) await crawlDirectory(NOW - i * 3_600_000, stream(post(hourly, NOW - i * 3_600_000 - 60_000)).source)
+    const batch = writer()
+    const stamped = NOW - 3_600_000
+    await crawlDirectory(NOW, stream(...Array.from({ length: 13 }, () => post(batch, stamped))).source)
+    expect(await directory(NOW)).toEqual([])
+  })
+
+  it('counts only listers who could be listed themselves, never the author, and drops one whose blogroll stops listing it', async () => {
+    const lister = 'did:plc:listerlisterlisterlister'
+    const tiny = 'did:plc:tinytinytinytinytinytiny'
+    profilesOf(lister, { followers: 300, labels: [] })
+    profilesOf(tiny, { followers: 2, labels: [] })
+    const one = writer({ listedBy: [lister, tiny] })
+    one.listers([lister, tiny, one.did])
+    await crawlDirectory(NOW, stream(post(one, NOW - day)).source)
+    expect((await directory(NOW))[0]).toMatchObject({ listedBy: [lister] })
+    // Their blogroll no longer lists it: gone from the next run on.
+    one.listers([])
+    await crawlDirectory(NOW + 3_600_000, stream().source)
+    expect((await directory(NOW + 3_600_000))[0].listedBy).toBeUndefined()
+  })
+
+  it('keeps a listed blog whose server is briefly down at its weekly check, without re-dating it', async () => {
+    const one = writer()
+    await crawlDirectory(NOW, stream(post(one, NOW - day)).source)
+    one.serverDown()
+    const later = NOW + 8 * day
+    expect(await crawlDirectory(later, stream(post(one, later - 1000)).source)).toMatchObject({ checked: 1, listed: 0 })
+    expect((await directory(later)).map((f) => [f.url, f.latest])).toEqual([[one.site, NOW - day]])
+    expect(Object.keys(await kv().hgetall('rd:directory:failed'))).toEqual([])
   })
 
   it('forgets publications that have gone quiet', async () => {

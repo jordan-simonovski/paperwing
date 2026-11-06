@@ -66,6 +66,16 @@ export const PeopleYouFollow: Story = {
   },
 }
 
+/** Signed in, but Bluesky can't say who you follow: the list as it comes, nothing claimed. */
+export const FollowsUnavailable: Story = {
+  parameters: { app: { atproto: { did: READER, handle: 'reader.example' } } },
+  play: async ({ canvas }) => {
+    const rows = await canvas.findAllByRole('group')
+    await expect(rows[0]).toHaveAccessibleName('Writer 1’s notebook')
+    await expect(canvas.queryByText('By someone you follow')).toBeNull()
+  },
+}
+
 /** The list couldn't be read: say so, with a retry. */
 export const Unreachable: Story = {
   parameters: { app: { queries: [] } },

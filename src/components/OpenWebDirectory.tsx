@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { keys } from '../lib/query'
 import { feed } from '../lib/sources/http'
 import type { DirectoryFeed } from '../lib/publishers'
-import { useFollowing } from '../lib/friends'
+import { useFollowing } from '../lib/following'
 import { CouldntReach } from './FeedState'
 import { FeedRow } from './FollowBlogs'
 
@@ -20,10 +20,11 @@ const nearYou = (f: DirectoryFeed, following: Set<string>) =>
  */
 export function OpenWebDirectory() {
   const list = useQuery({ queryKey: keys.directory, queryFn: () => feed('directory') as Promise<DirectoryFeed[]>, staleTime: 30 * 60_000 })
-  const following = useFollowing()
+  const { following, loading } = useFollowing()
   const [all, setAll] = useState(false)
   // Still loading, or nothing found yet: the section waits rather than saying so.
-  if (!list.isError && !list.data?.length) return null
+  // Signed in, it also waits for who you follow, so the rows don't jump once they're known.
+  if ((!list.isError && !list.data?.length) || loading) return null
   // By people you follow, then in their blogrolls, then everything else, each in the server's order.
   const rank = (f: DirectoryFeed) => (following.has(f.author) ? 0 : nearYou(f, following) ? 1 : 2)
   const feeds = [...(list.data ?? [])].sort((a, b) => rank(a) - rank(b))
