@@ -1,0 +1,25 @@
+# Local stand-ins for PaperWing's hosted services, for `npm run dev:full`:
+#   Redis, behind Upstash's REST API (the same HTTP calls api/_lib/kv.ts makes in production).
+# Data survives restarts in the `redis` volume; `docker compose down -v` empties it.
+services:
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes: ['redis:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      retries: 10
+  upstash:
+    # Upstash's own suggestion for local development: its REST API over a plain Redis.
+    image: hiett/serverless-redis-http:latest
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: local
+      SRH_CONNECTION_STRING: redis://redis:6379
+    ports: ['8079:80']
+    depends_on:
+      redis:
+        condition: service_healthy
+volumes:
+  redis:
