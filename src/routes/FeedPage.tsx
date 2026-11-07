@@ -48,9 +48,13 @@ export function FeedPage() {
   // On a board, the reading pane offers its moderators their actions.
   const { data: boardView } = useBoard(channel?.board?.did, channel?.board?.rkey)
 
+  // A new list starts at the top. Beside the reading pane the list scrolls itself; on a phone the
+  // page does, and the list column never moves. (Back still lands where you were: the browser
+  // restores the page after this runs.)
   useEffect(() => {
     setLimit(PAGE)
     document.getElementById('list-scroll')?.scrollTo({ top: 0 })
+    window.scrollTo({ top: 0 })
   }, [channelId, variant, sort, sourceFilter, kindFilter])
 
   useEffect(() => {

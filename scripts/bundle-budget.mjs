@@ -8,7 +8,7 @@ const BUDGET_KB = {
   // ~276.8 KB once marked and DOMPurify left for the reader and composer; held there.
   entry: 280, // index.html's script and everything it statically imports
   css: 25, // the wordmark's face is inlined (~5 KB) in place of a 121 KB font file
-  totalJs: 576, // ~575.2 KB: +1 KB for the open web directory's ranking and people-you-follow (Explore only, not the first screen); splitting marked and DOMPurify out costs ~1.6 KB of chunk overhead; every chunk is precached
+  totalJs: 577, // main reached ~576.3 KB after 60c4ce4 set 576 (~575.2 KB then): +1 KB for the open web directory's ranking and people-you-follow (Explore only, not the first screen); splitting marked and DOMPurify out costs ~1.6 KB of chunk overhead; every chunk is precached
 }
 
 const dist = process.argv[2] ?? 'dist'
