@@ -1,6 +1,40 @@
 {
-  "version": "0.20.0",
+  "version": "0.20.1",
   "releases": [
+    {
+      "version": "0.20.1",
+      "date": "7 November 2026",
+      "sections": [
+        {
+          "kind": "improved",
+          "title": "Improved",
+          "changes": [
+            {
+              "title": "Saved says what goes where when it's empty.",
+              "detail": "An empty queue, archive, watch list or search in Saved now has a short heading above how stories get there, and before you've saved anything Pip is there reading, ready for the first one. Settings descriptions and the principles page wrap at a comfortable reading width."
+            }
+          ]
+        },
+        {
+          "kind": "fix",
+          "title": "Fixes",
+          "changes": [
+            {
+              "title": "Small labels are easier to read.",
+              "detail": "Topic counts, the text on topic cards in Explore, the \"Breaking changes\" label in What's new and the count on Activity in dark mode were too faint against their backgrounds; they now meet the same contrast as the rest of the app. The full-screen picture viewer is a neutral dark instead of navy."
+            },
+            {
+              "title": "Menus and the reader keep your place with a keyboard or screen reader.",
+              "detail": "Tab now stays inside an open menu or sheet instead of wandering into the page behind it, and closing one takes you back to the button that opened it. On phones, opening a story moves you into the reader, and going back returns you to that story in the list."
+            },
+            {
+              "title": "Saved's sort fits on a phone.",
+              "detail": "The sort menu was pushed off the edge of narrow screens; the Queue, Archive and Watching buttons now scroll sideways and the sort stays in reach. The close buttons on the starter-mix note and on announcements are easier to tap."
+            }
+          ]
+        }
+      ]
+    },
     {
       "version": "0.20.0",
       "date": "6 November 2026",
