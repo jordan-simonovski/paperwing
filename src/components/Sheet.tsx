@@ -10,7 +10,8 @@ interface Props {
   children: React.ReactNode
 }
 
-const TABBABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, iframe, video[controls], audio[controls], [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
 
 function dealFrom(opener: HTMLElement, panel: HTMLElement) {
   const o = opener.getBoundingClientRect()
@@ -47,11 +48,13 @@ export function Sheet({ open, onClose, side, label, children }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return close.current()
       if (e.key !== 'Tab') return
-      // aria-modal promises the page underneath is out of reach: Tab wraps inside the panel.
+      // aria-modal promises the page underneath is out of reach: Tab wraps inside the panel. Focus
+      // somewhere else (another overlay on top) belongs to that overlay, so leave it alone.
+      const at = document.activeElement
+      if (at && at !== document.body && !el.contains(at)) return
       const stops = [...el.querySelectorAll<HTMLElement>(TABBABLE)].filter((s) => s.offsetParent)
       const first = stops[0]
       const last = stops[stops.length - 1]
-      const at = document.activeElement
       const wrapTo = !first ? el : e.shiftKey ? (at === first || at === el ? last : null) : at === last || !el.contains(at) ? first : null
       if (wrapTo) {
         e.preventDefault()
@@ -67,7 +70,8 @@ export function Sheet({ open, onClose, side, label, children }: Props) {
     return () => {
       window.removeEventListener('keydown', onKey)
       root.style.overflow = before
-      // Back to whatever opened it, unless closing moved you somewhere else (a link inside).
+      // Back to whatever opened it, if focus was still in the panel (or lost with it). Focus that
+      // already moved somewhere else stays there.
       const now = document.activeElement
       if (opener instanceof HTMLElement && opener.isConnected && (!now || now === document.body || el.contains(now))) opener.focus({ preventScroll: true })
     }
