@@ -77,8 +77,8 @@ only on purpose, in the change that needs it, with the reason in the pull reques
 
 Every story runs axe with `test: 'error'` (`.storybook/preview.tsx`), in Chromium with reduced motion,
 so the check sees settled UI. A story turns off one rule only for a known finding, with a comment;
-today that's `color-contrast` in `TopicCard`, `TopicTag` and `WhatsNew` (tinted cards, `opacity-*`
-text, the "Breaking changes" pill), waiting on new colour tokens.
+none does today. Secondary text on a tint or field is the field's own ink at a lighter weight or
+smaller size, never `opacity-*`: dimming text is how the last contrast findings got in.
 
 - **Focus stays visible.** The global `:focus-visible` ring in `src/styles.css` is the indicator; a
   control that restyles focus replaces the ring with something as visible, never `outline-none` alone.
@@ -88,8 +88,9 @@ text, the "Breaking changes" pill), waiting on new colour tokens.
 - **Headings descend by one**: the reading pane's title is `h1`, its sections `h2`.
 - **Stories wait for what's on screen** (`findByRole`, `waitFor`), never a lookup straight after a
   click into a sheet: under reduced motion, its visibility flips a frame later.
-- **Known gap:** `Sheet` (`src/components/Sheet.tsx`) is `aria-modal` without a focus trap, and on
-  phones the reading pane opens without taking focus. Native `<dialog>` with `showModal()` fixes both.
+- **Modal focus:** `Sheet` (`src/components/Sheet.tsx`) wraps Tab inside its panel and hands focus back
+  to its opener on close; on phones the reading pane takes focus as it slides in and returns it to the
+  story's row (`Split.tsx`). A new overlay does the same, or uses native `<dialog>` with `showModal()`.
 
 ## Shared homes
 

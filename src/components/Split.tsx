@@ -95,12 +95,26 @@ export function Split({ base, itemKey, list, idle }: Props) {
     if (!itemKey) navCommitted()
   }, [itemKey])
   useEffect(preloadPane, [])
+  // Phones: the reader slides over the list, so focus goes with it, and back to the story's row
+  // when it closes.
+  // Only when a story opens, closes or changes: turning a tablet across the breakpoint mustn't pull
+  // focus out of a reply being typed.
+  useEffect(() => {
+    const pane = paneRef.current
+    if (!itemKey || !pane || matchMedia('(min-width: 900px)').matches) return
+    if (!pane.contains(document.activeElement)) pane.focus({ preventScroll: true })
+    return () => {
+      const now = document.activeElement
+      if (now && now !== document.body && !pane.contains(now)) return
+      document.querySelector<HTMLElement>(`#row-${CSS.escape(itemKey)} .row-title a`)?.focus({ preventScroll: true })
+    }
+  }, [itemKey, paneRef])
   return (
     <>
       <div className="list-col scroll-thin" id="list-scroll">
         {list}
       </div>
-      <aside ref={paneRef} className={`pane-col ${itemKey ? 'open' : 'idle'}`} aria-label="Reading pane">
+      <aside ref={paneRef} className={`pane-col ${itemKey ? 'open' : 'idle'}`} aria-label="Reading pane" tabIndex={wide ? undefined : -1}>
         {itemKey ? (
           <Suspense fallback={null}>
             <ItemPane key={itemKey} itemKey={itemKey} onClose={close} onOpen={open} />
@@ -112,6 +126,12 @@ export function Split({ base, itemKey, list, idle }: Props) {
     </>
   )
 }
+
+/**
+ * The arrows belong to the list unless something else has focus. A story's title link, where focus
+ * lands as a phone's reader closes, counts as the list.
+ */
+const arrowsMoveCursor = () => document.activeElement === document.body || !!document.activeElement?.matches('.row-title a')
 
 /**
  * j/k move a cursor through the list. Once a story is open, j/k open the next one directly,
@@ -134,12 +154,14 @@ export function useListKeys(stories: Story[], itemKey: string | undefined, base:
         if (!next) return
         setCursor(next.key)
         document.getElementById(`row-${next.key}`)?.scrollIntoView({ block: 'nearest' })
+        // Focus on a row's title moves with the cursor, so Enter opens the story the cursor is on.
+        if (document.activeElement?.matches('.row-title a')) document.querySelector<HTMLElement>(`#row-${CSS.escape(next.key)} .row-title a`)?.focus({ preventScroll: true })
         if (itemKey) open(next.key)
       }
       switch (e.key) {
         case 'j':
         case 'ArrowDown':
-          if (e.key === 'ArrowDown' && !itemKey && document.activeElement !== document.body) return
+          if (e.key === 'ArrowDown' && !itemKey && !arrowsMoveCursor()) return
           e.preventDefault()
           move(idx < 0 ? 0 : 1)
           // Someone reading by keyboard: the two keys that open up the rest.
@@ -147,7 +169,7 @@ export function useListKeys(stories: Story[], itemKey: string | undefined, base:
           break
         case 'k':
         case 'ArrowUp':
-          if (e.key === 'ArrowUp' && !itemKey && document.activeElement !== document.body) return
+          if (e.key === 'ArrowUp' && !itemKey && !arrowsMoveCursor()) return
           e.preventDefault()
           move(-1)
           break

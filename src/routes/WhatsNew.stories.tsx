@@ -30,8 +30,6 @@ const meta = {
   title: 'Pages/WhatsNew',
   component: WhatsNew,
   args: { releases: changelog.releases, version: changelog.version },
-  // Known contrast findings, every other check still on. To fix: see the codebase-health skill, Accessibility.
-  parameters: { a11y: { config: { rules: [{ id: 'color-contrast', enabled: false }] } } },
 } satisfies Meta<typeof WhatsNew>
 export default meta
 type Story = StoryObj<typeof meta>

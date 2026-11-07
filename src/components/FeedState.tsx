@@ -114,6 +114,20 @@ export function QueueCleared({ archived, settle = false, onArchive }: { archived
   )
 }
 
+/**
+ * A Saved list with nothing in it: what belongs here and how it gets here. Before anything has been
+ * saved, Pip is already reading, book open; the queue read through is the shut book above.
+ */
+export function SavedEmpty({ title, reading = false, children }: { title: string; reading?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="px-6 py-16 text-center">
+      {reading && <Pip className="mx-auto mb-2 block size-20" />}
+      <p className="text-[1.125rem] font-bold">{title}</p>
+      <p className="mx-auto mt-2 max-w-sm text-[0.9375rem] text-ink-3">{children}</p>
+    </div>
+  )
+}
+
 /** One part of a page couldn't load: say which, in plain words, with a way to try again. */
 export function CouldntReach({ what, onRetry }: { what: string; onRetry: () => void }) {
   return (

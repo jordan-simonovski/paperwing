@@ -10,6 +10,9 @@ interface Props {
   children: React.ReactNode
 }
 
+const TABBABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, iframe, video[controls], audio[controls], [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
+
 function dealFrom(opener: HTMLElement, panel: HTMLElement) {
   const o = opener.getBoundingClientRect()
   const ox = o.left + o.width / 2
@@ -37,20 +40,40 @@ export function Sheet({ open, onClose, side, label, children }: Props) {
   close.current = onClose
 
   useEffect(() => {
-    if (!open) return
+    const el = panel.current
+    if (!open || !el) return
     // Pretext motion: the panel's items deal out of the button that opened it.
     const opener = document.activeElement
-    if (pretextOn() && opener instanceof HTMLElement && panel.current && !panel.current.contains(opener)) dealFrom(opener, panel.current)
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close.current()
+    if (pretextOn() && opener instanceof HTMLElement && !el.contains(opener)) dealFrom(opener, el)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return close.current()
+      if (e.key !== 'Tab') return
+      // aria-modal promises the page underneath is out of reach: Tab wraps inside the panel. Focus
+      // somewhere else (another overlay on top) belongs to that overlay, so leave it alone.
+      const at = document.activeElement
+      if (at && at !== document.body && !el.contains(at)) return
+      const stops = [...el.querySelectorAll<HTMLElement>(TABBABLE)].filter((s) => s.offsetParent)
+      const first = stops[0]
+      const last = stops[stops.length - 1]
+      const wrapTo = !first ? el : e.shiftKey ? (at === first || at === el ? last : null) : at === last || !el.contains(at) ? first : null
+      if (wrapTo) {
+        e.preventDefault()
+        wrapTo.focus()
+      }
+    }
     window.addEventListener('keydown', onKey)
     // The page underneath shouldn't scroll along with the panel.
     const root = document.documentElement
     const before = root.style.overflow
     root.style.overflow = 'hidden'
-    panel.current?.focus({ preventScroll: true })
+    el.focus({ preventScroll: true })
     return () => {
       window.removeEventListener('keydown', onKey)
       root.style.overflow = before
+      // Back to whatever opened it, if focus was still in the panel (or lost with it). Focus that
+      // already moved somewhere else stays there.
+      const now = document.activeElement
+      if (opener instanceof HTMLElement && opener.isConnected && (!now || now === document.body || el.contains(now))) opener.focus({ preventScroll: true })
     }
   }, [open])
 

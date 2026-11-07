@@ -5,8 +5,7 @@ const meta = {
   title: 'Feed/TopicTag',
   component: TopicTag,
   args: { id: 'space' },
-  // Known contrast findings, every other check still on. To fix: see the codebase-health skill, Accessibility.
-  parameters: { layout: 'centered', a11y: { config: { rules: [{ id: 'color-contrast', enabled: false }] } } },
+  parameters: { layout: 'centered' },
 } satisfies Meta<typeof TopicTag>
 export default meta
 type Story = StoryObj<typeof meta>

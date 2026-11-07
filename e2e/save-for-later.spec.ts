@@ -27,7 +27,7 @@ test.describe('with motion on', () => {
     await gotoFeed(page)
     await navigate(page, /^Saved/)
     // Nothing saved yet: the tips for getting started, not "cleared".
-    await expect(page.getByText(/Your queue is empty/)).toBeVisible()
+    await expect(page.getByText(/Nothing saved yet/)).toBeVisible()
 
     await navigate(page, /^For you/)
     await row(page, 'The Web We Lost').getByRole('button', { name: 'Save', exact: true }).click()
