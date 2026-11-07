@@ -1,5 +1,19 @@
 # What's new
 
+## 0.20.1
+
+_Released 7 November 2026_
+
+### Improved
+
+- **Saved says what goes where when it's empty.** An empty queue, archive, watch list or search in Saved now has a short heading above how stories get there, and before you've saved anything Pip is there reading, ready for the first one. Settings descriptions and the principles page wrap at a comfortable reading width.
+
+### Fixes
+
+- **Small labels are easier to read.** Topic counts, the text on topic cards in Explore, the "Breaking changes" label in What's new and the count on Activity in dark mode were too faint against their backgrounds; they now meet the same contrast as the rest of the app. The full-screen picture viewer is a neutral dark instead of navy.
+- **Menus and the reader keep your place with a keyboard or screen reader.** Tab now stays inside an open menu or sheet instead of wandering into the page behind it, and closing one takes you back to the button that opened it. On phones, opening a story moves you into the reader, and going back returns you to that story in the list.
+- **Saved's sort fits on a phone.** The sort menu was pushed off the edge of narrow screens; the Queue, Archive and Watching buttons now scroll sideways and the sort stays in reach. The close buttons on the starter-mix note and on announcements are easier to tap.
+
 ## 0.20.0
 
 _Released 6 November 2026_
