@@ -26,7 +26,7 @@ function Principle({ n, title, children }: { n: number; title: string; children:
 export function PrinciplesPage() {
   return (
     <div className="wide-col">
-      <article className="mx-auto max-w-[44rem] px-4 pb-24 pt-8 md:px-8">
+      <article className="mx-auto max-w-[42rem] px-4 pb-24 pt-8 md:px-8">
         <Pip variant="head" className="size-12" />
         <h1 className="mt-4 text-[2.25rem] font-bold leading-[1.05] tracking-[-0.02em]">What PaperWing stands for</h1>
         <p className="mt-5 text-[1.125rem] leading-relaxed text-ink-2">

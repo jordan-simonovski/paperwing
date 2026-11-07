@@ -72,7 +72,7 @@ function Section({ title, hint, children }: { title?: string; hint?: string; chi
   return (
     <section className="py-3">
       {title && <h2 className="text-[1rem] font-bold">{title}</h2>}
-      {hint && <p className="mt-1 text-[0.875rem] leading-snug text-ink-3">{hint}</p>}
+      {hint && <p className="mt-1 max-w-[34rem] text-[0.875rem] leading-snug text-ink-3">{hint}</p>}
       {/* minmax(0, 1fr): a column that can't shrink grows to fit a long unbroken line (a URL, a code) and runs off a phone screen. */}
       <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-5 rounded-[18px] bg-panel p-5">{children}</div>
     </section>

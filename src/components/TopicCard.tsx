@@ -51,7 +51,7 @@ function cachedLead(qc: QueryClient, t: Topic): Story | undefined {
   return best?.s
 }
 
-export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRemove?: () => void }) {
+export function TopicCard({ t, onRemove }: { t: Topic; onRemove?: () => void }) {
   const on = usePrefs((p) => p.followed.includes(t.id))
   const toggleFollow = usePrefs((p) => p.toggleFollow)
   const Icon = topicIcon(t.id)
@@ -62,7 +62,7 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
   const names = sources.slice(0, 2).map((s) => s.name)
 
   return (
-    <article className={`tcard topic${on ? ' on' : ''}${dim ? ' dim' : ''}`} style={{ '--h': t.hue } as React.CSSProperties}>
+    <article className={`tcard topic${on ? ' on' : ''}`} style={{ '--h': t.hue } as React.CSSProperties}>
       <Icon className="tcard-glyph" aria-hidden strokeWidth={1.5} />
       <div className="flex items-center gap-3">
         <span className="tcard-badge" aria-hidden>
@@ -85,7 +85,7 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
         </button>
       </div>
 
-      <p className="mt-2.5 line-clamp-2 text-[0.875rem] leading-snug opacity-85">{t.blurb}</p>
+      <p className="mt-2.5 line-clamp-2 text-[0.875rem] leading-snug">{t.blurb}</p>
 
       {lead && (
         <p className="tcard-now mt-3 line-clamp-2 text-[0.8125rem] leading-snug">
@@ -103,7 +103,7 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
                 </span>
               ))}
             </span>
-            <span className="min-w-0 truncate text-[0.8125rem] opacity-75">
+            <span className="min-w-0 truncate text-[0.8125rem]">
               {names.join(', ')}
               {sources.length > 2 ? ` and ${sources.length - 2} more` : ''}
             </span>
@@ -111,7 +111,7 @@ export function TopicCard({ t, dim, onRemove }: { t: Topic; dim?: boolean; onRem
         )}
         {(near.length > 0 || onRemove) && (
           <div className="tcard-near mt-2.5 flex items-center gap-1 text-[0.8125rem]">
-            {near.length > 0 && <span className="opacity-80">Near</span>}
+            {near.length > 0 && <span>Near</span>}
             <span className="min-w-0 flex-1 truncate">
               {near.slice(0, 3).map((r, i) => (
                 <span key={r.id}>

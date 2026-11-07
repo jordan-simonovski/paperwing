@@ -87,6 +87,11 @@ typography:
     fontSize: "0.8125rem"
     fontWeight: 400
     lineHeight: 1.5
+  caption:
+    fontFamily: "'Atkinson Hyperlegible Next Variable', ui-sans-serif, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 600
+    lineHeight: 1.35
   code:
     fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace"
     fontSize: "0.8125rem"
@@ -245,6 +250,7 @@ A near-neutral, faintly warm greyscale doing almost all the work, with one red a
 - **State** (700, 1.125rem, 1.3): the one-line heading of an empty, failed or finished state ("Queue cleared", "No reader view for this one").
 - **UI** (600, 0.875rem): buttons, chips, segmented controls, rail links.
 - **Meta** (400, 0.8125rem, Ink 3): row headers, timestamps, labels; numbers tabular.
+- **Caption** (600, 0.75rem): bottom-nav labels, badges and the small counts on pills. The floor for words: nothing smaller carries text (an avatar's initial scales with its circle).
 
 Three text sizes scale the reading and row sizes only: small (reading 1.0625rem, row 1rem), default, large (reading 1.3125rem, row 1.1875rem).
 

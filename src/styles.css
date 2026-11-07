@@ -573,6 +573,11 @@
     background: var(--panel);
     border-top-left-radius: var(--r-panel);
   }
+  /* Focus lands on the pane itself when it slides in on a phone: a region, not a control, so no
+     ring around the whole screen. The first Tab reaches Back, which has one. */
+  .pane-col:focus-visible {
+    outline: none;
+  }
   .wide-col {
     grid-column: 2 / -1;
     overflow-y: auto;
@@ -947,8 +952,8 @@
     padding: 0 0.3125rem;
     border-radius: 999px;
     background: var(--signal);
-    color: #fff;
-    font-size: 0.6875rem;
+    color: var(--signal-ink);
+    font-size: 0.75rem;
     font-weight: 700;
     line-height: 1;
   }
@@ -1044,9 +1049,6 @@
     background: var(--t-field);
     color: var(--t-field-ink);
     box-shadow: none;
-  }
-  .tcard.dim {
-    opacity: 0.35;
   }
   .tcard:hover {
     transform: translateY(-2px);
@@ -1773,7 +1775,7 @@
   .op {
     padding: 0 0.375rem;
     border-radius: 999px;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 700;
     background: var(--signal-soft);
     color: var(--ink);
@@ -2132,17 +2134,24 @@
     .post-btn,
     .pill-icon,
     .votes button,
-    .seg > button {
+    .seg > button,
+    .row-chip-x,
+    .newcomer-close {
       position: relative;
     }
     .icon-btn::before,
     .post-btn::before,
     .pill-icon::before,
     .votes button::before,
-    .seg > button::before {
+    .seg > button::before,
+    .row-chip-x::before,
+    .newcomer-close::before {
       content: '';
       position: absolute;
       inset: -0.375rem;
+    }
+    .row-chip-x::before {
+      inset: -0.625rem;
     }
     .votes button::before {
       inset: -0.5rem -0.25rem;
@@ -2492,16 +2501,17 @@
   margin: 0;
   border: 0;
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: #10151d;
-  color: #fff;
+  /* Always dark, whatever the theme: the dark ground, neutral rather than navy. */
+  background: oklch(0.145 0.003 95);
+  color: oklch(0.95 0.004 95);
   overflow: hidden;
   overscroll-behavior: contain;
 }
 .image-viewer[open] { display: flex; flex-direction: column; gap: 12px; }
-.image-viewer::backdrop { background: #10151d; }
-.image-viewer :focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
-.image-viewer-button { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 1px solid #69717e; border-radius: 50%; }
-.image-viewer-button:hover:not([aria-disabled="true"]) { background: #303844; }
+.image-viewer::backdrop { background: oklch(0.145 0.003 95); }
+.image-viewer :focus-visible { outline: 2px solid oklch(0.7 0.18 30); outline-offset: 4px; }
+.image-viewer-button { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 1px solid oklch(0.55 0.005 95); border-radius: 50%; }
+.image-viewer-button:hover:not([aria-disabled="true"]) { background: oklch(0.27 0.005 95); }
 .image-viewer-button[aria-disabled="true"] { opacity: .35; cursor: default; }
 .image-viewer-figure { display: flex; flex: 1; flex-direction: column; gap: 12px; min-height: 0; }
 .image-viewer-stage { position: relative; display: grid; place-items: center; flex: 1; min-height: 0; touch-action: none; overflow: hidden; }
@@ -2515,5 +2525,5 @@
 .image-viewer-stage[data-zoom]:not([data-zoom="1"]) { cursor: grab; }
 .image-viewer-stage[data-zoom]:not([data-zoom="1"]):active { cursor: grabbing; }
 .image-download { position: relative; }
-.image-download-error { position: absolute; top: calc(100% + 12px); right: -80px; z-index: 2; width: min(280px, 80vw); padding: 12px; border: 1px solid #69717e; border-radius: 12px; background: #202833; font-size: .875rem; }
+.image-download-error { position: absolute; top: calc(100% + 12px); right: -80px; z-index: 2; width: min(280px, 80vw); padding: 12px; border: 1px solid oklch(0.55 0.005 95); border-radius: 12px; background: oklch(0.205 0.004 95); font-size: .875rem; }
 @media (pointer: coarse) { .image-zoom-controls { display: none; } }

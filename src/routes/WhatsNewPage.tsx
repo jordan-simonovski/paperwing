@@ -20,8 +20,8 @@ export interface Release {
 
 /** How each kind of change is marked: the colour it wears in the list. */
 const MARK: Record<string, string> = {
-  highlight: 'bg-signal text-white',
-  breaking: 'bg-[color-mix(in_oklab,var(--signal)_16%,transparent)] text-signal',
+  highlight: 'bg-signal text-signal-ink',
+  breaking: 'text-signal shadow-[inset_0_0_0_1px_currentColor]',
   new: 'bg-ink text-ground',
   improved: 'bg-sunk text-ink-2',
   fix: 'bg-sunk text-ink-3',
@@ -40,7 +40,7 @@ export function ReleaseNotes({ release, current }: { release: Release; current?:
       {release.sections.map((s) => (
         <div key={s.title} className="mt-5">
           <h3 className="flex items-center gap-2 text-[0.8125rem] font-bold text-ink-3">
-            <span className={`inline-block rounded-full px-2 py-0.5 text-[0.6875rem] ${MARK[s.kind] ?? MARK.improved}`}>{s.title}</span>
+            <span className={`inline-block rounded-full px-2 py-0.5 text-[0.75rem] ${MARK[s.kind] ?? MARK.improved}`}>{s.title}</span>
           </h3>
           <ul className="mt-3 space-y-3.5">
             {s.changes.map((c) => (

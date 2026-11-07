@@ -20,7 +20,7 @@ export function TopicChip({ id, count, small }: { id: string; count?: number; sm
   return (
     <Link to={`/t/${t.id}`} className={`chip topic${small ? ' h-7 flex-none px-3 text-[0.8125rem]' : ''}`} style={{ '--h': t.hue } as React.CSSProperties}>
       {t.label}
-      {count !== undefined && <span className="num font-normal opacity-75">{count}</span>}
+      {count !== undefined && <span className="num font-normal">{count}</span>}
     </Link>
   )
 }

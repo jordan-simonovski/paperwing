@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { FeedEmpty, FeedFailed, QueueCleared } from './FeedState'
+import { FeedEmpty, FeedFailed, QueueCleared, SavedEmpty } from './FeedState'
 
 const meta = { title: 'Feed/FeedState', component: FeedFailed } satisfies Meta<typeof FeedFailed>
 export default meta
@@ -67,6 +67,34 @@ export const QueueReadThroughOne: StoryObj<typeof QueueCleared> = {
   args: { archived: 1, onArchive: fn() },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText(/the one you’ve finished is in the archive/)).toBeVisible()
+  },
+}
+
+/** Nothing saved yet: Pip is already reading, and the line says how stories get here. */
+export const NothingSavedYet: StoryObj<typeof SavedEmpty> = {
+  render: (args) => <SavedEmpty {...args} />,
+  args: {
+    title: 'Nothing saved yet',
+    reading: true,
+    children: (
+      <>
+        Press <kbd>s</kbd> on a story, tap its bookmark, or share a link into PaperWing.
+      </>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement)
+    await expect(c.getByText('Nothing saved yet')).toBeVisible()
+    await expect(canvasElement.querySelector('svg')).not.toBeNull()
+  },
+}
+
+/** An empty archive: no Pip, the plain heading and how stories land here. */
+export const NothingArchivedYet: StoryObj<typeof SavedEmpty> = {
+  render: (args) => <SavedEmpty {...args} />,
+  args: { title: 'Nothing archived yet', children: 'Finish a story, or press e, and it lands here.' },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('svg')).toBeNull()
   },
 }
 

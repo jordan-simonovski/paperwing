@@ -16,15 +16,12 @@ const meta = {
   component: TopicCard,
   args: { t: space },
   decorators: [(Story) => <div style={{ width: 320, padding: 16 }}>{Story()}</div>],
-  // Known contrast findings, every other check still on. To fix: see the codebase-health skill, Accessibility.
-  parameters: { a11y: { config: { rules: [{ id: 'color-contrast', enabled: false }] } } },
 } satisfies Meta<typeof TopicCard>
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const NotFollowed: Story = {}
 export const Followed: Story = { parameters: { app: { prefs: { followed: ['space'] } } } }
-export const Dimmed: Story = { args: { dim: true } }
 export const Removable: Story = { args: { onRemove: fn() }, parameters: { app: { prefs: { followed: ['space'] } } } }
 
 /** When one of its feeds is already on this device, the card shows what's leading the topic now. */

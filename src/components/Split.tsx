@@ -95,12 +95,19 @@ export function Split({ base, itemKey, list, idle }: Props) {
     if (!itemKey) navCommitted()
   }, [itemKey])
   useEffect(preloadPane, [])
+  // Phones: the reader slides over the list, so focus goes with it, and back to the story's row
+  // when it closes.
+  useEffect(() => {
+    if (!itemKey || wide) return
+    paneRef.current?.focus({ preventScroll: true })
+    return () => document.querySelector<HTMLElement>(`#row-${CSS.escape(itemKey)} .row-title a`)?.focus({ preventScroll: true })
+  }, [itemKey, wide, paneRef])
   return (
     <>
       <div className="list-col scroll-thin" id="list-scroll">
         {list}
       </div>
-      <aside ref={paneRef} className={`pane-col ${itemKey ? 'open' : 'idle'}`} aria-label="Reading pane">
+      <aside ref={paneRef} className={`pane-col ${itemKey ? 'open' : 'idle'}`} aria-label="Reading pane" tabIndex={-1}>
         {itemKey ? (
           <Suspense fallback={null}>
             <ItemPane key={itemKey} itemKey={itemKey} onClose={close} onOpen={open} />

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-02T22:35:40.528809+00:00",
+  "generatedAt": "2026-11-07T02:31:04.548470+00:00",
   "title": "Design System: PaperWing",
   "extensions": {
     "colorMeta": {
@@ -294,6 +294,14 @@
         "displayName": "Body",
         "purpose": "Comments and inline prose."
       },
+      "secondary": {
+        "displayName": "Secondary",
+        "purpose": "The sentence under a heading, card and sheet descriptions, empty-state explanations, field help."
+      },
+      "state": {
+        "displayName": "State",
+        "purpose": "The one-line heading of an empty, failed or finished state."
+      },
       "ui": {
         "displayName": "UI",
         "purpose": "Buttons, chips, segments, rail links."
@@ -301,6 +309,10 @@
       "meta": {
         "displayName": "Meta",
         "purpose": "Row headers, timestamps, labels."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Bottom-nav labels, badges and small counts on pills. The floor for words."
       },
       "code": {
         "displayName": "Code",

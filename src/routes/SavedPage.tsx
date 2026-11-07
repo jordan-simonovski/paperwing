@@ -1,4 +1,4 @@
-import { QueueCleared } from '../components/FeedState'
+import { QueueCleared, SavedEmpty } from '../components/FeedState'
 import { SaveFromClipboardButton } from '../components/SaveFromApps'
 import { usePretext } from '../lib/pretext'
 import { Search, X } from 'lucide-react'
@@ -260,21 +260,24 @@ export function SavedPage() {
                 <span className="num">{stories.length}</span> {stories.length === 1 ? 'match' : 'matches'} in your queue and archive
               </p>
             ) : (
-              <div className="seg flex-none" role="group" aria-label="Queue or archive">
-                <button aria-pressed={view === 'queue'} onClick={() => setParam('view', undefined)}>
-                  Queue <span className="num ml-1 font-normal text-ink-3">{counts.queue}</span>
-                </button>
-                <button aria-pressed={view === 'archive'} onClick={() => setParam('view', 'archive')}>
-                  Archive <span className="num ml-1 font-normal text-ink-3">{counts.archive}</span>
-                </button>
-                <button aria-pressed={view === 'watching'} onClick={() => setParam('view', 'watching')}>
-                  Watching <span className="num ml-1 font-normal text-ink-3">{watched.length}</span>
-                  {watched.some((w) => (w.fresh ?? 0) > 0) && <span className="dot ml-1.5" aria-label="New replies" />}
-                </button>
+              // On a phone the three lists and the sort don't fit side by side: the lists scroll, the sort stays.
+              <div className="scroll-x -my-1 -ml-1 min-w-0 flex-1 py-1 pl-1">
+                <div className="seg w-max" role="group" aria-label="Queue or archive">
+                  <button aria-pressed={view === 'queue'} onClick={() => setParam('view', undefined)}>
+                    Queue <span className="num ml-1 font-normal text-ink-3">{counts.queue}</span>
+                  </button>
+                  <button aria-pressed={view === 'archive'} onClick={() => setParam('view', 'archive')}>
+                    Archive <span className="num ml-1 font-normal text-ink-3">{counts.archive}</span>
+                  </button>
+                  <button aria-pressed={view === 'watching'} onClick={() => setParam('view', 'watching')}>
+                    Watching <span className="num ml-1 font-normal text-ink-3">{watched.length}</span>
+                    {watched.some((w) => (w.fresh ?? 0) > 0) && <span className="dot ml-1.5" aria-label="New replies" />}
+                  </button>
+                </div>
               </div>
             )}
             <select
-              className="ml-auto h-8 rounded-full bg-sunk px-3 text-[0.8125rem] font-semibold text-ink-2"
+              className="ml-auto h-8 flex-none rounded-full bg-sunk px-3 text-[0.8125rem] font-semibold text-ink-2"
               value={sort}
               onChange={(e) => setParam('sort', e.target.value === 'newest' ? undefined : e.target.value)}
               aria-label="Sort saved stories"
@@ -303,9 +306,9 @@ export function SavedPage() {
                 />
               ))}
               {!watchRows.length && (
-                <p className="px-6 py-16 text-center text-ink-3">
-                  Not watching any threads. Open a discussion and tap the bell, or press <kbd>w</kbd>, to follow its replies here.
-                </p>
+                <SavedEmpty title="Not watching any threads">
+                  Open a discussion and tap the bell, or press <kbd>w</kbd>, to follow its replies here.
+                </SavedEmpty>
               )}
             </div>
           )}
@@ -329,19 +332,21 @@ export function SavedPage() {
             </div>
           )}
           {queueCleared && <QueueCleared archived={counts.archive} settle={justCleared && pretext} onArchive={() => setParam('view', 'archive')} />}
-          {ready && !stories.length && !(view === 'watching' && !searching) && !queueCleared && (
-            <p className="px-6 py-16 text-center text-ink-3">
-              {searching ? (
-                'Nothing you have saved mentions that.'
-              ) : view === 'archive' ? (
-                'Nothing archived yet. Finish a story, or press e, and it lands here.'
-              ) : (
-                <>
-                  Your queue is empty. Press <kbd>s</kbd> on a story, tap its bookmark, or share a link into PaperWing.
-                </>
-              )}
-            </p>
-          )}
+          {ready &&
+            !stories.length &&
+            !(view === 'watching' && !searching) &&
+            !queueCleared &&
+            (searching ? (
+              <SavedEmpty title="No matches">Nothing you have saved mentions that.</SavedEmpty>
+            ) : view === 'archive' ? (
+              <SavedEmpty title="Nothing archived yet">
+                Finish a story, or press <kbd>e</kbd>, and it lands here.
+              </SavedEmpty>
+            ) : (
+              <SavedEmpty title="Nothing saved yet" reading>
+                Press <kbd>s</kbd> on a story, tap its bookmark, or share a link into PaperWing.
+              </SavedEmpty>
+            ))}
         </>
       }
     />
